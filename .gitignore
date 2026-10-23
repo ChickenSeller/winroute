@@ -1,0 +1,8 @@
+build/
+build-*/
+*.user
+
+# NetFilter SDK and the signed driver are not redistributed with the source;
+# place them here locally before building (see README).
+netfilter/
+netfilter2.sys

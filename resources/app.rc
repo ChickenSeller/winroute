@@ -1,0 +1,6 @@
+#include <winuser.h>
+
+IDI_ICON1 ICON "app.ico"
+#ifdef WINROUTE_REQUIRE_ADMIN
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "app.manifest"
+#endif

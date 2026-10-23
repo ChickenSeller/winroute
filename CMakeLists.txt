@@ -1,0 +1,97 @@
+cmake_minimum_required(VERSION 3.21)
+project(WinRoute VERSION 1.0.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network LinguistTools)
+
+set(NETFILTER_SDK_DIR ${CMAKE_SOURCE_DIR}/netfilter/nfsdk CACHE PATH "NetFilter SDK root (nfsdk folder)")
+set(NETFILTER_DRIVER ${CMAKE_SOURCE_DIR}/netfilter2.sys CACHE FILEPATH "netfilter2.sys driver to ship")
+set(NETFILTER_API_DLL ${NETFILTER_SDK_DIR}/wfp/bin/release_c_api/x64/nfapi.dll)
+
+set(CORE_SOURCES
+    src/core/Profile.h            src/core/Profile.cpp
+    src/core/RuleEngine.h         src/core/RuleEngine.cpp
+    src/core/ProcessInfo.h        src/core/ProcessInfo.cpp
+    src/core/FlowTable.h          src/core/FlowTable.cpp
+    src/core/DnsMessage.h         src/core/DnsMessage.cpp
+    src/core/FakeDns.h            src/core/FakeDns.cpp
+    src/core/DnsClient.h          src/core/DnsClient.cpp
+    src/core/ProxyConnector.h     src/core/ProxyConnector.cpp
+    src/core/Relay.h              src/core/Relay.cpp
+    src/core/Interceptor.h
+    src/core/NetFilterApi.h       src/core/NetFilterApi.cpp
+    src/core/NetFilterInterceptor.h src/core/NetFilterInterceptor.cpp
+    src/core/Engine.h             src/core/Engine.cpp
+    src/core/Logger.h             src/core/Logger.cpp
+    src/core/Utils.h              src/core/Utils.cpp
+)
+
+set(UI_SOURCES
+    src/ui/MainWindow.h           src/ui/MainWindow.cpp
+    src/ui/ConnectionsModel.h     src/ui/ConnectionsModel.cpp
+    src/ui/TrafficWidget.h        src/ui/TrafficWidget.cpp
+    src/ui/StatisticsWidget.h     src/ui/StatisticsWidget.cpp
+    src/ui/ProxyServersDialog.h   src/ui/ProxyServersDialog.cpp
+    src/ui/ProxyServerDialog.h    src/ui/ProxyServerDialog.cpp
+    src/ui/ChainTypeDialog.h      src/ui/ChainTypeDialog.cpp
+    src/ui/RulesDialog.h          src/ui/RulesDialog.cpp
+    src/ui/RuleDialog.h           src/ui/RuleDialog.cpp
+    src/ui/NameResolutionDialog.h src/ui/NameResolutionDialog.cpp
+    src/ui/AdvancedDialogs.h      src/ui/AdvancedDialogs.cpp
+    src/ui/ProxyCheckerDialog.h   src/ui/ProxyCheckerDialog.cpp
+    src/ui/Icons.h                src/ui/Icons.cpp
+    src/ui/Language.h             src/ui/Language.cpp
+)
+
+set(TS_FILES
+    translations/winroute_zh_CN.ts
+    translations/winroute_ja.ts
+)
+
+add_library(winroute_core STATIC ${CORE_SOURCES})
+target_include_directories(winroute_core PUBLIC src ${NETFILTER_SDK_DIR}/wfp/include ${NETFILTER_SDK_DIR}/include)
+target_compile_definitions(winroute_core PUBLIC UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _WIN32_WINNT=0x0A00)
+target_link_libraries(winroute_core PUBLIC Qt6::Core Qt6::Network ws2_32 iphlpapi psapi advapi32 shell32 crypt32)
+
+option(WINROUTE_BUILD_GUI "Build the WinRoute application" ON)
+# Development builds can drop the requireAdministrator manifest to test the UI unelevated.
+option(WINROUTE_REQUIRE_ADMIN "Embed a manifest that requires administrator rights" ON)
+if(WINROUTE_BUILD_GUI)
+qt_add_executable(WinRoute WIN32
+    src/main.cpp
+    ${UI_SOURCES}
+    resources/app.rc
+)
+target_link_libraries(WinRoute PRIVATE winroute_core Qt6::Widgets)
+if(WINROUTE_REQUIRE_ADMIN)
+    target_compile_definitions(WinRoute PRIVATE WINROUTE_REQUIRE_ADMIN)
+endif()
+
+# Translations: "cmake --build build --target update_translations" refreshes the .ts files
+# from the sources of both targets; the compiled .qm files are embedded under :/i18n.
+qt_add_lupdate(TS_FILES ${TS_FILES} SOURCE_TARGETS WinRoute winroute_core LUPDATE_TARGET update_translations
+               OPTIONS -no-obsolete -locations none)
+qt_add_lrelease(TS_FILES ${TS_FILES} QM_FILES_OUTPUT_VARIABLE WINROUTE_QM_FILES)
+set(QT_TRANSLATIONS_DIR ${QT6_INSTALL_PREFIX}/${QT6_INSTALL_TRANSLATIONS})
+set(QT_QM_FILES ${QT_TRANSLATIONS_DIR}/qtbase_zh_CN.qm ${QT_TRANSLATIONS_DIR}/qtbase_ja.qm)
+foreach(qm ${WINROUTE_QM_FILES} ${QT_QM_FILES})
+    get_filename_component(qm_name ${qm} NAME)
+    set_source_files_properties(${qm} PROPERTIES QT_RESOURCE_ALIAS ${qm_name})
+endforeach()
+qt_add_resources(WinRoute "translations" PREFIX "/i18n" FILES ${WINROUTE_QM_FILES} ${QT_QM_FILES})
+
+add_custom_command(TARGET WinRoute POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NETFILTER_API_DLL} $<TARGET_FILE_DIR:WinRoute>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NETFILTER_DRIVER} $<TARGET_FILE_DIR:WinRoute>
+)
+endif()
+
+# Tests for the platform-independent pieces (profile IO, rule matching, DNS, proxy protocols).
+enable_testing()
+add_executable(winroute_tests tests/tests.cpp)
+target_link_libraries(winroute_tests PRIVATE winroute_core)
+add_test(NAME winroute_tests COMMAND winroute_tests)

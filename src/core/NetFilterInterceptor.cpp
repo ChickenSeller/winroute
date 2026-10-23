@@ -1,0 +1,480 @@
+#include "NetFilterInterceptor.h"
+#include "DnsMessage.h"
+#include "FakeDns.h"
+#include "FlowTable.h"
+#include "Logger.h"
+#include "ProcessInfo.h"
+#include "Utils.h"
+
+#include <QCoreApplication>
+#include <QDateTime>
+#include <QDir>
+#include <QFileInfo>
+
+namespace {
+
+NetFilterInterceptor *g_instance = nullptr;
+
+void NFAPI_CC cbThreadStart() {}
+void NFAPI_CC cbThreadEnd() {}
+void NFAPI_CC cbTcpConnectRequest(ENDPOINT_ID id, PNF_TCP_CONN_INFO info)
+{
+    if (g_instance)
+        g_instance->onTcpConnectRequest(id, info);
+}
+void NFAPI_CC cbTcpConnected(ENDPOINT_ID, PNF_TCP_CONN_INFO) {}
+void NFAPI_CC cbTcpClosed(ENDPOINT_ID, PNF_TCP_CONN_INFO) {}
+void NFAPI_CC cbTcpReceive(ENDPOINT_ID, const char *, int) {}
+void NFAPI_CC cbTcpSend(ENDPOINT_ID, const char *, int) {}
+void NFAPI_CC cbTcpCanReceive(ENDPOINT_ID) {}
+void NFAPI_CC cbTcpCanSend(ENDPOINT_ID) {}
+void NFAPI_CC cbUdpCreated(ENDPOINT_ID, PNF_UDP_CONN_INFO) {}
+void NFAPI_CC cbUdpConnectRequest(ENDPOINT_ID, PNF_UDP_CONN_REQUEST) {}
+void NFAPI_CC cbUdpClosed(ENDPOINT_ID, PNF_UDP_CONN_INFO) {}
+void NFAPI_CC cbUdpReceive(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len, PNF_UDP_OPTIONS opt)
+{
+    if (g_instance)
+        g_instance->onUdpReceive(id, remote, buf, len, opt);
+}
+void NFAPI_CC cbUdpSend(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len, PNF_UDP_OPTIONS opt)
+{
+    if (g_instance)
+        g_instance->onUdpSend(id, remote, buf, len, opt);
+}
+void NFAPI_CC cbUdpCanReceive(ENDPOINT_ID) {}
+void NFAPI_CC cbUdpCanSend(ENDPOINT_ID) {}
+
+NF_EventHandler g_handler = {
+    cbThreadStart, cbThreadEnd,
+    cbTcpConnectRequest, cbTcpConnected, cbTcpClosed, cbTcpReceive, cbTcpSend, cbTcpCanReceive, cbTcpCanSend,
+    cbUdpCreated, cbUdpConnectRequest, cbUdpClosed, cbUdpReceive, cbUdpSend, cbUdpCanReceive, cbUdpCanSend,
+};
+
+QHostAddress fromSockaddr(const unsigned char *raw, quint16 *port)
+{
+    const auto *sa = reinterpret_cast<const sockaddr *>(raw);
+    if (sa->sa_family == AF_INET) {
+        const auto *in = reinterpret_cast<const sockaddr_in *>(raw);
+        *port = ntohs(in->sin_port);
+        return QHostAddress(ntohl(in->sin_addr.s_addr));
+    }
+    if (sa->sa_family == AF_INET6) {
+        const auto *in6 = reinterpret_cast<const sockaddr_in6 *>(raw);
+        *port = ntohs(in6->sin6_port);
+        return util::normalize(QHostAddress(reinterpret_cast<const quint8 *>(&in6->sin6_addr)));
+    }
+    *port = 0;
+    return {};
+}
+
+QString endpointKey(const QHostAddress &a, quint16 port)
+{
+    return util::formatEndpoint(a, port);
+}
+
+// DnsFlushResolverCache is exported by dnsapi.dll but not declared in the SDK headers.
+void flushSystemDnsCache()
+{
+    using FlushFn = BOOL(WINAPI *)();
+    HMODULE dnsapi = LoadLibraryW(L"dnsapi.dll");
+    if (!dnsapi)
+        return;
+    auto flush = reinterpret_cast<FlushFn>(reinterpret_cast<void *>(GetProcAddress(dnsapi, "DnsFlushResolverCache")));
+    if (flush && flush())
+        logVerbose(QCoreApplication::translate("Interceptor", "Windows DNS cache flushed"));
+    FreeLibrary(dnsapi);
+}
+
+} // namespace
+
+NetFilterInterceptor::NetFilterInterceptor()
+{
+    m_selfPid = GetCurrentProcessId();
+    m_selfSession = procinfo::currentSessionId();
+}
+
+NetFilterInterceptor::~NetFilterInterceptor()
+{
+    stop();
+}
+
+static QString driverInstallPath()
+{
+    wchar_t sys[MAX_PATH];
+    GetSystemDirectoryW(sys, MAX_PATH);
+    return QDir(QString::fromWCharArray(sys)).filePath(QString("drivers/%1.sys").arg(NetFilterInterceptor::kDriverName));
+}
+
+static bool serviceExists()
+{
+    SC_HANDLE scm = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+    if (!scm)
+        return false;
+    SC_HANDLE svc = OpenServiceW(scm, L"netfilter2", SERVICE_QUERY_STATUS);
+    const bool exists = svc != nullptr;
+    if (svc)
+        CloseServiceHandle(svc);
+    CloseServiceHandle(scm);
+    return exists;
+}
+
+bool NetFilterInterceptor::ensureDriver(QString *error)
+{
+    const QString installed = driverInstallPath();
+    const QString bundled = QDir(QCoreApplication::applicationDirPath()).filePath(QString("%1.sys").arg(kDriverName));
+    const bool haveService = serviceExists();
+    if (haveService && QFileInfo::exists(installed))
+        return true;
+
+    if (!QFileInfo::exists(installed)) {
+        if (!QFileInfo::exists(bundled)) {
+            *error = QCoreApplication::translate("Interceptor", "Driver file %1 was not found").arg(QDir::toNativeSeparators(bundled));
+            return false;
+        }
+        if (!CopyFileW(reinterpret_cast<LPCWSTR>(QDir::toNativeSeparators(bundled).utf16()),
+                       reinterpret_cast<LPCWSTR>(QDir::toNativeSeparators(installed).utf16()), FALSE)) {
+            *error = QCoreApplication::translate("Interceptor", "Cannot copy the driver to %1 (error %2)").arg(QDir::toNativeSeparators(installed)).arg(GetLastError());
+            return false;
+        }
+    }
+    const NF_STATUS st = m_api->registerDriver(kDriverName);
+    if (st != NF_STATUS_SUCCESS) {
+        *error = QCoreApplication::translate("Interceptor", "Cannot register the driver: %1").arg(nfStatusString(st));
+        return false;
+    }
+    logNormal(QCoreApplication::translate("Interceptor", "Network driver %1 installed").arg(kDriverName));
+    return true;
+}
+
+bool NetFilterInterceptor::uninstallDriver(QString *error)
+{
+    const NetFilterApi *api = NetFilterApi::load(error);
+    if (!api)
+        return false;
+    const NF_STATUS st = api->unRegisterDriver(kDriverName);
+    if (st != NF_STATUS_SUCCESS) {
+        if (error)
+            *error = nfStatusString(st);
+        return false;
+    }
+    DeleteFileW(reinterpret_cast<LPCWSTR>(QDir::toNativeSeparators(driverInstallPath()).utf16()));
+    return true;
+}
+
+bool NetFilterInterceptor::installRules(QString *error)
+{
+    NF_RULE rule;
+    auto add = [&](const char *what) {
+        const NF_STATUS st = m_api->addRule(&rule, FALSE);
+        if (st != NF_STATUS_SUCCESS && error)
+            *error = QCoreApplication::translate("Interceptor", "Cannot add driver rule (%1): %2").arg(what, nfStatusString(st));
+        return st == NF_STATUS_SUCCESS;
+    };
+
+    // 1. Our own traffic (relay upstream connections, resolver) is never touched.
+    memset(&rule, 0, sizeof(rule));
+    rule.processId = m_selfPid;
+    rule.filteringFlag = NF_ALLOW;
+    if (!add("self"))
+        return false;
+
+    // 2. Loopback traffic stays local.
+    memset(&rule, 0, sizeof(rule));
+    rule.ip_family = AF_INET;
+    rule.remoteIpAddress[0] = 127;
+    rule.remoteIpAddressMask[0] = 255;
+    rule.filteringFlag = NF_ALLOW;
+    if (!add("loopback"))
+        return false;
+    memset(&rule, 0, sizeof(rule));
+    rule.ip_family = AF_INET6;
+    rule.remoteIpAddress[15] = 1;
+    memset(rule.remoteIpAddressMask, 0xFF, sizeof(rule.remoteIpAddressMask));
+    rule.filteringFlag = NF_ALLOW;
+    if (!add("loopback6"))
+        return false;
+
+    // 3. DNS datagrams in both directions.
+    memset(&rule, 0, sizeof(rule));
+    rule.protocol = IPPROTO_UDP;
+    rule.direction = NF_D_BOTH;
+    rule.remotePort = htons(53);
+    rule.filteringFlag = NF_FILTER;
+    if (!add("dns"))
+        return false;
+
+    // 4. Outgoing TCP connect requests are indicated to tcpConnectRequest().
+    memset(&rule, 0, sizeof(rule));
+    rule.protocol = IPPROTO_TCP;
+    rule.direction = NF_D_OUT;
+    rule.filteringFlag = NF_INDICATE_CONNECT_REQUESTS;
+    return add("tcp");
+}
+
+bool NetFilterInterceptor::start(const InterceptorContext &ctx, QString *error)
+{
+    if (m_running)
+        return true;
+    m_api = NetFilterApi::load(error);
+    if (!m_api)
+        return false;
+    if (!procinfo::isElevated()) {
+        *error = QCoreApplication::translate("Interceptor", "Administrator rights are required to control the network driver");
+        return false;
+    }
+    if (!ensureDriver(error))
+        return false;
+
+    m_ctx = ctx;
+    g_instance = this;
+    m_api->adjustProcessPriviledges();
+    m_api->setOptions(4, 0);
+    const NF_STATUS st = m_api->init(kDriverName, &g_handler);
+    if (st != NF_STATUS_SUCCESS) {
+        g_instance = nullptr;
+        *error = QCoreApplication::translate("Interceptor", "Cannot connect to the network driver %1: %2").arg(kDriverName, nfStatusString(st));
+        return false;
+    }
+    if (!installRules(error)) {
+        m_api->free();
+        g_instance = nullptr;
+        return false;
+    }
+    m_running = true;
+    // Names already in the Windows DNS client cache would be answered without a
+    // DNS packet, so their IP -> host name mapping would never be learned.
+    flushSystemDnsCache();
+    return true;
+}
+
+void NetFilterInterceptor::stop()
+{
+    if (!m_running)
+        return;
+    m_running = false;
+    m_api->deleteRules();
+    m_api->free();
+    g_instance = nullptr;
+}
+
+void NetFilterInterceptor::setRules(RuleEnginePtr rules)
+{
+    QSet<QString> hosts, endpoints;
+    if (rules) {
+        for (const ProxyServer &p : rules->profile().proxies) {
+            const QHostAddress literal(p.address);
+            if (literal.isNull())
+                hosts.insert(p.address.toLower());
+            else
+                endpoints.insert(endpointKey(util::normalize(literal), p.port));
+        }
+    }
+    QMutexLocker lock(&m_rulesMutex);
+    m_rules = std::move(rules);
+    m_proxyHosts = hosts;
+    m_proxyEndpoints = endpoints;
+}
+
+RuleEnginePtr NetFilterInterceptor::rules() const
+{
+    QMutexLocker lock(&m_rulesMutex);
+    return m_rules;
+}
+
+QString NetFilterInterceptor::processPath(quint32 pid, const QString &fallback) const
+{
+    if (!fallback.isEmpty() || !m_api)
+        return fallback;
+    wchar_t buf[1024];
+    if (m_api->getProcessNameFromKernel(pid, buf, DWORD(std::size(buf)))) {
+        wchar_t longBuf[1024];
+        if (GetLongPathNameW(buf, longBuf, DWORD(std::size(longBuf))))
+            return QString::fromWCharArray(longBuf);
+        return QString::fromWCharArray(buf);
+    }
+    return {};
+}
+
+void NetFilterInterceptor::onTcpConnectRequest(ENDPOINT_ID id, PNF_TCP_CONN_INFO ci)
+{
+    if (!m_running)
+        return;
+    quint16 dport = 0, sport = 0;
+    const QHostAddress dst = fromSockaddr(ci->remoteAddress, &dport);
+    const QHostAddress src = fromSockaddr(ci->localAddress, &sport);
+    const quint32 pid = ci->processId;
+    if (pid == m_selfPid || dst.isNull() || dst.isLoopback())
+        return;
+
+    const RuleEnginePtr engine = rules();
+    if (!engine)
+        return;
+    const ProfileOptions &opt = engine->profile().options;
+
+    procinfo::Info pinfo = procinfo::lookup(pid);
+    pinfo.path = processPath(pid, pinfo.path);
+    if (!pinfo.path.isEmpty())
+        pinfo.name = QFileInfo(pinfo.path).fileName();
+    const bool isService = pid == 4 || pinfo.sessionId == 0;
+    if (isService && !opt.processServices)
+        return;
+    if (!isService && pinfo.sessionId != m_selfSession && !opt.processOtherUsers)
+        return;
+
+    QString host;
+    const bool fake = FakeDns::isFake(dst);
+    if (fake) {
+        host = m_ctx.fakeDns->hostnameFor(dst);
+        if (host.isEmpty()) {
+            ci->filteringFlag = NF_BLOCK;
+            logError(QCoreApplication::translate("Interceptor", "%1 - %2 error : unknown fake DNS address, the name was resolved before WinRoute started")
+                         .arg(pinfo.name, util::formatEndpoint(dst, dport)));
+            return;
+        }
+    } else {
+        host = m_ctx.dnsCache->lookup(dst);
+    }
+
+    ConnectionRequest req;
+    req.appPath = pinfo.path;
+    req.appName = pinfo.name;
+    req.pid = pid;
+    req.ip = fake ? QHostAddress() : dst;
+    req.hostname = host;
+    req.port = dport;
+    const RuleMatch match = engine->match(req);
+    const QString target = host.isEmpty() ? util::formatEndpoint(dst, dport) : QString("%1:%2").arg(host).arg(dport);
+
+    switch (match.action.type) {
+    case ActionType::Block:
+        ci->filteringFlag = NF_BLOCK;
+        logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : blocked").arg(pinfo.name, target, match.ruleName));
+        return;
+    case ActionType::Direct:
+        if (!fake && !opt.handleDirectConnections) {
+            logVerbose(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : direct connection").arg(pinfo.name, target, match.ruleName));
+            return;
+        }
+        break;
+    case ActionType::Proxy:
+    case ActionType::Chain: {
+        if (!fake && opt.loopDetection) {
+            QMutexLocker lock(&m_rulesMutex);
+            if (m_proxyEndpoints.contains(endpointKey(dst, dport))) {
+                lock.unlock();
+                logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 is a proxy server; connecting directly to prevent a connection loop")
+                              .arg(pinfo.name, target));
+                return;
+            }
+        }
+        break;
+    }
+    }
+
+    const bool v6 = reinterpret_cast<const sockaddr *>(ci->remoteAddress)->sa_family == AF_INET6;
+    if (v6 && !m_ctx.relayIPv6) {
+        logError(QCoreApplication::translate("Interceptor", "%1 - %2 error : IPv6 relay is not available, connecting directly").arg(pinfo.name, target));
+        return;
+    }
+
+    RedirectInfo info;
+    info.connId = id;
+    info.pid = pid;
+    info.appPath = pinfo.path;
+    info.appName = pinfo.name;
+    info.srcAddr = src;
+    info.srcPort = sport;
+    info.dstAddr = dst;
+    info.dstPort = dport;
+    info.hostname = host;
+    info.fakeIp = fake;
+    info.match = match;
+    info.createdMs = QDateTime::currentMSecsSinceEpoch();
+    m_ctx.flows->add(info);
+
+    // Point the connection at the relay, on the same local address when known.
+    if (!v6) {
+        sockaddr_in addr{};
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(m_ctx.relayPort);
+        const auto *local = reinterpret_cast<const sockaddr_in *>(ci->localAddress);
+        addr.sin_addr.s_addr = local->sin_addr.s_addr ? local->sin_addr.s_addr : htonl(INADDR_LOOPBACK);
+        memcpy(ci->remoteAddress, &addr, sizeof(addr));
+    } else {
+        sockaddr_in6 addr{};
+        addr.sin6_family = AF_INET6;
+        addr.sin6_port = htons(m_ctx.relayPort);
+        const auto *local = reinterpret_cast<const sockaddr_in6 *>(ci->localAddress);
+        static const unsigned char zero[16] = {};
+        if (memcmp(&local->sin6_addr, zero, 16) != 0)
+            addr.sin6_addr = local->sin6_addr;
+        else
+            addr.sin6_addr.s6_addr[15] = 1;
+        memcpy(ci->remoteAddress, &addr, sizeof(addr));
+    }
+    // Lets the driver accept a connection redirected to a local proxy.
+    ci->processId = m_selfPid;
+}
+
+bool NetFilterInterceptor::resolveViaProxy(const ProfileOptions &opt) const
+{
+    return opt.dnsAutoDetect ? !m_localDnsAvailable : opt.dnsViaProxy;
+}
+
+bool NetFilterInterceptor::shouldFakeResolve(const RuleEngine &engine, const QString &name) const
+{
+    const ProfileOptions &opt = engine.profile().options;
+    if (!resolveViaProxy(opt) || name.isEmpty())
+        return false;
+    const QString lower = name.toLower();
+    if (lower.endsWith(".arpa") || lower == "localhost" || lower.endsWith(".localhost"))
+        return false;
+    {
+        QMutexLocker lock(&m_rulesMutex);
+        if (m_proxyHosts.contains(lower))
+            return false;
+    }
+    const bool listed = RuleEngine::matchHostList(util::splitList(opt.dnsExclusionList), lower, QHostAddress());
+    return opt.dnsOnlyFromList ? listed : !listed;
+}
+
+void NetFilterInterceptor::onUdpSend(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len,
+                                     PNF_UDP_OPTIONS opt)
+{
+    const RuleEnginePtr engine = m_running ? rules() : nullptr;
+    if (engine && resolveViaProxy(engine->profile().options)) {
+        const QByteArray query(buf, len);
+        dns::Question q;
+        if (dns::parseQuestion(query, &q) && !(q.flags & 0x8000) && q.qclass == 1 && shouldFakeResolve(*engine, q.name)) {
+            const bool blockOthers = engine->profile().options.dnsBlockNonATypes;
+            QByteArray response;
+            if (q.qtype == dns::TypeA) {
+                const QHostAddress fake = m_ctx.fakeDns->addressFor(q.name);
+                response = dns::buildResponse(query, q, {fake}, 10);
+                logDebug(QCoreApplication::translate("Interceptor", "DNS %1 resolved through proxy as %2").arg(q.name, fake.toString()));
+            } else if (q.qtype == dns::TypeAAAA || q.qtype == dns::TypeHTTPS || blockOthers) {
+                // Force clients onto the fake IPv4 address.
+                response = dns::buildResponse(query, q, {}, 10);
+            }
+            if (!response.isEmpty()) {
+                m_api->udpPostReceive(id, remote, response.constData(), int(response.size()), opt);
+                return;
+            }
+        }
+    }
+    m_api->udpPostSend(id, remote, buf, len, opt);
+}
+
+void NetFilterInterceptor::onUdpReceive(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len,
+                                        PNF_UDP_OPTIONS opt)
+{
+    dns::Question q;
+    QList<dns::Answer> answers;
+    if (dns::parseAnswers(QByteArray::fromRawData(buf, len), &q, &answers)) {
+        for (const auto &a : answers) {
+            if ((a.type == dns::TypeA || a.type == dns::TypeAAAA) && !a.address.isNull() && !FakeDns::isFake(a.address))
+                m_ctx.dnsCache->insert(a.address, q.name);
+        }
+    }
+    m_api->udpPostReceive(id, remote, buf, len, opt);
+}
