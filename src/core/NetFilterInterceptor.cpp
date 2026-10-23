@@ -9,6 +9,7 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 
 namespace {
@@ -162,13 +163,31 @@ static bool stopAndDeleteService(QString *error)
     return true;
 }
 
-bool NetFilterInterceptor::installDriver(QString *error)
+static bool sameFile(const QString &a, const QString &b)
+{
+    QFile fa(a), fb(b);
+    if (!fa.open(QIODevice::ReadOnly) || !fb.open(QIODevice::ReadOnly) || fa.size() != fb.size())
+        return false;
+    return fa.readAll() == fb.readAll();
+}
+
+bool NetFilterInterceptor::installDriver(QString *error, bool replaceDifferent)
 {
     const NetFilterApi *api = NetFilterApi::load(error);
     if (!api)
         return false;
     const QString installed = driverInstallPath();
     const QString bundled = QDir(QCoreApplication::applicationDirPath()).filePath(QString("%1.sys").arg(kDriverName));
+    // The installer may bring a different driver than the installed one (the user
+    // can choose between drivers): stop and remove the old one first.
+    if (replaceDifferent && QFileInfo::exists(installed) && QFileInfo::exists(bundled) && !sameFile(installed, bundled)) {
+        if (serviceState() != 0 && !stopAndDeleteService(error))
+            return false;
+        if (!DeleteFileW(reinterpret_cast<LPCWSTR>(QDir::toNativeSeparators(installed).utf16()))) {
+            *error = QCoreApplication::translate("Interceptor", "Cannot delete %1 (error %2)").arg(QDir::toNativeSeparators(installed)).arg(GetLastError());
+            return false;
+        }
+    }
     // A disabled or stopped service (e.g. left by an earlier uninstall) is registered again.
     if (serviceState() == SERVICE_RUNNING && QFileInfo::exists(installed))
         return true;

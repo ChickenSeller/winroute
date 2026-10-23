@@ -29,7 +29,8 @@ public:
     // Copies netfilter2.sys next to the executable into System32\drivers and registers
     // the service if needed; removes both again. Used by start() and by the installer
     // through the --install-driver / --uninstall-driver command line switches.
-    static bool installDriver(QString *error);
+    // With replaceDifferent an installed driver that differs from the bundled one is replaced.
+    static bool installDriver(QString *error, bool replaceDifferent = false);
     static bool uninstallDriver(QString *error);
 
     // NF_EventHandler callbacks, dispatched from nfapi worker threads.

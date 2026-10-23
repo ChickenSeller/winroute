@@ -1,14 +1,112 @@
 stages:
+  - sync
+  - release
   - deploy
+
+# Set these under Settings > CI/CD > Variables:
+#   GITHUB_REPO   owner/name of the GitHub repository, e.g. kaguya/winroute
+#   GITHUB_TOKEN  fine-grained token for that repository only, with
+#                 Contents: read and write, Workflows: read and write (to
+#                 push .github/workflows) and Actions: read-only (to notice a
+#                 failed build). Mark it Masked and Protected,
+#                 and protect the v* tags so release pipelines can use it.
+.github:
+  image:
+    name: alpine/git:latest
+    entrypoint: [""]
+  variables:
+    # GitHub rejects pushes from a shallow clone, so fetch the full history.
+    GIT_DEPTH: 0
+    GIT_STRATEGY: clone
+  before_script:
+    - test -n "$GITHUB_REPO" || { echo "GITHUB_REPO is not set"; exit 1; }
+    - test -n "$GITHUB_TOKEN" || { echo "GITHUB_TOKEN is not set"; exit 1; }
+    - git remote add github "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git"
+
+# Mirrors the default branch and all tags to GitHub. Runs only when started
+# by hand from the pipeline page.
+sync-github:
+  extends: .github
+  stage: sync
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+  script:
+    # Not a force push: if GitHub has commits GitLab lacks, this fails rather
+    # than discarding them.
+    - git push github "HEAD:refs/heads/${CI_DEFAULT_BRANCH}"
+    - git push github --tags
+
+# --- Release ------------------------------------------------------------------
+# Pushing a version tag (v1.2.3) here releases it:
+#   1. sync-tag-github pushes the tag to GitHub;
+#   2. GitHub Actions (.github/workflows/release.yml) builds the installer and
+#      publishes a GitHub release with it;
+#   3. release-from-github waits for that, copies the installer into this
+#      project's package registry and creates the GitLab release, which the
+#      homepage's release list shows (deploy/nginx/).
+# The tag must match project(... VERSION) in CMakeLists.txt; its message
+# becomes the release notes.
+.version-tag:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+
+sync-tag-github:
+  extends: [.github, .version-tag]
+  stage: sync
+  script:
+    - git push github "refs/tags/${CI_COMMIT_TAG}"
+
+release-from-github:
+  extends: .version-tag
+  stage: release
+  image: alpine:latest
+  needs: [sync-tag-github]
+  # The build on GitHub takes a while; this job polls until it is done.
+  timeout: 3h
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - apk add --no-cache curl jq
+    - |
+      version="${CI_COMMIT_TAG#v}"
+      name="WinRoute-${version}-setup.exe"
+      github() { curl -fsS -H "Authorization: Bearer ${GITHUB_TOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPO}/$1" 2>/dev/null; }
+      # The download URL of the uploaded installer of the GitHub release, or nothing.
+      asset_url() {
+        github "releases/tags/${CI_COMMIT_TAG}" \
+          | jq -r --arg name "$name" '.assets[] | select(.name == $name and .state == "uploaded") | .url' || true
+      }
+      echo "Waiting for ${name} in the GitHub release ${CI_COMMIT_TAG}"
+      echo "(progress: https://github.com/${GITHUB_REPO}/actions)"
+      while [ -z "$(asset_url)" ]; do
+        # Stop early when the build for this tag has failed.
+        conclusion=$(github "actions/workflows/release.yml/runs?branch=${CI_COMMIT_TAG}&per_page=1" \
+          | jq -r '.workflow_runs[0].conclusion // empty' || true)
+        case "$conclusion" in
+          failure|cancelled|timed_out|startup_failure)
+            echo "The GitHub build of ${CI_COMMIT_TAG} ended with: $conclusion"; exit 1 ;;
+        esac
+        sleep 60
+      done
+
+      # The package registry keeps the file for good (job artifacts expire).
+      curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" -H "Accept: application/octet-stream" -o "$name" "$(asset_url)"
+      package="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/winroute/${version}/${name}"
+      curl -fsS -H "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "$name" "$package"
+      echo
+
+      jq -n --arg tag "$CI_COMMIT_TAG" --arg version "$version" --arg name "$name" --arg url "$package" \
+            --arg notes "${CI_COMMIT_TAG_MESSAGE:-WinRoute $version}" \
+        '{tag_name: $tag, name: ("WinRoute " + $version), description: $notes,
+          assets: {links: [{name: ("Windows x64 installer (" + $name + ")"), url: $url,
+                            direct_asset_path: ("/" + $name), link_type: "package"}]}}' > release.json
+      curl -fsS -H "JOB-TOKEN: ${CI_JOB_TOKEN}" -H "Content-Type: application/json" --data @release.json \
+        "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/releases" > /dev/null
+      echo "Released: ${CI_PROJECT_URL}/-/releases/${CI_COMMIT_TAG}"
 
 # The project homepage (site/) on GitLab Pages. Deploys when the site changes
 # on the default branch, and can be started by hand.
-#
-# Releases are not built here: the build needs the NetFilter SDK and the signed
-# driver, which are not in the repository. tools/publish-release.ps1 builds the
-# installer locally, uploads it to the package registry and creates the
-# release; the release page reads them live through the web server
-# (releases.json, see deploy/nginx/).
 pages:
   stage: deploy
   image: alpine:latest
@@ -23,7 +121,8 @@ pages:
     - cp -r site/. public/
     # Stylesheet and scripts are linked with the commit (style.css?v=<sha>):
     # caches such as Cloudflare keep them for a day, while the page itself is
-    # fetched fresh.
+    # fetched fresh. The release list (releases.json) is not part of the site:
+    # the web server reads it live from the GitLab releases (deploy/nginx/).
     - >
       sed -i
       -e "s|%PROJECT_URL%|${CI_PROJECT_URL}|g"

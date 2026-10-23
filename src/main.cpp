@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     const bool installDriver = args.contains("--install-driver");
     if (installDriver || args.contains("--uninstall-driver")) {
         QString error;
-        const bool ok = installDriver ? NetFilterInterceptor::installDriver(&error)
+        const bool ok = installDriver ? NetFilterInterceptor::installDriver(&error, true)
                                       : NetFilterInterceptor::uninstallDriver(&error);
         if (!ok && !args.contains("--quiet"))
             QMessageBox::critical(nullptr, "WinRoute",

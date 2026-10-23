@@ -52,13 +52,14 @@ windeployqt --release build/WinRoute.exe
 cmake --build build --target installer    # 生成 build/WinRoute-<版本>-setup.exe
 ```
 
-这个目标会把 `WinRoute.exe`、`nfapi.dll`、`netfilter2.sys` 复制到 `build/stage`，用 `windeployqt` 补齐 Qt 和 MinGW 运行库，再调用 `ISCC` 打包。
+这个目标会把 `WinRoute.exe`、`nfapi.dll` 和两个驱动（`drivers/demo/`、`drivers/zhengyun/`）复制到 `build/stage`，用 `windeployqt` 补齐 Qt 和 MinGW 运行库，再调用 `ISCC` 打包。
 
-- **安装**：需要管理员权限，界面支持中文、日语、英语。文件复制完成后执行 `WinRoute.exe --install-driver --quiet` 注册并启动驱动。可选创建桌面快捷方式和开机自启动计划任务。
+- **安装**：需要管理员权限，界面支持中文、日语、英语。可选创建桌面快捷方式和开机自启动计划任务。
+- **选择驱动**：“网络驱动”页用下拉框选择，默认 **NetFilter SDK 演示驱动**（1.7.2.9，`NETFILTER_DEMO_DRIVER`，默认取自 SDK 的 `wfp/bin/driver/x64/`）。演示驱动拦截的连接数有上限，超过后要重启 Windows 才恢复。另一项是四川征云签名的正式版驱动（1.7.1.8，`NETFILTER_DRIVER`）。升级时沿用上次的选择。只安装选中的那个驱动，文件复制完成后执行 `WinRoute.exe --install-driver --quiet` 注册并启动；如果系统里已装的是另一个驱动，会先停掉并替换。
 - **卸载**：删除开机自启动计划任务，执行 `WinRoute.exe --uninstall-driver --quiet` 停止驱动、删除服务和 `System32\drivers
 etfilter2.sys`，再询问是否删除配置文件、设置和日志（静默卸载时保留）。
 - **运行检测**：WinRoute 运行时会创建互斥量 `WinRoute.AppMutex`，安装和卸载前都会提示先关闭程序。
-- **静默安装**：`WinRoute-0.1.0-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /TASKS=autostart`
+- **静默安装**：`WinRoute-0.1.0-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /TASKS=autostart /DRIVER=demo`（`/DRIVER=zhengyun` 选择征云驱动；不写时，首次安装用演示驱动，升级时沿用上次的选择）
 - **代码签名**：在 `WinRoute.iss` 中启用 `SignTool` 和 `SignedUninstaller` 两行，并给 ISCC 配置签名工具。
 - `installer/ChineseSimplified.isl` 是 Inno Setup 6.7.3 的简体中文非官方翻译，取自 jrsoftware/issrc。
 
@@ -68,12 +69,30 @@ etfilter2.sys`，再询问是否删除配置文件、设置和日志（静默卸
 
 - **主页**：`index.html` 和版本页 `releases.html`，中日英三语，语言切换和译文在 `i18n.js`。图标是 Material Symbols（Apache-2.0）。
 - **部署**：`.gitlab-ci.yml` 的 `pages` 任务在 `site/` 有改动时，把它发布到 GitLab Pages，并替换 `%PROJECT_URL%` 等占位符。
-- **版本列表**：版本页读取 `releases.json`，由 pages.yanlei.org 上的 OpenResty 实时从 GitLab 的 Release 生成。安装包通过 `/winroute-downloads/<版本>/<文件>` 转发自项目的软件包仓库。服务器端配置在 `deploy/nginx/`，使用前要把 `<PROJECT_ID>` 换成项目 ID，并在服务器上放好两个令牌文件。
-- **发布新版本**：构建需要 SDK 和驱动，所以在本机发布：
-  1. 修改 `CMakeLists.txt` 里的版本号，提交并推送；
-  2. 执行 `tools\publish-release.ps1 -Notes "..."`（需要环境变量 `GITLAB_TOKEN`，权限为 api）。
+- **版本列表**：版本页读取 `releases.json`，由 pages.yanlei.org 上的 OpenResty 实时从 GitLab 的 Release 生成。安装包通过 `/winroute-downloads/<版本>/<文件>` 转发自项目的软件包仓库。服务器端配置在 `deploy/nginx/`（项目 ID 151），两个令牌文件只放在服务器上。
 
-  脚本会构建安装包，上传到软件包仓库，并在当前提交上创建版本 `v<版本>`。
+## 发布新版本
+
+GitLab Runner 是 Linux，Windows 安装包由 GitHub Actions 构建，流程与 Glimpse 相同：
+
+1. 修改 `CMakeLists.txt` 里的版本号，提交并推送；
+2. 打带说明的标签并推送：`git tag -a v0.1.0 -m "WinRoute 0.1.0"`，然后 `git push origin v0.1.0`。标签说明会成为版本说明：以 `- ` 开头的行是列表项，`New`、`Fixes` 这类短行是小标题。
+
+接下来自动完成：
+
+1. GitLab 的 `sync-tag-github` 把标签推到 GitHub；
+2. `.github/workflows/release.yml` 在 Windows 上构建、跑测试、打安装包，并创建 GitHub Release；
+3. GitLab 的 `release-from-github` 等它完成后，把安装包存进本项目的软件包仓库，并创建 GitLab Release；
+4. 一分钟内主页的版本列表就会出现新版本。
+
+NetFilter SDK 和驱动不在仓库里。GitHub 构建时，从本项目的软件包仓库下载 `winroute-build-deps`，并按 `release.yml` 中的 SHA-256 校验。SDK 或驱动有变化时，执行 `tools\upload-build-deps.ps1 -Version <新版本>`，再把输出的版本和 SHA-256 填进 `release.yml`。
+
+需要设置的密钥：
+
+- GitLab CI/CD 变量：`GITHUB_REPO`（如 `kaguya/winroute`）、`GITHUB_TOKEN`（只限这个仓库的细粒度令牌：Contents 和 Workflows 读写，Actions 只读；设为 Masked、Protected，并保护 `v*` 标签）。
+- GitHub 仓库 secret：`BUILD_DEPS_TOKEN`，即 GitLab 部署令牌，只勾 `read_package_registry`。
+
+不经过 GitHub 时，也可以在装有 SDK 的本机执行 `tools\publish-release.ps1 -Notes "..."` 直接发布（需要 `GITLAB_TOKEN`，权限 api）。
 
 本地预览主页：
 
