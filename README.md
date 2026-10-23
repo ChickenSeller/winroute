@@ -44,6 +44,45 @@ windeployqt --release build/WinRoute.exe
 
 加 `-DWINROUTE_REQUIRE_ADMIN=OFF` 可以构建不带管理员 manifest 的开发版，用于不提权调试界面（此时网络拦截不会启动）。
 
+## 安装器
+
+使用 Inno Setup 6（脚本在 `installer/WinRoute.iss`）。安装好 Inno Setup 6 后执行：
+
+```sh
+cmake --build build --target installer    # 生成 build/WinRoute-<版本>-setup.exe
+```
+
+这个目标会把 `WinRoute.exe`、`nfapi.dll`、`netfilter2.sys` 复制到 `build/stage`，用 `windeployqt` 补齐 Qt 和 MinGW 运行库，再调用 `ISCC` 打包。
+
+- **安装**：需要管理员权限，界面支持中文、日语、英语。文件复制完成后执行 `WinRoute.exe --install-driver --quiet` 注册并启动驱动。可选创建桌面快捷方式和开机自启动计划任务。
+- **卸载**：删除开机自启动计划任务，执行 `WinRoute.exe --uninstall-driver --quiet` 停止驱动、删除服务和 `System32\drivers
+etfilter2.sys`，再询问是否删除配置文件、设置和日志（静默卸载时保留）。
+- **运行检测**：WinRoute 运行时会创建互斥量 `WinRoute.AppMutex`，安装和卸载前都会提示先关闭程序。
+- **静默安装**：`WinRoute-1.0.0-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /TASKS=autostart`
+- **代码签名**：在 `WinRoute.iss` 中启用 `SignTool` 和 `SignedUninstaller` 两行，并给 ISCC 配置签名工具。
+- `installer/ChineseSimplified.isl` 是 Inno Setup 6.7.3 的简体中文非官方翻译，取自 jrsoftware/issrc。
+
+## 项目主页和发布
+
+主页在 `site/`，做法与 Glimpse 相同：
+
+- **主页**：`index.html` 和版本页 `releases.html`，中日英三语，语言切换和译文在 `i18n.js`。图标是 Material Symbols（Apache-2.0）。
+- **部署**：`.gitlab-ci.yml` 的 `pages` 任务在 `site/` 有改动时，把它发布到 GitLab Pages，并替换 `%PROJECT_URL%` 等占位符。
+- **版本列表**：版本页读取 `releases.json`，由 pages.yanlei.org 上的 OpenResty 实时从 GitLab 的 Release 生成。安装包通过 `/winroute-downloads/<版本>/<文件>` 转发自项目的软件包仓库。服务器端配置在 `deploy/nginx/`，使用前要把 `<PROJECT_ID>` 换成项目 ID，并在服务器上放好两个令牌文件。
+- **发布新版本**：构建需要 SDK 和驱动，所以在本机发布：
+  1. 修改 `CMakeLists.txt` 里的版本号，提交并推送；
+  2. 执行 `tools\publish-release.ps1 -Notes "..."`（需要环境变量 `GITLAB_TOKEN`，权限为 api）。
+
+  脚本会构建安装包，上传到软件包仓库，并在当前提交上创建版本 `v<版本>`。
+
+本地预览主页：
+
+```sh
+cd site && python -m http.server 8000
+```
+
+占位符不会被替换，所以页面上的链接无效；`releases.json` 需要自己准备一份测试数据。
+
 ## 多语言
 
 支持简体中文、日语和英语。默认跟随系统界面语言，可在“视图 > 语言”中切换，切换后需要重启程序。
@@ -60,7 +99,7 @@ cmake --build build
 ## 命令行
 
 - `--minimized`：启动到系统托盘（开机自启动用，自启动通过“最高权限”计划任务实现）
-- `--uninstall-driver`：停止并删除驱动服务
+- `--install-driver` / `--uninstall-driver`：安装、卸载驱动（安装器使用）；加 `--quiet` 时不弹窗，只用退出码表示结果（0 成功，1 失败）
 
 ## 尚未实现
 

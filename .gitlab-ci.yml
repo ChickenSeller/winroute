@@ -1,0 +1,35 @@
+stages:
+  - deploy
+
+# The project homepage (site/) on GitLab Pages. Deploys when the site changes
+# on the default branch, and can be started by hand.
+#
+# Releases are not built here: the build needs the NetFilter SDK and the signed
+# driver, which are not in the repository. tools/publish-release.ps1 builds the
+# installer locally, uploads it to the package registry and creates the
+# release; the release page reads them live through the web server
+# (releases.json, see deploy/nginx/).
+pages:
+  stage: deploy
+  image: alpine:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - site/**/*
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+  script:
+    - mkdir public
+    - cp -r site/. public/
+    # Stylesheet and scripts are linked with the commit (style.css?v=<sha>):
+    # caches such as Cloudflare keep them for a day, while the page itself is
+    # fetched fresh.
+    - >
+      sed -i
+      -e "s|%PROJECT_URL%|${CI_PROJECT_URL}|g"
+      -e "s|%DEFAULT_BRANCH%|${CI_DEFAULT_BRANCH}|g"
+      -e "s|%ASSET_VERSION%|${CI_COMMIT_SHORT_SHA}|g"
+      public/index.html public/releases.html
+  artifacts:
+    paths:
+      - public

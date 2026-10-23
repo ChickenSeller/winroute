@@ -237,6 +237,22 @@
       <translation>已清空 Windows DNS 缓存</translation>
     </message>
     <message>
+      <source>Cannot open the service manager (error %1)</source>
+      <translation>无法打开服务管理器（错误 %1）</translation>
+    </message>
+    <message>
+      <source>Cannot open the driver service (error %1)</source>
+      <translation>无法打开驱动服务（错误 %1）</translation>
+    </message>
+    <message>
+      <source>Cannot delete the driver service (error %1)</source>
+      <translation>无法删除驱动服务（错误 %1）</translation>
+    </message>
+    <message>
+      <source>The driver could not be stopped; it will be removed after a reboot</source>
+      <translation>无法停止驱动，将在重启后删除</translation>
+    </message>
+    <message>
       <source>Driver file %1 was not found</source>
       <translation>找不到驱动文件 %1</translation>
     </message>
@@ -251,6 +267,10 @@
     <message>
       <source>Network driver %1 installed</source>
       <translation>已安装网络驱动 %1</translation>
+    </message>
+    <message>
+      <source>Cannot delete %1 (error %2)</source>
+      <translation>无法删除 %1（错误 %2）</translation>
     </message>
     <message>
       <source>Cannot add driver rule (%1): %2</source>
@@ -1825,6 +1845,10 @@ Use check boxes to enable/disable a rule.</source>
   </context>
   <context>
     <name>main</name>
+    <message>
+      <source>Cannot install the network driver: %1</source>
+      <translation>无法安装网络驱动：%1</translation>
+    </message>
     <message>
       <source>Cannot uninstall the network driver: %1</source>
       <translation>无法卸载网络驱动：%1</translation>

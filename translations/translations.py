@@ -109,6 +109,12 @@ T = {
         ("%1 - %2 错误：IPv6 中继不可用，改为直接连接", "%1 - %2 エラー：IPv6 リレーを利用できないため直接接続します"),
     "DNS %1 resolved through proxy as %2": ("DNS %1 通过代理解析为 %2", "DNS %1 をプロキシ経由で %2 として解決しました"),
     "Cannot uninstall the network driver: %1": ("无法卸载网络驱动：%1", "ネットワークドライバーをアンインストールできません：%1"),
+    "Cannot install the network driver: %1": ("无法安装网络驱动：%1", "ネットワークドライバーをインストールできません：%1"),
+    "Cannot open the service manager (error %1)": ("无法打开服务管理器（错误 %1）", "サービスマネージャーを開けません（エラー %1）"),
+    "Cannot open the driver service (error %1)": ("无法打开驱动服务（错误 %1）", "ドライバーのサービスを開けません（エラー %1）"),
+    "Cannot delete the driver service (error %1)": ("无法删除驱动服务（错误 %1）", "ドライバーのサービスを削除できません（エラー %1）"),
+    "The driver could not be stopped; it will be removed after a reboot": ("无法停止驱动，将在重启后删除", "ドライバーを停止できませんでした。再起動後に削除されます"),
+    "Cannot delete %1 (error %2)": ("无法删除 %1（错误 %2）", "%1 を削除できません（エラー %2）"),
 
     # ---- language ----
     "System Default": ("跟随系统", "システムの既定"),

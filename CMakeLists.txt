@@ -67,6 +67,7 @@ qt_add_executable(WinRoute WIN32
     resources/app.rc
 )
 target_link_libraries(WinRoute PRIVATE winroute_core Qt6::Widgets)
+target_compile_definitions(WinRoute PRIVATE WINROUTE_VERSION="${PROJECT_VERSION}")
 if(WINROUTE_REQUIRE_ADMIN)
     target_compile_definitions(WinRoute PRIVATE WINROUTE_REQUIRE_ADMIN)
 endif()
@@ -88,6 +89,29 @@ add_custom_command(TARGET WinRoute POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NETFILTER_API_DLL} $<TARGET_FILE_DIR:WinRoute>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NETFILTER_DRIVER} $<TARGET_FILE_DIR:WinRoute>
 )
+
+# "cmake --build build --target installer" stages a deployed copy and builds
+# build/WinRoute-<version>-setup.exe with Inno Setup 6.
+find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS ${QT6_INSTALL_PREFIX}/${QT6_INSTALL_BINS})
+find_program(ISCC_EXECUTABLE ISCC PATHS "C:/Program Files (x86)/Inno Setup 6" "C:/Program Files/Inno Setup 6")
+if(WINDEPLOYQT_EXECUTABLE AND ISCC_EXECUTABLE)
+    set(INSTALLER_STAGE ${CMAKE_BINARY_DIR}/stage)
+    add_custom_target(installer
+        COMMAND ${CMAKE_COMMAND} -E rm -rf ${INSTALLER_STAGE}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${INSTALLER_STAGE}
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:WinRoute> ${NETFILTER_API_DLL} ${NETFILTER_DRIVER} ${INSTALLER_STAGE}
+        COMMAND ${WINDEPLOYQT_EXECUTABLE} --release --no-translations --no-system-d3d-compiler --no-opengl-sw
+                ${INSTALLER_STAGE}/WinRoute.exe
+        COMMAND ${ISCC_EXECUTABLE} /Q /DAppVersion=${PROJECT_VERSION}
+                /DStageDir=${INSTALLER_STAGE} /DOutputDir=${CMAKE_BINARY_DIR}
+                ${CMAKE_SOURCE_DIR}/installer/WinRoute.iss
+        DEPENDS WinRoute
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/installer
+        COMMENT "Building the WinRoute installer"
+        VERBATIM)
+else()
+    message(STATUS "windeployqt or Inno Setup 6 (ISCC) not found: the installer target is not available")
+endif()
 endif()
 
 # Tests for the platform-independent pieces (profile IO, rule matching, DNS, proxy protocols).

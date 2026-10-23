@@ -237,6 +237,22 @@
       <translation>Windows の DNS キャッシュを消去しました</translation>
     </message>
     <message>
+      <source>Cannot open the service manager (error %1)</source>
+      <translation>サービスマネージャーを開けません（エラー %1）</translation>
+    </message>
+    <message>
+      <source>Cannot open the driver service (error %1)</source>
+      <translation>ドライバーのサービスを開けません（エラー %1）</translation>
+    </message>
+    <message>
+      <source>Cannot delete the driver service (error %1)</source>
+      <translation>ドライバーのサービスを削除できません（エラー %1）</translation>
+    </message>
+    <message>
+      <source>The driver could not be stopped; it will be removed after a reboot</source>
+      <translation>ドライバーを停止できませんでした。再起動後に削除されます</translation>
+    </message>
+    <message>
       <source>Driver file %1 was not found</source>
       <translation>ドライバーファイル %1 が見つかりません</translation>
     </message>
@@ -251,6 +267,10 @@
     <message>
       <source>Network driver %1 installed</source>
       <translation>ネットワークドライバー %1 をインストールしました</translation>
+    </message>
+    <message>
+      <source>Cannot delete %1 (error %2)</source>
+      <translation>%1 を削除できません（エラー %2）</translation>
     </message>
     <message>
       <source>Cannot add driver rule (%1): %2</source>
@@ -1825,6 +1845,10 @@ Use check boxes to enable/disable a rule.</source>
   </context>
   <context>
     <name>main</name>
+    <message>
+      <source>Cannot install the network driver: %1</source>
+      <translation>ネットワークドライバーをインストールできません：%1</translation>
+    </message>
     <message>
       <source>Cannot uninstall the network driver: %1</source>
       <translation>ネットワークドライバーをアンインストールできません：%1</translation>

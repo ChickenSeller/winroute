@@ -15,24 +15,32 @@
 #include <windows.h>
 
 static const char *kInstanceKey = "WinRoute-single-instance";
+// Checked by the installer (AppMutex) to detect a running WinRoute.
+static const wchar_t *kAppMutex = L"WinRoute.AppMutex";
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     QApplication::setApplicationName("WinRoute");
-    QApplication::setApplicationVersion("1.0.0");
+    QApplication::setApplicationVersion(WINROUTE_VERSION);
     // QSettings needs an organization name (stored under HKCU\Software\WinRoute\WinRoute).
     QApplication::setOrganizationName("WinRoute");
     QApplication::setQuitOnLastWindowClosed(false);
     i18n::install(app);
 
+    // --install-driver / --uninstall-driver are run by the installer; with --quiet
+    // errors are only reported through the exit code (0 = success, 1 = failure).
     const QStringList args = QApplication::arguments();
-    if (args.contains("--uninstall-driver")) {
+    const bool installDriver = args.contains("--install-driver");
+    if (installDriver || args.contains("--uninstall-driver")) {
         QString error;
-        const bool ok = NetFilterInterceptor::uninstallDriver(&error);
-        if (!ok)
+        const bool ok = installDriver ? NetFilterInterceptor::installDriver(&error)
+                                      : NetFilterInterceptor::uninstallDriver(&error);
+        if (!ok && !args.contains("--quiet"))
             QMessageBox::critical(nullptr, "WinRoute",
-                                  QCoreApplication::translate("main", "Cannot uninstall the network driver: %1").arg(error));
+                                  installDriver
+                                      ? QCoreApplication::translate("main", "Cannot install the network driver: %1").arg(error)
+                                      : QCoreApplication::translate("main", "Cannot uninstall the network driver: %1").arg(error));
         return ok ? 0 : 1;
     }
 
@@ -58,6 +66,7 @@ int main(int argc, char *argv[])
             return 0;
         }
     }
+    HANDLE appMutex = CreateMutexW(nullptr, FALSE, kAppMutex);
     QLocalServer instanceServer;
     QLocalServer::removeServer(kInstanceKey);
     instanceServer.listen(kInstanceKey);
@@ -78,5 +87,7 @@ int main(int argc, char *argv[])
     const int rc = app.exec();
     engine.stop();
     WSACleanup();
+    if (appMutex)
+        CloseHandle(appMutex);
     return rc;
 }

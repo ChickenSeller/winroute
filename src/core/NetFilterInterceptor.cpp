@@ -105,25 +105,72 @@ static QString driverInstallPath()
     return QDir(QString::fromWCharArray(sys)).filePath(QString("drivers/%1.sys").arg(NetFilterInterceptor::kDriverName));
 }
 
-static bool serviceExists()
+// Current state of the driver service (SERVICE_RUNNING etc.), 0 if it does not exist.
+static DWORD serviceState()
 {
     SC_HANDLE scm = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
     if (!scm)
-        return false;
-    SC_HANDLE svc = OpenServiceW(scm, L"netfilter2", SERVICE_QUERY_STATUS);
-    const bool exists = svc != nullptr;
-    if (svc)
+        return 0;
+    DWORD state = 0;
+    if (SC_HANDLE svc = OpenServiceW(scm, L"netfilter2", SERVICE_QUERY_STATUS)) {
+        SERVICE_STATUS st{};
+        if (QueryServiceStatus(svc, &st))
+            state = st.dwCurrentState;
         CloseServiceHandle(svc);
+    }
     CloseServiceHandle(scm);
-    return exists;
+    return state;
 }
 
-bool NetFilterInterceptor::ensureDriver(QString *error)
+// nf_unRegisterDriver only disables the service, so the driver keeps running
+// until reboot. Stop it and delete the service so an uninstall is complete.
+static bool stopAndDeleteService(QString *error)
 {
+    SC_HANDLE scm = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+    if (!scm) {
+        *error = QCoreApplication::translate("Interceptor", "Cannot open the service manager (error %1)").arg(GetLastError());
+        return false;
+    }
+    SC_HANDLE svc = OpenServiceW(scm, L"netfilter2", SERVICE_STOP | SERVICE_QUERY_STATUS | DELETE);
+    if (!svc) {
+        const DWORD err = GetLastError();
+        CloseServiceHandle(scm);
+        if (err == ERROR_SERVICE_DOES_NOT_EXIST)
+            return true;
+        *error = QCoreApplication::translate("Interceptor", "Cannot open the driver service (error %1)").arg(err);
+        return false;
+    }
+    SERVICE_STATUS st{};
+    if (QueryServiceStatus(svc, &st) && st.dwCurrentState != SERVICE_STOPPED) {
+        ControlService(svc, SERVICE_CONTROL_STOP, &st);
+        for (int i = 0; i < 100 && QueryServiceStatus(svc, &st) && st.dwCurrentState != SERVICE_STOPPED; ++i)
+            Sleep(100);
+    }
+    const bool stopped = st.dwCurrentState == SERVICE_STOPPED;
+    const bool deleted = DeleteService(svc) || GetLastError() == ERROR_SERVICE_MARKED_FOR_DELETE;
+    const DWORD err = GetLastError();
+    CloseServiceHandle(svc);
+    CloseServiceHandle(scm);
+    if (!deleted) {
+        *error = QCoreApplication::translate("Interceptor", "Cannot delete the driver service (error %1)").arg(err);
+        return false;
+    }
+    if (!stopped) {
+        *error = QCoreApplication::translate("Interceptor", "The driver could not be stopped; it will be removed after a reboot");
+        return false;
+    }
+    return true;
+}
+
+bool NetFilterInterceptor::installDriver(QString *error)
+{
+    const NetFilterApi *api = NetFilterApi::load(error);
+    if (!api)
+        return false;
     const QString installed = driverInstallPath();
     const QString bundled = QDir(QCoreApplication::applicationDirPath()).filePath(QString("%1.sys").arg(kDriverName));
-    const bool haveService = serviceExists();
-    if (haveService && QFileInfo::exists(installed))
+    // A disabled or stopped service (e.g. left by an earlier uninstall) is registered again.
+    if (serviceState() == SERVICE_RUNNING && QFileInfo::exists(installed))
         return true;
 
     if (!QFileInfo::exists(installed)) {
@@ -137,7 +184,7 @@ bool NetFilterInterceptor::ensureDriver(QString *error)
             return false;
         }
     }
-    const NF_STATUS st = m_api->registerDriver(kDriverName);
+    const NF_STATUS st = api->registerDriver(kDriverName);
     if (st != NF_STATUS_SUCCESS) {
         *error = QCoreApplication::translate("Interceptor", "Cannot register the driver: %1").arg(nfStatusString(st));
         return false;
@@ -151,13 +198,20 @@ bool NetFilterInterceptor::uninstallDriver(QString *error)
     const NetFilterApi *api = NetFilterApi::load(error);
     if (!api)
         return false;
-    const NF_STATUS st = api->unRegisterDriver(kDriverName);
-    if (st != NF_STATUS_SUCCESS) {
-        if (error)
+    if (serviceState() != 0) {
+        const NF_STATUS st = api->unRegisterDriver(kDriverName);
+        if (st != NF_STATUS_SUCCESS) {
             *error = nfStatusString(st);
+            return false;
+        }
+        if (!stopAndDeleteService(error))
+            return false;
+    }
+    const QString file = QDir::toNativeSeparators(driverInstallPath());
+    if (QFileInfo::exists(file) && !DeleteFileW(reinterpret_cast<LPCWSTR>(file.utf16()))) {
+        *error = QCoreApplication::translate("Interceptor", "Cannot delete %1 (error %2)").arg(file).arg(GetLastError());
         return false;
     }
-    DeleteFileW(reinterpret_cast<LPCWSTR>(QDir::toNativeSeparators(driverInstallPath()).utf16()));
     return true;
 }
 
@@ -222,7 +276,7 @@ bool NetFilterInterceptor::start(const InterceptorContext &ctx, QString *error)
         *error = QCoreApplication::translate("Interceptor", "Administrator rights are required to control the network driver");
         return false;
     }
-    if (!ensureDriver(error))
+    if (!installDriver(error))
         return false;
 
     m_ctx = ctx;

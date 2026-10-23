@@ -26,7 +26,10 @@ public:
     void setRules(RuleEnginePtr rules) override;
     void setLocalDnsAvailable(bool available) override { m_localDnsAvailable = available; }
 
-    // Removes the driver service (used by the uninstall command line switch).
+    // Copies netfilter2.sys next to the executable into System32\drivers and registers
+    // the service if needed; removes both again. Used by start() and by the installer
+    // through the --install-driver / --uninstall-driver command line switches.
+    static bool installDriver(QString *error);
     static bool uninstallDriver(QString *error);
 
     // NF_EventHandler callbacks, dispatched from nfapi worker threads.
@@ -35,7 +38,6 @@ public:
     void onUdpReceive(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len, PNF_UDP_OPTIONS opt);
 
 private:
-    bool ensureDriver(QString *error);
     bool installRules(QString *error);
     RuleEnginePtr rules() const;
     bool resolveViaProxy(const ProfileOptions &opt) const;
