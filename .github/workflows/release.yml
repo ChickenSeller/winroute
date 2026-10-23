@@ -2,10 +2,12 @@
 # publishes it as a GitHub release, which GitLab's release job then copies.
 # Started by hand, it only builds, and the installer is kept as a run artifact.
 #
-# The NetFilter SDK and the signed driver are not in the repository: they are
-# downloaded from the GitLab package registry (see tools/upload-build-deps.ps1)
-# with the deploy token in the BUILD_DEPS_TOKEN secret, and checked against the
-# SHA-256 below.
+# The NetFilter SDK and the drivers are not in the repository: they are a
+# release asset of a private repository (BUILD_DEPS_REPO, release
+# deps-<BUILD_DEPS_VERSION>, see tools/upload-build-deps.ps1), downloaded with
+# the read-only token in the BUILD_DEPS_GITHUB_TOKEN secret and checked against
+# the SHA-256 below. (Not from GitLab: Cloudflare's Bot Fight Mode in front of
+# git.yanlei.org challenges the runners.)
 name: Release
 
 on:
@@ -19,7 +21,7 @@ permissions:
 env:
   BUILD_DEPS_VERSION: '2'
   BUILD_DEPS_SHA256: 4136e1c13661a1b18ea96ff41d062e4c35ba5a0bd88dfa8af6d0128b05227d41
-  BUILD_DEPS_URL: https://git.yanlei.org/api/v4/projects/151/packages/generic/winroute-build-deps
+  BUILD_DEPS_REPO: ChickenSeller/winroute-build-deps
 
 jobs:
   windows:
@@ -59,12 +61,13 @@ jobs:
       - name: Get the NetFilter SDK and the driver
         shell: pwsh
         env:
-          BUILD_DEPS_TOKEN: ${{ secrets.BUILD_DEPS_TOKEN }}
+          GH_TOKEN: ${{ secrets.BUILD_DEPS_GITHUB_TOKEN }}
         run: |
-          if (-not $env:BUILD_DEPS_TOKEN) { throw 'The BUILD_DEPS_TOKEN secret is not set' }
+          if (-not $env:GH_TOKEN) { throw 'The BUILD_DEPS_GITHUB_TOKEN secret is not set' }
+          gh release download "deps-$env:BUILD_DEPS_VERSION" --repo $env:BUILD_DEPS_REPO `
+            --pattern winroute-build-deps.zip --dir $env:RUNNER_TEMP
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           $zip = Join-Path $env:RUNNER_TEMP 'winroute-build-deps.zip'
-          Invoke-WebRequest -Headers @{ 'Deploy-Token' = $env:BUILD_DEPS_TOKEN } -OutFile $zip `
-            "$env:BUILD_DEPS_URL/$env:BUILD_DEPS_VERSION/winroute-build-deps.zip"
           $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
           if ($hash -ne $env:BUILD_DEPS_SHA256) { throw "winroute-build-deps.zip has SHA-256 $hash, expected $env:BUILD_DEPS_SHA256" }
           Expand-Archive $zip -DestinationPath . -Force

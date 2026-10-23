@@ -85,12 +85,12 @@ GitLab Runner 是 Linux，Windows 安装包由 GitHub Actions 构建，流程与
 3. GitLab 的 `release-from-github` 等它完成后，把安装包存进本项目的软件包仓库，并创建 GitLab Release；
 4. 一分钟内主页的版本列表就会出现新版本。
 
-NetFilter SDK 和驱动不在仓库里。GitHub 构建时，从本项目的软件包仓库下载 `winroute-build-deps`，并按 `release.yml` 中的 SHA-256 校验。SDK 或驱动有变化时，执行 `tools\upload-build-deps.ps1 -Version <新版本>`，再把输出的版本和 SHA-256 填进 `release.yml`。
+NetFilter SDK 和驱动不在仓库里。GitHub 构建时，从私有仓库 `ChickenSeller/winroute-build-deps` 的 Release `deps-<版本>` 下载 `winroute-build-deps.zip`，并按 `release.yml` 中的 SHA-256 校验。不从 GitLab 下载，是因为 git.yanlei.org 前面的 Cloudflare Bot Fight Mode 会拦截 GitHub 的构建机。SDK 或驱动有变化时，执行 `tools\upload-build-deps.ps1 -Version <新版本>`（需要 `GITHUB_TOKEN`：只限这个私有仓库的细粒度令牌，Contents 读写），再把输出的版本和 SHA-256 填进 `release.yml`。
 
 需要设置的密钥：
 
 - GitLab CI/CD 变量：`GITHUB_REPO`（如 `kaguya/winroute`）、`GITHUB_TOKEN`（只限这个仓库的细粒度令牌：Contents 和 Workflows 读写，Actions 只读；设为 Masked、Protected，并保护 `v*` 标签）。
-- GitHub 仓库 secret：`BUILD_DEPS_TOKEN`，即 GitLab 部署令牌，只勾 `read_package_registry`。
+- GitHub 仓库 secret：`BUILD_DEPS_GITHUB_TOKEN`，是只限私有仓库 `winroute-build-deps` 的细粒度令牌，Contents 只读。
 
 不经过 GitHub 时，也可以在装有 SDK 的本机执行 `tools\publish-release.ps1 -Notes "..."` 直接发布（需要 `GITLAB_TOKEN`，权限 api）。
 
