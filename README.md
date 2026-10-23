@@ -58,7 +58,7 @@ cmake --build build --target installer    # 生成 build/WinRoute-<版本>-setup
 - **卸载**：删除开机自启动计划任务，执行 `WinRoute.exe --uninstall-driver --quiet` 停止驱动、删除服务和 `System32\drivers
 etfilter2.sys`，再询问是否删除配置文件、设置和日志（静默卸载时保留）。
 - **运行检测**：WinRoute 运行时会创建互斥量 `WinRoute.AppMutex`，安装和卸载前都会提示先关闭程序。
-- **静默安装**：`WinRoute-1.0.0-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /TASKS=autostart`
+- **静默安装**：`WinRoute-0.1.0-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /TASKS=autostart`
 - **代码签名**：在 `WinRoute.iss` 中启用 `SignTool` 和 `SignedUninstaller` 两行，并给 ISCC 配置签名工具。
 - `installer/ChineseSimplified.isl` 是 Inno Setup 6.7.3 的简体中文非官方翻译，取自 jrsoftware/issrc。
 
