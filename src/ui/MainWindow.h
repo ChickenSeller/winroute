@@ -119,7 +119,6 @@ private:
     QLabel *m_statusProfile = nullptr;
     QLabel *m_statusDriver = nullptr;
     QToolButton *m_certButton = nullptr;
-    QString m_certSubject;   // full signer subject of the installed driver, for the details popup
     QSystemTrayIcon *m_tray = nullptr;
     QMenu *m_trayMenu = nullptr;
     QMenu *m_loadProfileMenu = nullptr;

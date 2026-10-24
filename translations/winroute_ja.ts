@@ -814,6 +814,10 @@
       <translation>署名者：%1 — クリックで詳細</translation>
     </message>
     <message>
+      <source>%1 signatures — click for details</source>
+      <translation>署名 %1 件 — クリックで詳細</translation>
+    </message>
+    <message>
       <source>Driver Signature</source>
       <translation>ドライバーの署名</translation>
     </message>
@@ -822,20 +826,12 @@
       <translation>インストールされているドライバーは署名されていないか、署名を読み取れませんでした。</translation>
     </message>
     <message>
-      <source>Signed by: %1</source>
-      <translation>署名者：%1</translation>
-    </message>
-    <message>
       <source>Subject:</source>
       <translation>サブジェクト：</translation>
     </message>
     <message>
       <source>Issued by: %1</source>
       <translation>発行者：%1</translation>
-    </message>
-    <message>
-      <source>Signing certificate of %1:</source>
-      <translation>%1 の署名証明書：</translation>
     </message>
     <message>
       <source>&amp;Open WinRoute</source>
@@ -994,6 +990,14 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>End Process</source>
       <translation>プロセスの終了</translation>
+    </message>
+    <message>
+      <source>Signing certificates of %1:</source>
+      <translation>%1 の署名証明書：</translation>
+    </message>
+    <message>
+      <source>Certificate %1</source>
+      <translation>証明書 %1</translation>
     </message>
     <message>
       <source>Terminate the following process(es)?

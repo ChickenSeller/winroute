@@ -24,6 +24,8 @@
 #include <QClipboard>
 #include <QCloseEvent>
 #include <QDesktopServices>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -46,6 +48,7 @@
 #include <QToolButton>
 #include <QTreeView>
 #include <QUrl>
+#include <QVBoxLayout>
 
 static const char *kTaskName = "WinRoute";
 
@@ -460,7 +463,6 @@ void MainWindow::updateDriverStatus()
     if (!m_statusDriver)
         return;
     const auto info = NetFilterInterceptor::installedDriverInfo();
-    m_certSubject = info.certSubject;
     if (!info.installed) {
         m_statusDriver->setText(tr("Driver: not installed"));
         m_statusDriver->setToolTip(QString());
@@ -475,32 +477,47 @@ void MainWindow::updateDriverStatus()
     m_statusDriver->setText(tr("Driver: %1").arg(parts.join(" · ")));
     m_statusDriver->setToolTip(info.running ? tr("The network driver is running")
                                             : tr("The network driver is installed but not running"));
-    if (!info.certSubjectCN.isEmpty()) {
-        m_certButton->setToolTip(tr("Signed by %1 — click for details").arg(info.certSubjectCN));
-        m_certButton->show();
-    } else {
+    if (info.certs.isEmpty()) {
         m_certButton->hide();
+    } else {
+        m_certButton->setToolTip(info.certs.size() == 1
+                                     ? tr("Signed by %1 — click for details").arg(info.certs.first().name)
+                                     : tr("%1 signatures — click for details").arg(info.certs.size()));
+        m_certButton->show();
     }
 }
 
 void MainWindow::showCertificateDetails()
 {
     const auto info = NetFilterInterceptor::installedDriverInfo();
-    if (info.certSubjectCN.isEmpty() && info.certSubject.isEmpty()) {
+    if (info.certs.isEmpty()) {
         QMessageBox::information(this, tr("Driver Signature"),
                                  tr("The installed driver is not signed, or its signature could not be read."));
         return;
     }
-    QString body = tr("Signed by: %1").arg(info.certSubjectCN);
-    if (!info.certSubject.isEmpty())
-        body += "\n\n" + tr("Subject:") + "\n" + info.certSubject;
-    if (!info.certIssuerCN.isEmpty())
-        body += "\n\n" + tr("Issued by: %1").arg(info.certIssuerCN);
-    QMessageBox box(QMessageBox::NoIcon, tr("Driver Signature"),
-                    tr("Signing certificate of %1:").arg(info.name), QMessageBox::Ok, this);
-    box.setInformativeText(body);
-    box.setTextInteractionFlags(Qt::TextSelectableByMouse);
-    box.exec();
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Driver Signature"));
+    auto *lay = new QVBoxLayout(&dlg);
+    lay->addWidget(new QLabel(tr("Signing certificates of %1:").arg(info.name)));
+    auto *tabs = new QTabWidget;
+    for (int i = 0; i < info.certs.size(); ++i) {
+        const auto &c = info.certs[i];
+        QString body = tr("Subject:") + "\n" + (c.subject.isEmpty() ? c.name : c.subject);
+        if (!c.issuer.isEmpty())
+            body += "\n\n" + tr("Issued by: %1").arg(c.issuer);
+        auto *view = new QPlainTextEdit(body);
+        view->setReadOnly(true);
+        QString title = c.name.isEmpty() ? tr("Certificate %1").arg(i + 1) : c.name;
+        if (title.size() > 28)
+            title = title.left(27) + QChar(0x2026);
+        tabs->addTab(view, title);
+    }
+    lay->addWidget(tabs, 1);
+    auto *bb = new QDialogButtonBox(QDialogButtonBox::Ok, &dlg);
+    connect(bb, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    lay->addWidget(bb);
+    dlg.resize(480, 320);
+    dlg.exec();
 }
 
 void MainWindow::createTray()

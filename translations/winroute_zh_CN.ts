@@ -814,6 +814,10 @@
       <translation>签名者：%1 — 点击查看详情</translation>
     </message>
     <message>
+      <source>%1 signatures — click for details</source>
+      <translation>%1 张签名 — 点击查看详情</translation>
+    </message>
+    <message>
       <source>Driver Signature</source>
       <translation>驱动签名</translation>
     </message>
@@ -822,20 +826,12 @@
       <translation>已安装的驱动没有签名，或无法读取其签名。</translation>
     </message>
     <message>
-      <source>Signed by: %1</source>
-      <translation>签名者：%1</translation>
-    </message>
-    <message>
       <source>Subject:</source>
       <translation>主体：</translation>
     </message>
     <message>
       <source>Issued by: %1</source>
       <translation>颁发者：%1</translation>
-    </message>
-    <message>
-      <source>Signing certificate of %1:</source>
-      <translation>%1 的签名证书：</translation>
     </message>
     <message>
       <source>&amp;Open WinRoute</source>
@@ -994,6 +990,14 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>End Process</source>
       <translation>结束进程</translation>
+    </message>
+    <message>
+      <source>Signing certificates of %1:</source>
+      <translation>%1 的签名证书：</translation>
+    </message>
+    <message>
+      <source>Certificate %1</source>
+      <translation>证书 %1</translation>
     </message>
     <message>
       <source>Terminate the following process(es)?

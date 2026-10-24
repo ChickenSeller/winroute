@@ -50,6 +50,13 @@ public:
     static bool driverInstalled();         // the netfilter2 service exists and the file is present
     static bool driverRunning();           // the service is running
 
+    // One Authenticode signature of the driver file.
+    struct DriverCert {
+        QString name;       // signer common name, for the tab title
+        QString subject;    // full signer subject (multi-line)
+        QString issuer;     // issuer common name
+    };
+
     // Details of the installed driver file, for the status bar.
     struct DriverInfo {
         bool installed = false;    // the .sys file is present
@@ -58,9 +65,7 @@ public:
         QString name;              // display name
         bool demo = false;         // the SDK demo driver (limited) vs. an unlimited one
         QString version;           // file version, e.g. "1.7.1.8"
-        QString certSubjectCN;     // signer common name
-        QString certSubject;       // full signer subject (multi-line)
-        QString certIssuerCN;      // signer's issuer common name
+        QList<DriverCert> certs;   // every Authenticode signature (primary + nested)
     };
     static DriverInfo installedDriverInfo();
 
