@@ -56,8 +56,7 @@ cmake --build build --target installer    # 生成 build/WinRoute-<版本>-setup
 
 - **安装**：需要管理员权限，界面支持中文、日语、英语。可选创建桌面快捷方式和开机自启动计划任务。
 - **选择驱动**：“网络驱动”页用下拉框选择，默认 **NetFilter SDK 演示驱动**（1.7.2.9，`NETFILTER_DEMO_DRIVER`，默认取自 SDK 的 `wfp/bin/driver/x64/`）。演示驱动拦截的连接数有上限，超过后要重启 Windows 才恢复。另一项是四川征云签名的正式版驱动（1.7.1.8，`NETFILTER_DRIVER`）。升级时沿用上次的选择。只安装选中的那个驱动，文件复制完成后执行 `WinRoute.exe --install-driver --quiet` 注册并启动；如果系统里已装的是另一个驱动，会先停掉并替换。
-- **卸载**：删除开机自启动计划任务，执行 `WinRoute.exe --uninstall-driver --quiet` 停止驱动、删除服务和 `System32\drivers
-etfilter2.sys`，再询问是否删除配置文件、设置和日志（静默卸载时保留）。
+- **卸载**：删除开机自启动计划任务，执行 `WinRoute.exe --uninstall-driver --quiet` 停止驱动、删除服务和 `System32\drivers\netfilter2.sys`，再询问是否删除配置文件、设置和日志（静默卸载时保留）。
 - **运行检测**：WinRoute 运行时会创建互斥量 `WinRoute.AppMutex`，安装和卸载前都会提示先关闭程序。
 - **静默安装**：`WinRoute-0.1.0-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /TASKS=autostart /DRIVER=demo`（`/DRIVER=zhengyun` 选择征云驱动；不写时，首次安装用演示驱动，升级时沿用上次的选择）
 - **代码签名**：在 `WinRoute.iss` 中启用 `SignTool` 和 `SignedUninstaller` 两行，并给 ISCC 配置签名工具。
