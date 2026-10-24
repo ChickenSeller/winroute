@@ -30,6 +30,11 @@ public:
     // Refreshes elapsed times and drops rows closed for longer than `keepMs`.
     void tick(int keepMs);
 
+    // Drops the direct (non-proxied) connections from the display; used when
+    // "Handle Direct Connections" is turned off. The connections themselves are
+    // not touched, only hidden.
+    void removeDirect();
+
     quint64 idAt(int row) const;
     quint32 pidAt(int row) const;
     int activeCount() const;

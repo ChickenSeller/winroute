@@ -216,6 +216,18 @@ void ConnectionsModel::tick(int keepMs)
         emit dataChanged(index(0, ColTimeStatus), index(int(m_rows.size()) - 1, ColTimeStatus));
 }
 
+void ConnectionsModel::removeDirect()
+{
+    for (int i = int(m_rows.size()) - 1; i >= 0; --i) {
+        if (m_rows[i].ev.actionType == ActionType::Direct) {
+            beginRemoveRows({}, i, i);
+            m_rows.removeAt(i);
+            endRemoveRows();
+        }
+    }
+    reindex();
+}
+
 quint64 ConnectionsModel::idAt(int row) const
 {
     return row >= 0 && row < m_rows.size() ? m_rows[row].ev.id : 0;

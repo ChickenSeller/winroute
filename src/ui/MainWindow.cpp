@@ -143,6 +143,11 @@ void MainWindow::createActions()
         Profile p = m_profile;
         p.options.handleDirectConnections = on;
         applyProfile(p);
+        // New connections already follow the new setting; reflect it in the list
+        // at once by dropping the direct connections that are still shown. (They
+        // keep running; established connections can't change how they are routed.)
+        if (!on)
+            m_connModel->removeDirect();
     });
     m_actLoopDetection = new QAction(tr("Connection &Loop Detection"), this);
     m_actLoopDetection->setCheckable(true);
@@ -884,12 +889,16 @@ void MainWindow::showProxyChecker()
 
 void MainWindow::showAbout()
 {
+    // A fixed epigraph (Exodus 3:14), shown as-is in Hebrew; not translated.
+    const QString motto = QString::fromUtf8(
+        "<p align='center' dir='rtl' style='font-size:13pt'>אֶהְיֶה אֲשֶׁר אֶהְיֶה</p>");
     QMessageBox::about(this, tr("About WinRoute"),
-                       tr("<h3>WinRoute %1</h3>"
+                       motto
+                           + tr("<h3>WinRoute %1</h3>"
                                "<p>Routes the network connections of Windows applications through SOCKS and HTTPS "
                                "proxy servers according to proxification rules.</p>"
                                "<p>Interception: %2<br>Qt %3</p>")
-                           .arg(QApplication::applicationVersion(), m_engine->backendName(), qVersion()));
+                                 .arg(QApplication::applicationVersion(), m_engine->backendName(), qVersion()));
 }
 
 // ---- connections ------------------------------------------------------------------
