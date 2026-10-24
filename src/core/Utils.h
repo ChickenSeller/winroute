@@ -12,6 +12,11 @@ bool wildcardMatch(QStringView pattern, QStringView text);
 // Splits a Proxifier style list ("a; b; \"c d\"") into trimmed, unquoted items.
 QStringList splitList(const QString &list);
 
+// Joins an application list back into Proxifier's form: items separated by "; ",
+// with any name that contains a space wrapped in double quotes (Proxifier rejects
+// an unquoted space with "Unexpected blank space found").
+QString joinAppList(const QString &list);
+
 // Expands %VAR% occurrences using the process environment. %ComputerName% is always known.
 QString expandEnv(const QString &s);
 

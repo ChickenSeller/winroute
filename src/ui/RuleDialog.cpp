@@ -1,5 +1,6 @@
 #include "RuleDialog.h"
 #include "Icons.h"
+#include "core/Utils.h"
 
 #include <QCoreApplication>
 #include <QCheckBox>
@@ -145,7 +146,8 @@ Rule RuleDialog::rule() const
         }
         return parts.join("; ");
     };
-    r.applications = oneLine(m_apps->toPlainText());
+    // Quote application names containing spaces (Proxifier's required form).
+    r.applications = util::joinAppList(m_apps->toPlainText());
     r.targets = oneLine(m_targets->toPlainText());
     r.ports = m_ports->text().trimmed();
     r.action = comboAction(m_action);

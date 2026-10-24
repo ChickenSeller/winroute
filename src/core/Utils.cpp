@@ -54,6 +54,14 @@ QStringList splitList(const QString &list)
     return out;
 }
 
+QString joinAppList(const QString &list)
+{
+    QStringList parts;
+    for (const QString &app : splitList(list))
+        parts << (app.contains(u' ') ? u'"' + app + u'"' : app);
+    return parts.join(QStringLiteral("; "));
+}
+
 QString computerName()
 {
     static const QString name = [] {

@@ -129,6 +129,16 @@ static void testProfile()
         CHECK(q.rules[0].ports == "80; 8000-9000");
         CHECK(q.rules[1].name == QString::fromUtf8("新建"));
     }
+
+    // Application names with spaces must be quoted on export, or Proxifier
+    // rejects the profile ("Unexpected blank space found"); they round-trip back
+    // unquoted. A plain name is left as-is.
+    p.rules[1].applications = "chrome.exe; C:\\Program Files\\App\\a b.exe";
+    Profile q;
+    CHECK(q.fromXml(p.toXml(), &err));
+    CHECK(q.rules[1].applications == "chrome.exe; \"C:\\Program Files\\App\\a b.exe\"");
+    CHECK(util::splitList(q.rules[1].applications)
+          == (QStringList{"chrome.exe", "C:\\Program Files\\App\\a b.exe"}));
 }
 
 // ---- rules -----------------------------------------------------------------
@@ -143,6 +153,12 @@ static void testRules()
     CHECK(!util::wildcardMatch(u"a?c", u"abbc"));
 
     CHECK((util::splitList("a.exe; \"C:\\some app.exe\" ;b") == QStringList{"a.exe", "C:\\some app.exe", "b"}));
+
+    // joinAppList quotes names with spaces, leaves plain ones, and is idempotent.
+    CHECK(util::joinAppList("chrome.exe\nC:\\some app.exe") == "chrome.exe; \"C:\\some app.exe\"");
+    CHECK(util::joinAppList("a.exe; b.exe") == "a.exe; b.exe");
+    CHECK(util::joinAppList("\"C:\\some app.exe\"") == "\"C:\\some app.exe\"");
+    CHECK(util::joinAppList("") == "");
 
     CHECK(RuleEngine::matchPortList("80; 8000-9000", 8080));
     CHECK(RuleEngine::matchPortList("80; 8000-9000", 80));

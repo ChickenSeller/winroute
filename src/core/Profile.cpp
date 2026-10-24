@@ -1,5 +1,7 @@
 #include "Profile.h"
 
+#include "Utils.h"
+
 #include <QCoreApplication>
 #include <QFile>
 #include <QSaveFile>
@@ -573,7 +575,7 @@ QByteArray Profile::toXml() const
         if (!rule.targets.isEmpty())
             w.writeTextElement("Targets", rule.targets);
         if (!rule.applications.isEmpty())
-            w.writeTextElement("Applications", rule.applications);
+            w.writeTextElement("Applications", util::joinAppList(rule.applications));
         w.writeTextElement("Name", rule.name);
         w.writeEndElement();
     }
