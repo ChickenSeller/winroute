@@ -70,29 +70,42 @@ void TrafficGraph::paintEvent(QPaintEvent *)
     }
     maxV = niceCeil(maxV * 1.1);
 
-    // grid + scale
-    p.setPen(QColor(225, 228, 235));
+    // grid + scale: solid labelled lines, with dotted, paler lines marking the
+    // finer subdivisions between them. Drawn without antialiasing so the dots
+    // stay crisp.
+    const QPen majorPen(QColor(223, 226, 234), 1, Qt::SolidLine);
+    const QPen minorPen(QColor(228, 232, 239), 1, Qt::DotLine);
+    p.setRenderHint(QPainter::Antialiasing, false);
     const int gridRows = 4;
     QFont f = font();
     f.setPointSizeF(f.pointSizeF() * 0.85);
     p.setFont(f);
-    for (int i = 0; i <= gridRows; ++i) {
-        const int y = area.top() + area.height() * i / gridRows;
-        p.setPen(QColor(225, 228, 235));
+    // horizontal: a dotted line halfway between each labelled value line
+    for (int i = 0; i <= gridRows * 2; ++i) {
+        const int y = area.top() + area.height() * i / (gridRows * 2);
+        const bool labelled = (i % 2 == 0);
+        p.setPen(labelled ? majorPen : minorPen);
         p.drawLine(area.left(), y, area.right(), y);
-        p.setPen(palette().color(QPalette::Text));
-        p.drawText(QRect(0, y - 8, area.left() - 6, 16), Qt::AlignRight | Qt::AlignVCenter,
-                   util::formatRate(maxV * (gridRows - i) / gridRows));
+        if (labelled) {
+            p.setPen(palette().color(QPalette::Text));
+            p.drawText(QRect(0, y - 8, area.left() - 6, 16), Qt::AlignRight | Qt::AlignVCenter,
+                       util::formatRate(maxV * (gridRows - i / 2) / gridRows));
+        }
     }
-    for (int s = 60; s < int(kMaxSamples); s += 60) {
+    // vertical: a dotted line every 15 s, a solid labelled one each minute
+    for (int s = 15; s < int(kMaxSamples); s += 15) {
         const int x = area.right() - int(area.width() * double(s) / (kMaxSamples - 1));
-        p.setPen(QColor(225, 228, 235));
+        const bool minute = (s % 60 == 0);
+        p.setPen(minute ? majorPen : minorPen);
         p.drawLine(x, area.top(), x, area.bottom());
-        p.setPen(palette().color(QPalette::Text));
-        p.drawText(QRect(x - 30, area.bottom() + 2, 60, 16), Qt::AlignCenter, tr("-%1 min").arg(s / 60));
+        if (minute) {
+            p.setPen(palette().color(QPalette::Text));
+            p.drawText(QRect(x - 30, area.bottom() + 2, 60, 16), Qt::AlignCenter, tr("-%1 min").arg(s / 60));
+        }
     }
     p.setPen(QColor(190, 195, 205));
     p.drawRect(area);
+    p.setRenderHint(QPainter::Antialiasing, true);
 
     if (m_samples.size() < 2)
         return;
