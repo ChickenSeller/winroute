@@ -29,6 +29,7 @@ set(CORE_SOURCES
     src/core/DnsClient.h          src/core/DnsClient.cpp
     src/core/ProxyConnector.h     src/core/ProxyConnector.cpp
     src/core/Relay.h              src/core/Relay.cpp
+    src/core/UdpRelaySession.h    src/core/UdpRelaySession.cpp
     src/core/Interceptor.h
     src/core/NetFilterApi.h       src/core/NetFilterApi.cpp
     src/core/NetFilterInterceptor.h src/core/NetFilterInterceptor.cpp

@@ -43,6 +43,7 @@ bool Engine::start(QString *error)
     ctx.flows = &m_flows;
     ctx.fakeDns = &m_fakeDns;
     ctx.dnsCache = &m_dnsCache;
+    ctx.relay = m_relay;
     ctx.relayPort = m_relay->port();
     ctx.relayIPv6 = m_relay->hasIPv6();
     m_interceptor->setRules(m_rules);
@@ -57,8 +58,10 @@ void Engine::stop()
 {
     if (!m_running)
         return;
-    m_interceptor->stop();
+    // Close the relay first: its UDP sessions call into the driver API, which
+    // the interceptor's stop() tears down.
     m_relay->closeAll();
+    m_interceptor->stop();
     m_flows.clear();
     m_running = false;
 }

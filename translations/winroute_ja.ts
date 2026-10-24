@@ -58,6 +58,10 @@
       <translation>%1（PID %2）</translation>
     </message>
     <message>
+      <source>%1 (UDP)</source>
+      <translation>%1 (UDP)</translation>
+    </message>
+    <message>
       <source>Application</source>
       <translation>アプリケーション</translation>
     </message>
@@ -285,6 +289,10 @@
       <translation>ネットワークドライバー %1 に接続できません：%2</translation>
     </message>
     <message>
+      <source>Cannot update UDP filtering: %1</source>
+      <translation>UDP フィルタリングを更新できません：%1</translation>
+    </message>
+    <message>
       <source>%1 - %2 error : unknown fake DNS address, the name was resolved before WinRoute started</source>
       <translation>%1 - %2 エラー：不明な仮想 DNS アドレスです。この名前は WinRoute の起動前に解決されました</translation>
     </message>
@@ -307,6 +315,18 @@
     <message>
       <source>DNS %1 resolved through proxy as %2</source>
       <translation>DNS %1 をプロキシ経由で %2 として解決しました</translation>
+    </message>
+    <message>
+      <source>%1 - %2 matching %3 rule : blocked (UDP)</source>
+      <translation>%1 - %2 がルール %3 に一致：ブロック（UDP）</translation>
+    </message>
+    <message>
+      <source>%1 - %2 matching %3 rule : %4 does not support UDP, sending directly</source>
+      <translation>%1 - %2 がルール %3 に一致：%4 は UDP に対応していないため直接接続します</translation>
+    </message>
+    <message>
+      <source>%1 - %2 matching %3 rule : proxy chains do not support UDP, sending directly</source>
+      <translation>%1 - %2 がルール %3 に一致：プロキシチェーンは UDP に対応していないため直接接続します</translation>
     </message>
   </context>
   <context>
@@ -409,6 +429,14 @@
     <message>
       <source>Connect directly to proxy servers to prevent infinite connection loops</source>
       <translation>無限の接続ループを防ぐため、プロキシサーバーには直接接続します</translation>
+    </message>
+    <message>
+      <source>Route &amp;UDP through SOCKS5</source>
+      <translation>UDP を SOCKS5 で転送(&amp;U)</translation>
+    </message>
+    <message>
+      <source>Tunnel UDP through the proxy when a rule selects a SOCKS5 proxy (otherwise UDP goes directly)</source>
+      <translation>ルールが SOCKS5 プロキシを選択したとき、UDP をプロキシ経由で転送します（それ以外は UDP は直接接続）</translation>
     </message>
     <message>
       <source>&amp;Passwords Encryption...</source>
@@ -1576,6 +1604,62 @@ Default ルールが %1 を使用するように変更されます。
     <message>
       <source>Relay: unexpected connection from %1 dropped</source>
       <translation>リレー：%1 からの想定外の接続を破棄しました</translation>
+    </message>
+    <message>
+      <source>%1 - UDP proxy #%2 used by rule %3 does not exist</source>
+      <translation>%1 - ルール %3 が使用する UDP プロキシ #%2 は存在しません</translation>
+    </message>
+    <message>
+      <source>the network driver API is unavailable</source>
+      <translation>ネットワークドライバー API を利用できません</translation>
+    </message>
+    <message>
+      <source>no resolver available</source>
+      <translation>リゾルバーを利用できません</translation>
+    </message>
+    <message>
+      <source>could not resolve proxy %1 - %2</source>
+      <translation>プロキシ %1 を解決できませんでした - %2</translation>
+    </message>
+    <message>
+      <source>not a SOCKS5 proxy</source>
+      <translation>SOCKS5 プロキシではありません</translation>
+    </message>
+    <message>
+      <source>SOCKS5 authentication method not accepted</source>
+      <translation>SOCKS5 認証方式が受け入れられませんでした</translation>
+    </message>
+    <message>
+      <source>SOCKS5 authentication failed</source>
+      <translation>SOCKS5 認証に失敗しました</translation>
+    </message>
+    <message>
+      <source>malformed SOCKS5 reply</source>
+      <translation>SOCKS5 応答の形式が不正です</translation>
+    </message>
+    <message>
+      <source>the proxy does not support UDP (SOCKS5 reply %1)</source>
+      <translation>プロキシは UDP に対応していません（SOCKS5 応答 %1）</translation>
+    </message>
+    <message>
+      <source>cannot open the local UDP socket</source>
+      <translation>ローカル UDP ソケットを開けません</translation>
+    </message>
+    <message>
+      <source>%1 - %2 open through proxy %3:%4 SOCKS5 (UDP)</source>
+      <translation>%1 - %2 をプロキシ %3:%4 SOCKS5 経由で接続（UDP）</translation>
+    </message>
+    <message>
+      <source>%1 - %2 UDP cannot use the proxy (%3); sending directly</source>
+      <translation>%1 - %2 UDP はプロキシを使用できません（%3）。直接接続します</translation>
+    </message>
+    <message>
+      <source>the proxy closed the control connection</source>
+      <translation>プロキシが制御接続を閉じました</translation>
+    </message>
+    <message>
+      <source>%1 - %2 UDP closed, %3 sent, %4 received</source>
+      <translation>%1 - %2 UDP 切断、送信 %3、受信 %4</translation>
     </message>
   </context>
   <context>

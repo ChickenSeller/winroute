@@ -18,6 +18,7 @@ Relay (独立线程, 0.0.0.0/:: 随机端口)
 - **DNS**：驱动过滤 UDP 53。应答被嗅探成 IP→域名映射，所以基于域名的规则和连接列表能显示主机名。开启“通过代理解析主机名”后返回 `198.18.0.0/15` 内的假 IP（Proxifier 用的是 127.8.\*.\*），连接时把域名交给代理解析。
 - **自身流量**：驱动规则放行 WinRoute 自己的进程，不会形成环路；连接目标就是代理服务器本身时，“连接环路检测”会改为直连。
 - **代理链**：简单链、冗余（失败切换下一个，可设重检间隔和全部失败时直连）、负载均衡（随机，或同一 PID 固定用一个代理）。
+- **UDP**：默认直接放行（`mode_bypass`）。在“配置 > 高级 > 通过 SOCKS5 转发 UDP”开启后，命中规则且代理是单个 SOCKS5 的 UDP 会通过 SOCKS5 UDP ASSOCIATE 转发（驱动改为过滤全部出站 UDP，中继线程为每个 UDP 套接字建一个关联，回包用 `nf_udpPostReceive` 注回）。代理链或非 SOCKS5（SOCKS4/HTTPS）不支持 UDP，会直接放行并在日志提示一次；关联失败也回退为直连。
 
 ## 目录
 
@@ -129,6 +130,6 @@ cmake --build build
 
 ## 尚未实现
 
-- UDP 代理（SOCKS5 UDP ASSOCIATE）；UDP 目前直接放行，与 Proxifier 默认的 `mode_bypass` 相同
+- 代理链和非 SOCKS5 代理的 UDP（SOCKS4/HTTPS 协议本身不支持；单个 SOCKS5 的 UDP 已支持，见上）
 - NTLM / Kerberos 代理认证、主密码加密、规则的“指定网卡”高级选项
 - Proxifier 自带的 “basic” 加密密码无法解密，导入后需要重新输入密码

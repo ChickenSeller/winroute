@@ -13,6 +13,7 @@
 class QTcpServer;
 class DnsClient;
 class RelaySession;
+class UdpRelaySession;
 
 struct ConnectionEvent {
     quint64 id = 0;
@@ -23,7 +24,24 @@ struct ConnectionEvent {
     QString ruleName;
     QString actionText;   // translated: "Direct", "1.2.3.4:1080 SOCKS5", "Chain Office"
     ActionType actionType = ActionType::Direct;
+    bool udp = false;     // a UDP flow (shown with a "UDP" marker), not a TCP connection
     qint64 startMs = 0;
+};
+
+// One intercepted UDP datagram handed from the interceptor (NF thread) to the
+// relay thread, to be tunnelled through a SOCKS5 proxy (UDP ASSOCIATE).
+struct UdpDatagram {
+    quint64 id = 0;        // driver endpoint id (one UDP socket)
+    int proxyId = 0;       // SOCKS5 proxy the matched rule selected
+    quint32 pid = 0;
+    QString appName;
+    QString appPath;
+    QString ruleName;
+    QByteArray remote;     // the address the application sent to, as sockaddr bytes
+    QString hostname;      // target host name, used when the address is a fake DNS IP
+    bool fakeIp = false;
+    QByteArray data;       // the datagram payload
+    QByteArray opts;       // NF_UDP_OPTIONS bytes (flags + options), reused for the reply
 };
 
 struct TrafficSample {
@@ -34,6 +52,7 @@ struct TrafficSample {
 
 Q_DECLARE_METATYPE(ConnectionEvent)
 Q_DECLARE_METATYPE(TrafficSample)
+Q_DECLARE_METATYPE(UdpDatagram)
 
 // Local TCP relay. Lives in its own thread; accepts connections redirected by
 // the interceptor and tunnels them to their targets through the configured
@@ -56,6 +75,13 @@ public:
     void closeConnection(quint64 id);
     void closeAll();
 
+    // UDP over SOCKS5. The interceptor posts datagrams here (queued); the relay
+    // keeps one SOCKS5 UDP ASSOCIATE session per UDP socket. Both run in the
+    // relay thread.
+    void udpOut(const UdpDatagram &dg);
+    void closeUdp(quint64 id);
+    void udpSessionFinished(quint64 id, qint64 sent, qint64 received);
+
     DnsClient *dns() const { return m_dns; }
 
     // Redundancy chains remember failed proxies until the recheck time.
@@ -72,6 +98,7 @@ signals:
 
 private:
     friend class RelaySession;
+    friend class UdpRelaySession;
     void onNewConnection(QTcpServer *server);
     void sessionFinished(quint64 id);
     void emitTraffic();
@@ -84,6 +111,7 @@ private:
     bool m_hasV6 = false;
     quint64 m_nextId = 1;
     QHash<quint64, RelaySession *> m_sessions;
+    QHash<quint64, UdpRelaySession *> m_udpSessions;   // keyed by the driver endpoint id
     QTimer m_trafficTimer;
     QTimer m_expireTimer;
 

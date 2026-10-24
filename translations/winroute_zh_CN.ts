@@ -58,6 +58,10 @@
       <translation>%1（PID %2）</translation>
     </message>
     <message>
+      <source>%1 (UDP)</source>
+      <translation>%1 (UDP)</translation>
+    </message>
+    <message>
       <source>Application</source>
       <translation>应用程序</translation>
     </message>
@@ -285,6 +289,10 @@
       <translation>无法连接网络驱动 %1：%2</translation>
     </message>
     <message>
+      <source>Cannot update UDP filtering: %1</source>
+      <translation>无法更新 UDP 过滤：%1</translation>
+    </message>
+    <message>
       <source>%1 - %2 error : unknown fake DNS address, the name was resolved before WinRoute started</source>
       <translation>%1 - %2 错误：未知的虚拟 DNS 地址，该域名是在 WinRoute 启动前解析的</translation>
     </message>
@@ -307,6 +315,18 @@
     <message>
       <source>DNS %1 resolved through proxy as %2</source>
       <translation>DNS %1 通过代理解析为 %2</translation>
+    </message>
+    <message>
+      <source>%1 - %2 matching %3 rule : blocked (UDP)</source>
+      <translation>%1 - %2 匹配规则 %3：已阻止（UDP）</translation>
+    </message>
+    <message>
+      <source>%1 - %2 matching %3 rule : %4 does not support UDP, sending directly</source>
+      <translation>%1 - %2 匹配规则 %3：%4 不支持 UDP，直接连接</translation>
+    </message>
+    <message>
+      <source>%1 - %2 matching %3 rule : proxy chains do not support UDP, sending directly</source>
+      <translation>%1 - %2 匹配规则 %3：代理链不支持 UDP，直接连接</translation>
     </message>
   </context>
   <context>
@@ -409,6 +429,14 @@
     <message>
       <source>Connect directly to proxy servers to prevent infinite connection loops</source>
       <translation>直接连接代理服务器，防止无限连接环路</translation>
+    </message>
+    <message>
+      <source>Route &amp;UDP through SOCKS5</source>
+      <translation>通过 SOCKS5 转发 UDP(&amp;U)</translation>
+    </message>
+    <message>
+      <source>Tunnel UDP through the proxy when a rule selects a SOCKS5 proxy (otherwise UDP goes directly)</source>
+      <translation>当规则命中 SOCKS5 代理时，通过代理转发 UDP（否则 UDP 直接连接）</translation>
     </message>
     <message>
       <source>&amp;Passwords Encryption...</source>
@@ -1576,6 +1604,62 @@ Default 规则将改为使用 %1。
     <message>
       <source>Relay: unexpected connection from %1 dropped</source>
       <translation>中继：已丢弃来自 %1 的意外连接</translation>
+    </message>
+    <message>
+      <source>%1 - UDP proxy #%2 used by rule %3 does not exist</source>
+      <translation>%1 - 规则 %3 使用的 UDP 代理 #%2 不存在</translation>
+    </message>
+    <message>
+      <source>the network driver API is unavailable</source>
+      <translation>网络驱动接口不可用</translation>
+    </message>
+    <message>
+      <source>no resolver available</source>
+      <translation>解析器不可用</translation>
+    </message>
+    <message>
+      <source>could not resolve proxy %1 - %2</source>
+      <translation>无法解析代理 %1 - %2</translation>
+    </message>
+    <message>
+      <source>not a SOCKS5 proxy</source>
+      <translation>不是 SOCKS5 代理</translation>
+    </message>
+    <message>
+      <source>SOCKS5 authentication method not accepted</source>
+      <translation>SOCKS5 认证方式未被接受</translation>
+    </message>
+    <message>
+      <source>SOCKS5 authentication failed</source>
+      <translation>SOCKS5 认证失败</translation>
+    </message>
+    <message>
+      <source>malformed SOCKS5 reply</source>
+      <translation>SOCKS5 应答格式错误</translation>
+    </message>
+    <message>
+      <source>the proxy does not support UDP (SOCKS5 reply %1)</source>
+      <translation>代理不支持 UDP（SOCKS5 应答 %1）</translation>
+    </message>
+    <message>
+      <source>cannot open the local UDP socket</source>
+      <translation>无法打开本地 UDP 套接字</translation>
+    </message>
+    <message>
+      <source>%1 - %2 open through proxy %3:%4 SOCKS5 (UDP)</source>
+      <translation>%1 - %2 通过代理 %3:%4 SOCKS5 连接（UDP）</translation>
+    </message>
+    <message>
+      <source>%1 - %2 UDP cannot use the proxy (%3); sending directly</source>
+      <translation>%1 - %2 UDP 无法使用代理（%3），改为直接连接</translation>
+    </message>
+    <message>
+      <source>the proxy closed the control connection</source>
+      <translation>代理关闭了控制连接</translation>
+    </message>
+    <message>
+      <source>%1 - %2 UDP closed, %3 sent, %4 received</source>
+      <translation>%1 - %2 UDP 关闭，发送 %3，接收 %4</translation>
     </message>
   </context>
   <context>

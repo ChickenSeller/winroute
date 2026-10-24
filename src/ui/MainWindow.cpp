@@ -147,6 +147,14 @@ void MainWindow::createActions()
         p.options.loopDetection = on;
         applyProfile(p);
     });
+    m_actUdpProxy = new QAction(tr("Route &UDP through SOCKS5"), this);
+    m_actUdpProxy->setCheckable(true);
+    m_actUdpProxy->setStatusTip(tr("Tunnel UDP through the proxy when a rule selects a SOCKS5 proxy (otherwise UDP goes directly)"));
+    connect(m_actUdpProxy, &QAction::triggered, this, [this](bool on) {
+        Profile p = m_profile;
+        p.options.udpMode = on ? "mode_proxy" : "mode_bypass";
+        applyProfile(p);
+    });
     m_actEncryption = act(tr("&Passwords Encryption..."), &MainWindow::showEncryption);
 
     m_actDisconnect = act(tr("&Disconnect"), &MainWindow::disconnectSelected, QKeySequence::Delete, icons::disconnect());
@@ -228,6 +236,7 @@ void MainWindow::createMenus()
     advanced->addAction(m_actServices);
     advanced->addAction(m_actHandleDirect);
     advanced->addAction(m_actLoopDetection);
+    advanced->addAction(m_actUdpProxy);
     advanced->addAction(m_actEncryption);
 
     QMenu *log = menuBar()->addMenu(tr("&Log"));
@@ -520,6 +529,7 @@ void MainWindow::updateTitle()
     m_statusProfile->setText(tr("Profile: ") + m_profileName);
     m_actHandleDirect->setChecked(m_profile.options.handleDirectConnections);
     m_actLoopDetection->setChecked(m_profile.options.loopDetection);
+    m_actUdpProxy->setChecked(m_profile.options.udpMode == "mode_proxy");
 }
 
 void MainWindow::updateTrayIcon(double down, double up)

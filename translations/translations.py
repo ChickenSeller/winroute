@@ -477,6 +477,35 @@ T = {
     "%1 KB/sec": ("%1 KB/秒", "%1 KB/秒"),
     "%1 MB/sec": ("%1 MB/秒", "%1 MB/秒"),
 
+    # ---- UDP over SOCKS5 ----
+    "%1 (UDP)": ("%1 (UDP)", "%1 (UDP)"),
+    "Route &UDP through SOCKS5": ("通过 SOCKS5 转发 UDP(&U)", "UDP を SOCKS5 で転送(&U)"),
+    "Tunnel UDP through the proxy when a rule selects a SOCKS5 proxy (otherwise UDP goes directly)":
+        ("当规则命中 SOCKS5 代理时，通过代理转发 UDP（否则 UDP 直接连接）",
+         "ルールが SOCKS5 プロキシを選択したとき、UDP をプロキシ経由で転送します（それ以外は UDP は直接接続）"),
+    "Cannot update UDP filtering: %1": ("无法更新 UDP 过滤：%1", "UDP フィルタリングを更新できません：%1"),
+    "%1 - %2 matching %3 rule : blocked (UDP)": ("%1 - %2 匹配规则 %3：已阻止（UDP）", "%1 - %2 がルール %3 に一致：ブロック（UDP）"),
+    "%1 - %2 matching %3 rule : %4 does not support UDP, sending directly":
+        ("%1 - %2 匹配规则 %3：%4 不支持 UDP，直接连接", "%1 - %2 がルール %3 に一致：%4 は UDP に対応していないため直接接続します"),
+    "%1 - %2 matching %3 rule : proxy chains do not support UDP, sending directly":
+        ("%1 - %2 匹配规则 %3：代理链不支持 UDP，直接连接", "%1 - %2 がルール %3 に一致：プロキシチェーンは UDP に対応していないため直接接続します"),
+    "%1 - UDP proxy #%2 used by rule %3 does not exist":
+        ("%1 - 规则 %3 使用的 UDP 代理 #%2 不存在", "%1 - ルール %3 が使用する UDP プロキシ #%2 は存在しません"),
+    "the network driver API is unavailable": ("网络驱动接口不可用", "ネットワークドライバー API を利用できません"),
+    "no resolver available": ("解析器不可用", "リゾルバーを利用できません"),
+    "could not resolve proxy %1 - %2": ("无法解析代理 %1 - %2", "プロキシ %1 を解決できませんでした - %2"),
+    "not a SOCKS5 proxy": ("不是 SOCKS5 代理", "SOCKS5 プロキシではありません"),
+    "SOCKS5 authentication method not accepted": ("SOCKS5 认证方式未被接受", "SOCKS5 認証方式が受け入れられませんでした"),
+    "SOCKS5 authentication failed": ("SOCKS5 认证失败", "SOCKS5 認証に失敗しました"),
+    "malformed SOCKS5 reply": ("SOCKS5 应答格式错误", "SOCKS5 応答の形式が不正です"),
+    "the proxy does not support UDP (SOCKS5 reply %1)": ("代理不支持 UDP（SOCKS5 应答 %1）", "プロキシは UDP に対応していません（SOCKS5 応答 %1）"),
+    "cannot open the local UDP socket": ("无法打开本地 UDP 套接字", "ローカル UDP ソケットを開けません"),
+    "the proxy closed the control connection": ("代理关闭了控制连接", "プロキシが制御接続を閉じました"),
+    "%1 - %2 open through proxy %3:%4 SOCKS5 (UDP)": ("%1 - %2 通过代理 %3:%4 SOCKS5 连接（UDP）", "%1 - %2 をプロキシ %3:%4 SOCKS5 経由で接続（UDP）"),
+    "%1 - %2 UDP cannot use the proxy (%3); sending directly":
+        ("%1 - %2 UDP 无法使用代理（%3），改为直接连接", "%1 - %2 UDP はプロキシを使用できません（%3）。直接接続します"),
+    "%1 - %2 UDP closed, %3 sent, %4 received": ("%1 - %2 UDP 关闭，发送 %3，接收 %4", "%1 - %2 UDP 切断、送信 %3、受信 %4"),
+
     # ---- updates ----
     "Check for &Updates...": ("检查更新(&U)...", "更新の確認(&U)..."),
     "Automatic U&pdates": ("自动更新(&P)", "自動更新(&P)"),

@@ -25,6 +25,7 @@ struct NetFilterApi {
     decltype(&::nf_tcpPostReceive) tcpPostReceive = nullptr;
     decltype(&::nf_udpPostSend) udpPostSend = nullptr;
     decltype(&::nf_udpPostReceive) udpPostReceive = nullptr;
+    decltype(&::nf_getUDPConnInfo) getUDPConnInfo = nullptr;
     decltype(&::nf_getProcessNameFromKernel) getProcessNameFromKernel = nullptr;
     decltype(&::nf_adjustProcessPriviledges) adjustProcessPriviledges = nullptr;
     decltype(&::nf_getDriverType) getDriverType = nullptr;

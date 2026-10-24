@@ -64,7 +64,7 @@ QVariant ConnectionsModel::data(const QModelIndex &index, int role) const
             if (role == Qt::ToolTipRole)
                 return tr("%1 (pid %2)").arg(r.ev.appPath.isEmpty() ? r.ev.appName : r.ev.appPath).arg(r.ev.pid);
             return r.ev.appName;
-        case ColTarget: return r.ev.target;
+        case ColTarget: return r.ev.udp ? tr("%1 (UDP)").arg(r.ev.target) : r.ev.target;
         case ColTimeStatus: return timeStatus(r.status, r.ev.startMs, r.closedMs);
         case ColRuleProxy: return QString("%1 : %2").arg(r.ev.ruleName, r.ev.actionText);
         case ColSent: return util::formatBytes(r.sent);

@@ -3,15 +3,19 @@
 
 #include "core/DnsMessage.h"
 #include "core/FakeDns.h"
+#include "core/FlowTable.h"
 #include "core/Profile.h"
 #include "core/ProxyConnector.h"
+#include "core/Relay.h"
 #include "core/RuleEngine.h"
+#include "core/UdpRelaySession.h"
 #include "core/Utils.h"
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QUdpSocket>
 #include <QtEndian>
 #include <cstdio>
 
@@ -471,6 +475,185 @@ static void testProxies()
     CHECK(e.startsWith("Could not connect to proxy 127.0.0.1:1"));
 }
 
+// ---- UDP over SOCKS5 -------------------------------------------------------
+
+// A sockaddr_in as the driver passes it: family(LE) port(BE) addr(BE) + padding.
+static QByteArray makeSockaddr4(quint32 ipv4, quint16 port)
+{
+    QByteArray sa(16, '\0');
+    sa[0] = 2;   // AF_INET
+    const quint16 bePort = qToBigEndian(port);
+    memcpy(sa.data() + 2, &bePort, 2);
+    const quint32 beIp = qToBigEndian(ipv4);
+    memcpy(sa.data() + 4, &beIp, 4);
+    return sa;
+}
+
+// A SOCKS5 proxy that supports UDP ASSOCIATE and echoes UDP datagrams back,
+// keeping the SOCKS5 UDP header (so the reply appears to come from the target).
+class TestUdpProxy : public QTcpServer {
+public:
+    TestUdpProxy()
+    {
+        m_udp = new QUdpSocket(this);
+        m_udp->bind(QHostAddress::LocalHost, 0);
+        m_relayPort = m_udp->localPort();
+        connect(m_udp, &QUdpSocket::readyRead, this, [this] {
+            while (m_udp->hasPendingDatagrams()) {
+                QByteArray buf(int(m_udp->pendingDatagramSize()), '\0');
+                QHostAddress from;
+                quint16 fp = 0;
+                m_udp->readDatagram(buf.data(), buf.size(), &from, &fp);
+                if (buf.size() < 4)
+                    continue;
+                const quint8 atyp = quint8(buf[3]);
+                int hdr;
+                if (atyp == 1)
+                    hdr = 10;
+                else if (atyp == 4)
+                    hdr = 22;
+                else if (atyp == 3)
+                    hdr = 5 + quint8(buf[4]) + 2;
+                else
+                    continue;
+                if (buf.size() < hdr)
+                    continue;
+                lastAtyp = atyp;
+                m_udp->writeDatagram(buf, from, fp);   // echo header + payload
+            }
+        });
+        listen(QHostAddress::LocalHost);
+        connect(this, &QTcpServer::newConnection, this, [this] {
+            while (QTcpSocket *c = nextPendingConnection())
+                handle(c);
+        });
+    }
+    quint16 relayPort() const { return m_relayPort; }
+    int lastAtyp = 0;
+
+private:
+    void handle(QTcpSocket *c)
+    {
+        auto *buf = new QByteArray;
+        auto *stage = new int(0);
+        connect(c, &QTcpSocket::readyRead, c, [=] {
+            *buf += c->readAll();
+            process(c, buf, stage);
+        });
+        connect(c, &QTcpSocket::disconnected, c, [=] {
+            delete buf;
+            delete stage;
+            c->deleteLater();
+        });
+    }
+    void process(QTcpSocket *c, QByteArray *buf, int *stage)
+    {
+        if (*stage == 0) {
+            if (buf->size() < 2 || buf->size() < 2 + quint8((*buf)[1]))
+                return;
+            buf->remove(0, 2 + quint8((*buf)[1]));
+            c->write(QByteArray("\x05\x00", 2));   // no auth
+            *stage = 2;
+        }
+        if (*stage == 2) {
+            if (buf->size() < 5)
+                return;
+            const quint8 atyp = quint8((*buf)[3]);
+            int off;
+            if (atyp == 1) {
+                if (buf->size() < 10)
+                    return;
+                off = 8;
+            } else if (atyp == 3) {
+                const int l = quint8((*buf)[4]);
+                if (buf->size() < 5 + l + 2)
+                    return;
+                off = 5 + l;
+            } else {
+                if (buf->size() < 22)
+                    return;
+                off = 20;
+            }
+            buf->remove(0, off + 2);
+            *stage = 3;
+            QByteArray rep("\x05\x00\x00\x01", 4);   // success, BND = 127.0.0.1:relayPort
+            const quint32 beIp = qToBigEndian<quint32>(0x7F000001);
+            rep.append(reinterpret_cast<const char *>(&beIp), 4);
+            const quint16 bePort = qToBigEndian(m_relayPort);
+            rep.append(reinterpret_cast<const char *>(&bePort), 2);
+            c->write(rep);
+        }
+    }
+    QUdpSocket *m_udp;
+    quint16 m_relayPort = 0;
+};
+
+// Drives one UDP datagram through a UdpRelaySession and returns the delivered
+// payload (empty on timeout). gotRemote receives the source handed back.
+static QByteArray runUdp(Relay *relay, const ProxyServer &proxy, const UdpDatagram &dg, QByteArray *gotRemote,
+                         bool *bypassed = nullptr)
+{
+    QByteArray payload;
+    auto *s = new UdpRelaySession(relay, dg, proxy);
+    s->setTestSinks([&](const QByteArray &r, const QByteArray &pl) { if (gotRemote) *gotRemote = r; payload = pl; },
+                    [&](const UdpDatagram &) { if (bypassed) *bypassed = true; });
+    QElapsedTimer t;
+    t.start();
+    while (payload.isEmpty() && (!bypassed || !*bypassed) && t.elapsed() < 5000)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+    s->close();
+    QCoreApplication::processEvents();
+    return payload;
+}
+
+static void testUdpProxy()
+{
+    FlowTable flows;
+    Relay relay(&flows);
+    TestUdpProxy proxy;
+
+    ProxyServer p;
+    p.type = ProxyType::Socks5;
+    p.address = "127.0.0.1";
+    p.port = proxy.serverPort();
+
+    // IPv4 target: wrapped with ATYP=1, echoed back as from the same address.
+    UdpDatagram dg;
+    dg.id = 1;
+    dg.remote = makeSockaddr4(0x7F000001, 9999);
+    dg.data = "ping-udp";
+    QByteArray gotRemote;
+    CHECK(runUdp(&relay, p, dg, &gotRemote) == "ping-udp");
+    CHECK(gotRemote == dg.remote);
+    CHECK(proxy.lastAtyp == 1);
+
+    // Fake-DNS target: sent by host name with ATYP=3, delivered as from the fake IP.
+    UdpDatagram dgn;
+    dgn.id = 2;
+    dgn.remote = makeSockaddr4(0xC6120005, 5353);   // 198.18.0.5 (a fake DNS address)
+    dgn.hostname = "echo.test";
+    dgn.fakeIp = true;
+    dgn.data = "by-name";
+    QByteArray gotRemote2;
+    CHECK(runUdp(&relay, p, dgn, &gotRemote2) == "by-name");
+    CHECK(gotRemote2 == dgn.remote);
+    CHECK(proxy.lastAtyp == 3);
+
+    // A proxy that is not reachable falls back to sending directly (bypass).
+    ProxyServer dead;
+    dead.type = ProxyType::Socks5;
+    dead.address = "127.0.0.1";
+    dead.port = 1;
+    UdpDatagram dgd;
+    dgd.id = 3;
+    dgd.remote = makeSockaddr4(0x7F000001, 9999);
+    dgd.data = "x";
+    bool bypassed = false;
+    QByteArray none;
+    runUdp(&relay, dead, dgd, &none, &bypassed);
+    CHECK(bypassed);
+}
+
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
@@ -478,6 +661,7 @@ int main(int argc, char **argv)
     testRules();
     testDns();
     testProxies();
+    testUdpProxy();
     std::printf("%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
 }

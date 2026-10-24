@@ -37,6 +37,7 @@ const NetFilterApi *NetFilterApi::load(QString *error)
     get(api.tcpPostReceive, "nf_tcpPostReceive");
     get(api.udpPostSend, "nf_udpPostSend");
     get(api.udpPostReceive, "nf_udpPostReceive");
+    get(api.getUDPConnInfo, "nf_getUDPConnInfo");
     get(api.getProcessNameFromKernel, "nf_getProcessNameFromKernel");
     get(api.adjustProcessPriviledges, "nf_adjustProcessPriviledges");
     get(api.getDriverType, "nf_getDriverType");

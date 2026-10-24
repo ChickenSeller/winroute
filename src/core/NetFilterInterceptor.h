@@ -3,8 +3,11 @@
 #include "Interceptor.h"
 #include "NetFilterApi.h"
 
+#include <QHash>
 #include <QMutex>
+#include <QPair>
 #include <QSet>
+#include <QString>
 #include <atomic>
 
 // Interceptor backed by the NetFilter SDK WFP driver (netfilter2.sys).
@@ -35,6 +38,8 @@ public:
 
     // NF_EventHandler callbacks, dispatched from nfapi worker threads.
     void onTcpConnectRequest(ENDPOINT_ID id, PNF_TCP_CONN_INFO info);
+    void onUdpCreated(ENDPOINT_ID id, PNF_UDP_CONN_INFO info);
+    void onUdpClosed(ENDPOINT_ID id);
     void onUdpSend(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len, PNF_UDP_OPTIONS opt);
     void onUdpReceive(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len, PNF_UDP_OPTIONS opt);
 
@@ -44,6 +49,21 @@ private:
     bool resolveViaProxy(const ProfileOptions &opt) const;
     bool shouldFakeResolve(const RuleEngine &rules, const QString &name) const;
     QString processPath(quint32 pid, const QString &fallback) const;
+    void handleUdpProxy(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len, PNF_UDP_OPTIONS opt,
+                        const RuleEnginePtr &engine, const QHostAddress &dst, quint16 dport);
+    int decideUdp(const RuleMatch &match, bool skip, const Profile &profile, const ProfileOptions &opt,
+                  const QHostAddress &dst, quint16 dport, bool fake, const QString &appName, const QString &target,
+                  int *proxyId) const;
+
+    // Per UDP socket state, for the SOCKS5 UDP tunnelling decision.
+    enum UdpDecision { UdpBypass, UdpProxy, UdpDrop };
+    struct UdpSock {
+        quint32 pid = 0;
+        bool haveProc = false;
+        QString appName;
+        QString appPath;
+        QHash<QString, QPair<int, int>> decisions;   // remoteKey -> (UdpDecision, proxyId)
+    };
 
     const NetFilterApi *m_api = nullptr;
     InterceptorContext m_ctx;
@@ -56,4 +76,8 @@ private:
     RuleEnginePtr m_rules;
     QSet<QString> m_proxyHosts;        // proxy host names (never faked)
     QSet<QString> m_proxyEndpoints;    // "ip:port" of proxies (loop detection)
+    bool m_udpProxyMode = false;       // ProfileOptions.udpMode == "mode_proxy" (guarded by m_rulesMutex)
+
+    mutable QMutex m_udpMutex;
+    QHash<quint64, UdpSock> m_udpSocks;   // keyed by ENDPOINT_ID
 };

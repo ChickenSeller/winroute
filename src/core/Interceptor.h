@@ -7,11 +7,13 @@
 class FlowTable;
 class FakeDns;
 class DnsCache;
+class Relay;
 
 struct InterceptorContext {
     FlowTable *flows = nullptr;
     FakeDns *fakeDns = nullptr;
     DnsCache *dnsCache = nullptr;
+    Relay *relay = nullptr;   // UDP datagrams are handed here for SOCKS5 tunnelling
     quint16 relayPort = 0;
     bool relayIPv6 = false;   // the relay also accepts IPv6 connections
 };

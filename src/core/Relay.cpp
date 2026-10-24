@@ -1,6 +1,7 @@
 #include "Relay.h"
 #include "DnsClient.h"
 #include "Logger.h"
+#include "UdpRelaySession.h"
 #include "Utils.h"
 
 #include <QCoreApplication>
@@ -321,6 +322,7 @@ Relay::Relay(FlowTable *flows, QObject *parent)
     qRegisterMetaType<ConnectionEvent>();
     qRegisterMetaType<TrafficSample>();
     qRegisterMetaType<QList<TrafficSample>>();
+    qRegisterMetaType<UdpDatagram>();
 }
 
 Relay::~Relay()
@@ -383,10 +385,58 @@ void Relay::sessionFinished(quint64 id)
     m_sessions.remove(id);
 }
 
+void Relay::udpOut(const UdpDatagram &dg)
+{
+    if (UdpRelaySession *s = m_udpSessions.value(dg.id)) {
+        s->send(dg);
+        return;
+    }
+    RuleEnginePtr rules = this->rules();
+    const ProxyServer *p = rules ? rules->profile().proxyById(dg.proxyId) : nullptr;
+    if (!p) {
+        logError(QCoreApplication::translate("Relay", "%1 - UDP proxy #%2 used by rule %3 does not exist")
+                     .arg(dg.appName).arg(dg.proxyId).arg(dg.ruleName));
+        return;
+    }
+    // The constructor takes the first datagram, so do not send it again here.
+    auto *s = new UdpRelaySession(this, dg, *p, this);
+    m_udpSessions.insert(dg.id, s);
+
+    ConnectionEvent ev;
+    ev.id = dg.id;
+    ev.pid = dg.pid;
+    ev.appName = dg.appName;
+    ev.appPath = dg.appPath;
+    ev.target = UdpRelaySession::targetText(dg.remote, dg.hostname);
+    ev.ruleName = dg.ruleName;
+    ev.actionText = QString("%1:%2 %3").arg(p->address).arg(p->port).arg(proxyTypeToString(p->type));
+    ev.actionType = ActionType::Proxy;
+    ev.udp = true;
+    ev.startMs = QDateTime::currentMSecsSinceEpoch();
+    emit opened(ev);
+}
+
+void Relay::closeUdp(quint64 id)
+{
+    QMetaObject::invokeMethod(this, [this, id] {
+        if (UdpRelaySession *s = m_udpSessions.value(id))
+            s->close();
+    });
+}
+
+void Relay::udpSessionFinished(quint64 id, qint64 sent, qint64 received)
+{
+    m_udpSessions.remove(id);
+    emit closed(id, sent, received);
+}
+
 void Relay::emitTraffic()
 {
     QList<TrafficSample> samples;
     for (RelaySession *s : std::as_const(m_sessions))
+        if (s->trafficChanged())
+            samples << TrafficSample{s->id(), s->sent(), s->received()};
+    for (UdpRelaySession *s : std::as_const(m_udpSessions))
         if (s->trafficChanged())
             samples << TrafficSample{s->id(), s->sent(), s->received()};
     if (!samples.isEmpty())
@@ -419,6 +469,9 @@ void Relay::closeAll()
         const auto sessions = m_sessions.values();
         for (RelaySession *s : sessions)
             s->abort();
+        const auto udp = m_udpSessions.values();
+        for (UdpRelaySession *s : udp)
+            s->close();
     };
     if (thread() == QThread::currentThread())
         doClose();

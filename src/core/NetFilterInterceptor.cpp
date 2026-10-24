@@ -4,6 +4,7 @@
 #include "FlowTable.h"
 #include "Logger.h"
 #include "ProcessInfo.h"
+#include "Relay.h"
 #include "Utils.h"
 
 #include <QCoreApplication>
@@ -29,9 +30,17 @@ void NFAPI_CC cbTcpReceive(ENDPOINT_ID, const char *, int) {}
 void NFAPI_CC cbTcpSend(ENDPOINT_ID, const char *, int) {}
 void NFAPI_CC cbTcpCanReceive(ENDPOINT_ID) {}
 void NFAPI_CC cbTcpCanSend(ENDPOINT_ID) {}
-void NFAPI_CC cbUdpCreated(ENDPOINT_ID, PNF_UDP_CONN_INFO) {}
+void NFAPI_CC cbUdpCreated(ENDPOINT_ID id, PNF_UDP_CONN_INFO info)
+{
+    if (g_instance)
+        g_instance->onUdpCreated(id, info);
+}
 void NFAPI_CC cbUdpConnectRequest(ENDPOINT_ID, PNF_UDP_CONN_REQUEST) {}
-void NFAPI_CC cbUdpClosed(ENDPOINT_ID, PNF_UDP_CONN_INFO) {}
+void NFAPI_CC cbUdpClosed(ENDPOINT_ID id, PNF_UDP_CONN_INFO)
+{
+    if (g_instance)
+        g_instance->onUdpClosed(id);
+}
 void NFAPI_CC cbUdpReceive(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len, PNF_UDP_OPTIONS opt)
 {
     if (g_instance)
@@ -267,13 +276,21 @@ bool NetFilterInterceptor::installRules(QString *error)
     if (!add("loopback6"))
         return false;
 
-    // 3. DNS datagrams in both directions.
+    // 3. UDP datagrams. In proxy mode all outgoing UDP is filtered so it can be
+    // tunnelled through SOCKS5; otherwise only DNS (for the fake resolver and to
+    // learn IP -> host name mappings).
+    bool udpProxy;
+    {
+        QMutexLocker lock(&m_rulesMutex);
+        udpProxy = m_udpProxyMode;
+    }
     memset(&rule, 0, sizeof(rule));
     rule.protocol = IPPROTO_UDP;
     rule.direction = NF_D_BOTH;
-    rule.remotePort = htons(53);
+    if (!udpProxy)
+        rule.remotePort = htons(53);
     rule.filteringFlag = NF_FILTER;
-    if (!add("dns"))
+    if (!add("udp"))
         return false;
 
     // 4. Outgoing TCP connect requests are indicated to tcpConnectRequest().
@@ -328,12 +345,16 @@ void NetFilterInterceptor::stop()
     m_api->deleteRules();
     m_api->free();
     g_instance = nullptr;
+    QMutexLocker lock(&m_udpMutex);
+    m_udpSocks.clear();
 }
 
 void NetFilterInterceptor::setRules(RuleEnginePtr rules)
 {
     QSet<QString> hosts, endpoints;
+    bool udpProxy = false;
     if (rules) {
+        udpProxy = rules->profile().options.udpMode == QLatin1String("mode_proxy");
         for (const ProxyServer &p : rules->profile().proxies) {
             const QHostAddress literal(p.address);
             if (literal.isNull())
@@ -342,10 +363,26 @@ void NetFilterInterceptor::setRules(RuleEnginePtr rules)
                 endpoints.insert(endpointKey(util::normalize(literal), p.port));
         }
     }
-    QMutexLocker lock(&m_rulesMutex);
-    m_rules = std::move(rules);
-    m_proxyHosts = hosts;
-    m_proxyEndpoints = endpoints;
+    bool modeChanged;
+    {
+        QMutexLocker lock(&m_rulesMutex);
+        modeChanged = udpProxy != m_udpProxyMode;
+        m_rules = std::move(rules);
+        m_proxyHosts = hosts;
+        m_proxyEndpoints = endpoints;
+        m_udpProxyMode = udpProxy;
+    }
+    // The set of filtered UDP depends on the mode, so re-apply the driver rules.
+    if (modeChanged && m_running && m_api) {
+        m_api->deleteRules();
+        QString error;
+        if (!installRules(&error))
+            logError(QCoreApplication::translate("Interceptor", "Cannot update UDP filtering: %1").arg(error));
+        {
+            QMutexLocker lock(&m_udpMutex);
+            m_udpSocks.clear();
+        }
+    }
 }
 
 RuleEnginePtr NetFilterInterceptor::rules() const
@@ -511,31 +548,223 @@ bool NetFilterInterceptor::shouldFakeResolve(const RuleEngine &engine, const QSt
     return opt.dnsOnlyFromList ? listed : !listed;
 }
 
+void NetFilterInterceptor::onUdpCreated(ENDPOINT_ID id, PNF_UDP_CONN_INFO info)
+{
+    if (!info)
+        return;
+    QMutexLocker lock(&m_udpMutex);
+    UdpSock &sock = m_udpSocks[id];
+    sock.pid = info->processId;
+}
+
+void NetFilterInterceptor::onUdpClosed(ENDPOINT_ID id)
+{
+    bool had;
+    {
+        QMutexLocker lock(&m_udpMutex);
+        had = m_udpSocks.remove(id) > 0;
+    }
+    if (had && m_ctx.relay)
+        m_ctx.relay->closeUdp(id);
+}
+
 void NetFilterInterceptor::onUdpSend(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len,
                                      PNF_UDP_OPTIONS opt)
 {
-    const RuleEnginePtr engine = m_running ? rules() : nullptr;
-    if (engine && resolveViaProxy(engine->profile().options)) {
-        const QByteArray query(buf, len);
-        dns::Question q;
-        if (dns::parseQuestion(query, &q) && !(q.flags & 0x8000) && q.qclass == 1 && shouldFakeResolve(*engine, q.name)) {
-            const bool blockOthers = engine->profile().options.dnsBlockNonATypes;
-            QByteArray response;
-            if (q.qtype == dns::TypeA) {
-                const QHostAddress fake = m_ctx.fakeDns->addressFor(q.name);
-                response = dns::buildResponse(query, q, {fake}, 10);
-                logDebug(QCoreApplication::translate("Interceptor", "DNS %1 resolved through proxy as %2").arg(q.name, fake.toString()));
-            } else if (q.qtype == dns::TypeAAAA || q.qtype == dns::TypeHTTPS || blockOthers) {
-                // Force clients onto the fake IPv4 address.
-                response = dns::buildResponse(query, q, {}, 10);
-            }
-            if (!response.isEmpty()) {
-                m_api->udpPostReceive(id, remote, response.constData(), int(response.size()), opt);
-                return;
+    if (!m_running) {
+        m_api->udpPostSend(id, remote, buf, len, opt);
+        return;
+    }
+    quint16 dport = 0;
+    const QHostAddress dst = fromSockaddr(remote, &dport);
+    const RuleEnginePtr engine = rules();
+
+    // DNS (port 53): fake-resolve queries and let everything else pass, as before.
+    if (dport == 53) {
+        if (engine && resolveViaProxy(engine->profile().options)) {
+            const QByteArray query(buf, len);
+            dns::Question q;
+            if (dns::parseQuestion(query, &q) && !(q.flags & 0x8000) && q.qclass == 1 && shouldFakeResolve(*engine, q.name)) {
+                const bool blockOthers = engine->profile().options.dnsBlockNonATypes;
+                QByteArray response;
+                if (q.qtype == dns::TypeA) {
+                    const QHostAddress fake = m_ctx.fakeDns->addressFor(q.name);
+                    response = dns::buildResponse(query, q, {fake}, 10);
+                    logDebug(QCoreApplication::translate("Interceptor", "DNS %1 resolved through proxy as %2").arg(q.name, fake.toString()));
+                } else if (q.qtype == dns::TypeAAAA || q.qtype == dns::TypeHTTPS || blockOthers) {
+                    response = dns::buildResponse(query, q, {}, 10);
+                }
+                if (!response.isEmpty()) {
+                    m_api->udpPostReceive(id, remote, response.constData(), int(response.size()), opt);
+                    return;
+                }
             }
         }
+        m_api->udpPostSend(id, remote, buf, len, opt);
+        return;
+    }
+
+    // Other UDP: tunnel through SOCKS5 when the mode is on, otherwise pass through.
+    bool proxyMode;
+    {
+        QMutexLocker lock(&m_rulesMutex);
+        proxyMode = m_udpProxyMode;
+    }
+    if (!engine || !proxyMode || dst.isNull() || dst.isLoopback()) {
+        m_api->udpPostSend(id, remote, buf, len, opt);
+        return;
+    }
+    handleUdpProxy(id, remote, buf, len, opt, engine, dst, dport);
+}
+
+void NetFilterInterceptor::handleUdpProxy(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len,
+                                          PNF_UDP_OPTIONS opt, const RuleEnginePtr &engine, const QHostAddress &dst,
+                                          quint16 dport)
+{
+    const ProfileOptions &optns = engine->profile().options;
+    const bool fake = FakeDns::isFake(dst);
+    const QString host = fake ? m_ctx.fakeDns->hostnameFor(dst) : m_ctx.dnsCache->lookup(dst);
+    const QString remoteKey = fake ? QStringLiteral("fake:") + dst.toString() : endpointKey(dst, dport);
+
+    // Resolve the per-socket process info and the per-target decision, caching both.
+    quint32 pid = 0;
+    QString appName, appPath;
+    bool haveProc = false;
+    int decision = UdpBypass, proxyId = 0;
+    bool decided = false;
+    {
+        QMutexLocker lock(&m_udpMutex);
+        UdpSock &sock = m_udpSocks[id];
+        if (sock.pid == 0) {
+            NF_UDP_CONN_INFO ci{};
+            if (m_api->getUDPConnInfo && m_api->getUDPConnInfo(id, &ci) == NF_STATUS_SUCCESS)
+                sock.pid = ci.processId;
+        }
+        pid = sock.pid;
+        haveProc = sock.haveProc;
+        appName = sock.appName;
+        appPath = sock.appPath;
+        const auto it = sock.decisions.constFind(remoteKey);
+        if (it != sock.decisions.constEnd()) {
+            decision = it->first;
+            proxyId = it->second;
+            decided = true;
+        }
+    }
+
+    if (pid == m_selfPid) {
+        m_api->udpPostSend(id, remote, buf, len, opt);
+        return;
+    }
+
+    if (!decided) {
+        bool skip = false;
+        if (!haveProc) {
+            procinfo::Info pinfo = procinfo::lookup(pid);
+            pinfo.path = processPath(pid, pinfo.path);
+            if (!pinfo.path.isEmpty())
+                pinfo.name = QFileInfo(pinfo.path).fileName();
+            appName = pinfo.name;
+            appPath = pinfo.path;
+            const bool isService = pid == 4 || pinfo.sessionId == 0;
+            const bool otherUser = !isService && pinfo.sessionId != m_selfSession;
+            skip = (isService && !optns.processServices) || (otherUser && !optns.processOtherUsers);
+            QMutexLocker lock(&m_udpMutex);
+            UdpSock &sock = m_udpSocks[id];
+            sock.pid = pid;
+            sock.appName = appName;
+            sock.appPath = appPath;
+            sock.haveProc = true;
+        }
+        RuleMatch match;
+        if (!skip) {
+            ConnectionRequest req;
+            req.appPath = appPath;
+            req.appName = appName;
+            req.pid = pid;
+            req.ip = fake ? QHostAddress() : dst;
+            req.hostname = host;
+            req.port = dport;
+            match = engine->match(req);
+        }
+        const QString target = host.isEmpty() ? util::formatEndpoint(dst, dport) : QString("%1:%2").arg(host).arg(dport);
+        decision = decideUdp(match, skip, engine->profile(), optns, dst, dport, fake, appName, target, &proxyId);
+        QMutexLocker lock(&m_udpMutex);
+        m_udpSocks[id].decisions.insert(remoteKey, {decision, proxyId});
+    }
+
+    switch (decision) {
+    case UdpDrop:
+        return;
+    case UdpProxy: {
+        if (!m_ctx.relay)
+            break;
+        UdpDatagram dg;
+        dg.id = id;
+        dg.proxyId = proxyId;
+        dg.pid = pid;
+        dg.appName = appName;
+        dg.appPath = appPath;
+        // The rule name is not cached; re-match cheaply only for display is avoided,
+        // so leave it empty (the relay logs the proxy, not the rule, for UDP).
+        const auto *sa = reinterpret_cast<const sockaddr *>(remote);
+        int salen = sizeof(sockaddr_in);
+        if (sa->sa_family == AF_INET6)
+            salen = sizeof(sockaddr_in6);
+        dg.remote = QByteArray(reinterpret_cast<const char *>(remote), salen);
+        dg.hostname = host;
+        dg.fakeIp = fake;
+        dg.data = QByteArray(buf, len);
+        if (opt)
+            dg.opts = QByteArray(reinterpret_cast<const char *>(opt), int(sizeof(NF_UDP_OPTIONS) - 1 + qMax<long>(0, opt->optionsLength)));
+        Relay *relay = m_ctx.relay;
+        QMetaObject::invokeMethod(relay, [relay, dg] { relay->udpOut(dg); }, Qt::QueuedConnection);
+        return;
+    }
+    case UdpBypass:
+    default:
+        break;
     }
     m_api->udpPostSend(id, remote, buf, len, opt);
+}
+
+// Decides what to do with a UDP flow (one target of one socket). Logs the
+// reason once, since the result is cached per (socket, target).
+int NetFilterInterceptor::decideUdp(const RuleMatch &match, bool skip, const Profile &profile, const ProfileOptions &opt,
+                                    const QHostAddress &dst, quint16 dport, bool fake, const QString &appName,
+                                    const QString &target, int *proxyId) const
+{
+    *proxyId = 0;
+    if (skip)
+        return UdpBypass;   // services / other users, when not handled
+    switch (match.action.type) {
+    case ActionType::Block:
+        logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : blocked (UDP)").arg(appName, target, match.ruleName));
+        return UdpDrop;
+    case ActionType::Direct:
+        return UdpBypass;
+    case ActionType::Proxy: {
+        if (!fake && opt.loopDetection) {
+            QMutexLocker lock(&m_rulesMutex);
+            if (m_proxyEndpoints.contains(endpointKey(dst, dport)))
+                return UdpBypass;
+        }
+        const ProxyServer *p = profile.proxyById(match.action.id);
+        if (!p)
+            return UdpBypass;
+        if (p->type == ProxyType::Socks5) {
+            *proxyId = p->id;
+            return UdpProxy;
+        }
+        logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : %4 does not support UDP, sending directly")
+                      .arg(appName, target, match.ruleName, proxyTypeToString(p->type)));
+        return UdpBypass;
+    }
+    case ActionType::Chain:
+        logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : proxy chains do not support UDP, sending directly").arg(appName, target, match.ruleName));
+        return UdpBypass;
+    }
+    return UdpBypass;
 }
 
 void NetFilterInterceptor::onUdpReceive(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len,
