@@ -43,10 +43,11 @@
           <summary class="btn primary split-btn"><span data-i18n="hero.download">Download</span><span class="arrow" aria-hidden="true"><i></i></span></summary>
           <div class="menu">
             <a class="btn" href="releases.html" data-i18n="dl.site">From this site</a>
+            <a class="btn" href="https://github.com/ChickenSeller/winroute/releases/latest" target="_blank" rel="noopener" data-i18n="dl.github">From GitHub</a>
             <a class="btn" href="%PROJECT_URL%/-/releases/permalink/latest" target="_blank" rel="noopener" data-i18n="dl.gitlab">From GitLab</a>
           </div>
         </details>
-        <a class="btn" href="%PROJECT_URL%" target="_blank" rel="noopener" data-i18n="hero.source">Source code</a>
+        <a class="btn" href="https://github.com/ChickenSeller/winroute" target="_blank" rel="noopener" data-i18n="hero.source">Source code</a>
       </div>
       <p class="meta" data-i18n="hero.meta">Windows 10 and 11, x64 · English, 简体中文, 日本語</p>
     </div>
@@ -130,7 +131,7 @@
     </div>
     <div>
       <ol class="steps">
-        <li><strong data-i18n="how.s1.t">Catch</strong> <span data-i18n="how.s1.d">The NetFilter SDK WFP driver reports every outgoing TCP connection, with the program that opened it.</span></li>
+        <li><strong data-i18n="how.s1.t">Catch</strong> <span data-i18n="how.s1.d">The NetFilter SDK WFP driver reports every outgoing TCP connection — and UDP, when you turn it on — with the program that opened it.</span></li>
         <li><strong data-i18n="how.s2.t">Decide</strong> <span data-i18n="how.s2.d">The first rule that matches the program, host and port picks the action: a proxy, a chain, direct, or block.</span></li>
         <li><strong data-i18n="how.s3.t">Redirect</strong> <span data-i18n="how.s3.d">Proxied connections are pointed at WinRoute's local relay; direct ones go on untouched.</span></li>
         <li><strong data-i18n="how.s4.t">Tunnel</strong> <span data-i18n="how.s4.d">The relay talks SOCKS or HTTPS to the proxies, then passes the data through and counts it.</span></li>
@@ -155,7 +156,7 @@
           <tr><td data-i18n="sp.ipv6">IPv6 targets</td><td class="y">✓</td></tr>
           <tr><td data-i18n="sp.ppx">Proxifier .ppx profiles</td><td class="y">✓</td></tr>
           <tr><td data-i18n="sp.services">Windows services and other users (optional)</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.udp">UDP through SOCKS5</td><td class="n" data-i18n="sp.planned">Planned</td></tr>
+          <tr><td data-i18n="sp.udp">UDP through SOCKS5</td><td class="y">✓</td></tr>
           <tr><td data-i18n="sp.ntlm">NTLM and Kerberos proxy authentication</td><td class="n" data-i18n="sp.planned">Planned</td></tr>
         </tbody>
       </table>
