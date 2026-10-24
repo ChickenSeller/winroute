@@ -84,7 +84,6 @@ MainWindow::MainWindow(Engine *engine, QWidget *parent)
         a->setChecked(a->data().toInt() == Logger::instance().fileLevel());
     setRefreshRate(s.value("view/refresh", 1000).toInt());
     m_actTrayIcon->setChecked(s.value("view/trayIcon", true).toBool());
-    m_actTrayTraffic->setChecked(s.value("view/trayTraffic", true).toBool());
     m_tray->setVisible(m_actTrayIcon->isChecked());
 
     initialProfile();
@@ -178,12 +177,6 @@ void MainWindow::createActions()
     connect(m_actTrayIcon, &QAction::toggled, this, [this](bool on) {
         m_tray->setVisible(on);
         QSettings().setValue("view/trayIcon", on);
-    });
-    m_actTrayTraffic = new QAction(tr("Show Traffic on the System Tray Icon"), this);
-    m_actTrayTraffic->setCheckable(true);
-    connect(m_actTrayTraffic, &QAction::toggled, this, [this](bool on) {
-        QSettings().setValue("view/trayTraffic", on);
-        updateTrayIcon(0, 0);
     });
     m_actToolbar = new QAction(tr("&Toolbar"), this);
     m_actToolbar->setCheckable(true);
@@ -303,7 +296,6 @@ void MainWindow::createMenus()
     }
     view->addSeparator();
     view->addAction(m_actTrayIcon);
-    view->addAction(m_actTrayTraffic);
     view->addSeparator();
     QMenu *language = view->addMenu(tr("&Language"));
     auto *languageGroup = new QActionGroup(this);
@@ -459,8 +451,6 @@ void MainWindow::createTray()
     m_trayMenu->addSeparator();
     m_trayProfileMenu = m_trayMenu->addMenu(tr("Profiles"));
     m_trayMenu->addSeparator();
-    m_trayMenu->addAction(m_actTrayTraffic);
-    m_trayMenu->addSeparator();
     m_trayMenu->addAction(m_actExit);
     m_tray->setContextMenu(m_trayMenu);
     m_tray->setToolTip(tr("WinRoute"));
@@ -482,7 +472,7 @@ void MainWindow::startEngine()
     if (m_engine->start(&error)) {
         logNormal(tr("Network interception started (%1)").arg(m_engine->backendName()));
         m_statusState->setText(tr("Ready"));
-        updateTrayIcon(0, 0);
+        updateTrayIcon();
         probeLocalDns();
     } else {
         logError(tr("Cannot start network interception: ") + error);
@@ -540,13 +530,9 @@ void MainWindow::updateTitle()
     m_actUdpProxy->setChecked(m_profile.options.udpMode == "mode_proxy");
 }
 
-void MainWindow::updateTrayIcon(double down, double up)
+void MainWindow::updateTrayIcon()
 {
-    const bool active = m_engine->isRunning();
-    if (m_actTrayTraffic->isChecked())
-        m_tray->setIcon(icons::trayTraffic(active, down, up));
-    else
-        m_tray->setIcon(icons::app(active));
+    m_tray->setIcon(icons::app(m_engine->isRunning()));
 }
 
 // ---- profiles ------------------------------------------------------------------
@@ -954,9 +940,8 @@ void MainWindow::onSecondTick()
     m_pendingIn = m_pendingOut = 0;
     m_traffic->addSample(in, out);
     m_statusRate->setText(tr("Down %1, Up %2").arg(util::formatRate(in), util::formatRate(out)));
-    m_maxRate = qMax(m_maxRate * 0.98, qMax(in, out));
     if (m_tray->isVisible()) {
-        updateTrayIcon(in / qMax(1.0, m_maxRate), out / qMax(1.0, m_maxRate));
+        updateTrayIcon();
         m_tray->setToolTip(tr("WinRoute - %1\n%2 active connections\nDown %3, Up %4")
                                .arg(m_profileName)
                                .arg(m_connModel->activeCount())

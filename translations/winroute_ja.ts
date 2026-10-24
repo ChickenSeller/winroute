@@ -590,10 +590,6 @@
       <translation>システムトレイに WinRoute のアイコンを表示し、閉じたときはメインウィンドウを隠します</translation>
     </message>
     <message>
-      <source>Show Traffic on the System Tray Icon</source>
-      <translation>システムトレイのアイコンにトラフィックを表示</translation>
-    </message>
-    <message>
       <source>&amp;Toolbar</source>
       <translation>ツールバー(&amp;T)</translation>
     </message>

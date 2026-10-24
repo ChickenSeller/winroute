@@ -162,7 +162,6 @@ T = {
     "Icon in the System &Tray": ("在系统托盘显示图标(&T)", "システムトレイにアイコンを表示(&T)"),
     "Show WinRoute icon in the System Tray and hide the main window when closed":
         ("在系统托盘显示 WinRoute 图标，关闭主窗口时隐藏到托盘", "システムトレイに WinRoute のアイコンを表示し、閉じたときはメインウィンドウを隠します"),
-    "Show Traffic on the System Tray Icon": ("在托盘图标上显示流量", "システムトレイのアイコンにトラフィックを表示"),
     "&Toolbar": ("工具栏(&T)", "ツールバー(&T)"),
     "&Status Bar": ("状态栏(&S)", "ステータスバー(&S)"),
     "Proxy &Checker...": ("代理检测(&C)...", "プロキシチェッカー(&C)..."),

@@ -590,10 +590,6 @@
       <translation>在系统托盘显示 WinRoute 图标，关闭主窗口时隐藏到托盘</translation>
     </message>
     <message>
-      <source>Show Traffic on the System Tray Icon</source>
-      <translation>在托盘图标上显示流量</translation>
-    </message>
-    <message>
       <source>&amp;Toolbar</source>
       <translation>工具栏(&amp;T)</translation>
     </message>

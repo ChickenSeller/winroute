@@ -20,7 +20,4 @@ QIcon profile();
 QIcon arrowUp();
 QIcon arrowDown();
 
-// Tray icon with small traffic bars (values 0..1).
-QIcon trayTraffic(bool active, double down, double up);
-
 } // namespace icons

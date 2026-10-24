@@ -248,27 +248,4 @@ QIcon arrowDown()
     });
 }
 
-QIcon trayTraffic(bool active, double down, double up)
-{
-    QIcon base = app(active);
-    QIcon out;
-    for (int size : {16, 20, 24, 32, 48}) {
-        QPixmap pm = base.pixmap(size, size);
-        QPainter p(&pm);
-        const double w = size * 0.18;
-        auto bar = [&](double x, double v, const QColor &c) {
-            v = qBound(0.0, v, 1.0);
-            if (v <= 0)
-                return;
-            const double h = qMax(2.0, v * size);
-            p.fillRect(QRectF(x, size - h, w, h), c);
-        };
-        bar(size - 2 * w - 1, down, QColor(40, 200, 60));
-        bar(size - w, up, QColor(230, 60, 50));
-        p.end();
-        out.addPixmap(pm);
-    }
-    return out;
-}
-
 } // namespace icons

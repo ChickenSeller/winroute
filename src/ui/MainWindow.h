@@ -95,7 +95,7 @@ private:
     void setAutostart(bool on);
     static bool autostartEnabled();
     void updateTitle();
-    void updateTrayIcon(double down, double up);
+    void updateTrayIcon();
 
     Engine *m_engine;
     Profile m_profile;
@@ -125,7 +125,7 @@ private:
         *m_actLoopDetection, *m_actUdpProxy, *m_actEncryption;
     QAction *m_actDisconnect, *m_actEndProcess, *m_actCreateRule, *m_actCopyConn;
     QAction *m_actLogCopy, *m_actLogSelectAll, *m_actLogClear;
-    QAction *m_actTrayIcon, *m_actTrayTraffic, *m_actToolbar, *m_actStatusBar;
+    QAction *m_actTrayIcon, *m_actToolbar, *m_actStatusBar;
     QAction *m_actChecker, *m_actDriver, *m_actAbout, *m_actCheckUpdates;
     Updater *m_updater = nullptr;
     QActionGroup *m_logLevelGroup = nullptr;
@@ -140,5 +140,4 @@ private:
     DnsClient *m_dnsProbe = nullptr;
     QHash<quint64, QPair<qint64, qint64>> m_lastTotals;
     qint64 m_pendingIn = 0, m_pendingOut = 0;
-    double m_maxRate = 1;
 };
