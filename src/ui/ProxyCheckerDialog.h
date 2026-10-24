@@ -4,6 +4,7 @@
 
 #include <QDialog>
 #include <QElapsedTimer>
+#include <QHostAddress>
 #include <QPointer>
 
 class QComboBox;
@@ -12,6 +13,7 @@ class QPushButton;
 class QSpinBox;
 class QTcpSocket;
 class QTextEdit;
+class QUdpSocket;
 class DnsClient;
 class ProxyConnector;
 
@@ -30,7 +32,17 @@ private:
     void out(const QString &html);
     void step1();
     void step2();
+    void httpRequest(const QString &host, const QByteArray &leftover);
+    void afterTcpTests();
     void finish(bool ok);
+
+    // UDP support test (SOCKS5 UDP ASSOCIATE), for a single SOCKS5 proxy.
+    void udpTest();
+    void udpCtrlReadyRead();
+    void sendUdpAssociate();
+    void udpProbe();
+    void onUdpDatagram();
+    void udpDone(bool ok, const QString &detail = {});
 
     QList<QPair<QString, QList<ProxyServer>>> m_choices;
     QComboBox *m_choice = nullptr;
@@ -44,4 +56,18 @@ private:
     QList<ProxyServer> m_hops;
     QElapsedTimer m_timer;
     bool m_running = false;
+
+    // HTTP request test state.
+    QByteArray m_httpBuf;
+    bool m_httpDone = false;
+
+    // UDP test state.
+    QPointer<QTcpSocket> m_udpCtrl;
+    QPointer<QUdpSocket> m_udp;
+    QByteArray m_udpBuf;
+    int m_udpStage = 0;          // 0 greeting, 1 auth, 2 associate
+    bool m_udpPending = false;
+    QHostAddress m_relayAddr;
+    quint16 m_relayPort = 0;
+    quint16 m_dnsId = 0;
 };
