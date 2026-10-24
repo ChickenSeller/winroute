@@ -3,7 +3,7 @@
 ;   ISCC /DAppVersion=x.y.z /DStageDir=<dir> /DOutputDir=<dir> WinRoute.iss
 
 #ifndef AppVersion
-  #define AppVersion "0.4.5"
+  #define AppVersion "0.4.6"
 #endif
 #ifndef StageDir
   #define StageDir "..\build\stage"
@@ -81,21 +81,15 @@ ja.DriverA=ドライバー A
 en.DriverB=Driver B
 zh_CN.DriverB=驱动 B
 ja.DriverB=ドライバー B
-en.DriverC=Driver C
-zh_CN.DriverC=驱动 C
-ja.DriverC=ドライバー C
 en.DriverDemoNote=The evaluation driver from the NetFilter SDK (version 1.7.2.9). It stops capturing connections after a limited number of them, until Windows restarts.
 zh_CN.DriverDemoNote=NetFilter SDK 自带的评估版驱动（版本 1.7.2.9）。拦截的连接数达到上限后会停止工作，重启 Windows 后恢复。
 ja.DriverDemoNote=NetFilter SDK に付属する評価版ドライバー（バージョン 1.7.2.9）です。捕捉した接続数が上限に達すると、Windows を再起動するまで動作しません。
 en.DriverANote=A release build of the driver (version 1.7.1.8), without a connection limit.
 zh_CN.DriverANote=正式版驱动（版本 1.7.1.8），没有连接数限制。
 ja.DriverANote=製品版ドライバー（バージョン 1.7.1.8）です。接続数の制限はありません。
-en.DriverBNote=A release build of the driver (version 1.7.1.8), without a connection limit.
-zh_CN.DriverBNote=正式版驱动（版本 1.7.1.8），没有连接数限制。
-ja.DriverBNote=製品版ドライバー（バージョン 1.7.1.8）です。接続数の制限はありません。
-en.DriverCNote=A release build of the driver, without a connection limit.
-zh_CN.DriverCNote=正式版驱动，没有连接数限制。
-ja.DriverCNote=製品版ドライバーです。接続数の制限はありません。
+en.DriverBNote=A release build of the driver, without a connection limit.
+zh_CN.DriverBNote=正式版驱动，没有连接数限制。
+ja.DriverBNote=製品版ドライバーです。接続数の制限はありません。
 en.DriverReady=Network driver:
 zh_CN.DriverReady=网络驱动：
 ja.DriverReady=ネットワークドライバー：
@@ -106,14 +100,10 @@ Name: "autostart"; Description: "{cm:AutostartTask}"; Flags: unchecked
 
 [Files]
 Source: "{#StageDir}\*"; Excludes: "\drivers"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-; The driver chosen on the Network Driver page becomes the active one
-; (WinRoute.exe --install-driver puts it at {app}\netfilter2.sys).
-Source: "{#StageDir}\drivers\demo\netfilter2.sys"; DestDir: "{app}"; Flags: ignoreversion; Check: DriverIs('demo')
-Source: "{#StageDir}\drivers\a\netfilter2.sys"; DestDir: "{app}"; Flags: ignoreversion; Check: DriverIs('a')
-Source: "{#StageDir}\drivers\b\netfilter2.sys"; DestDir: "{app}"; Flags: ignoreversion; Check: DriverIs('b')
-Source: "{#StageDir}\drivers\c\netfilter2.sys"; DestDir: "{app}"; Flags: ignoreversion; Check: DriverIs('c')
-; All drivers are also shipped under {app}\drivers\<key>\ so Tools > Network
-; Driver can switch between them later.
+; Every driver is shipped under {app}\drivers\<key>\; WinRoute installs the one
+; chosen on the Network Driver page (--install-driver=<key>) from there, and
+; Tools > Network Driver can switch between them later. No copy is placed next
+; to WinRoute.exe.
 Source: "{#StageDir}\drivers\*"; DestDir: "{app}\drivers"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
@@ -134,8 +124,8 @@ Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /F /TN WinRoute"; Flags: ru
 Filename: "{app}\WinRoute.exe"; Parameters: "--uninstall-driver --quiet"; Flags: runhidden waituntilterminated; RunOnceId: "RemoveDriver"
 
 [Code]
-// The Network Driver page: a drop-down with the two drivers, the demo one by
-// default. An upgrade keeps the previous choice; /DRIVER=demo|a|b|c on the
+// The Network Driver page: a drop-down with the drivers, the demo one by
+// default. An upgrade keeps the previous choice; /DRIVER=demo|a|b on the
 // command line picks one for silent installs.
 var
   DriverPage: TWizardPage;
@@ -147,7 +137,6 @@ begin
   case Index of
     1: Result := 'a';
     2: Result := 'b';
-    3: Result := 'c';
   else
     Result := 'demo';
   end;
@@ -157,7 +146,6 @@ function DriverIndex(Key: String): Integer;
 begin
   if Key = 'a' then Result := 1
   else if Key = 'b' then Result := 2
-  else if Key = 'c' then Result := 3
   else Result := 0;
 end;
 
@@ -165,7 +153,6 @@ function DriverName(Key: String): String;
 begin
   if Key = 'a' then Result := CustomMessage('DriverA')
   else if Key = 'b' then Result := CustomMessage('DriverB')
-  else if Key = 'c' then Result := CustomMessage('DriverC')
   else Result := CustomMessage('DriverDemo');
 end;
 
@@ -173,7 +160,6 @@ function DriverNoteText(Key: String): String;
 begin
   if Key = 'a' then Result := CustomMessage('DriverANote')
   else if Key = 'b' then Result := CustomMessage('DriverBNote')
-  else if Key = 'c' then Result := CustomMessage('DriverCNote')
   else Result := CustomMessage('DriverDemoNote');
 end;
 
@@ -215,7 +201,6 @@ begin
   DriverCombo.Items.Add(DriverName('demo'));
   DriverCombo.Items.Add(DriverName('a'));
   DriverCombo.Items.Add(DriverName('b'));
-  DriverCombo.Items.Add(DriverName('c'));
   DriverCombo.OnChange := @UpdateDriverNote;
 
   DriverNote := TNewStaticText.Create(DriverPage);
@@ -254,7 +239,7 @@ var
   ResultCode: Integer;
 begin
   WizardForm.StatusLabel.Caption := CustomMessage('InstallingDriver');
-  if not Exec(ExpandConstant('{app}\WinRoute.exe'), '--install-driver --quiet', '', SW_HIDE,
+  if not Exec(ExpandConstant('{app}\WinRoute.exe'), '--install-driver=' + SelectedDriver() + ' --quiet', '', SW_HIDE,
               ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) then
     SuppressibleMsgBox(FmtMessage(CustomMessage('DriverFailed'), [IntToStr(ResultCode)]),
                        mbError, MB_OK, IDOK);

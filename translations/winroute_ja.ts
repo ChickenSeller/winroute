@@ -152,10 +152,6 @@
       <translation>NetFilter SDK に付属する評価版ドライバーです。捕捉した接続数が上限に達すると、Windows を再起動するまで動作しません。</translation>
     </message>
     <message>
-      <source>A release build of the driver, without a connection limit. In rare cases this driver may need a Windows restart before it can be switched or removed.</source>
-      <translation>製品版ドライバーで、接続数の制限はありません。まれに、このドライバーの切り替えや削除の前に Windows の再起動が必要になることがあります。</translation>
-    </message>
-    <message>
       <source>A release build of the driver, without a connection limit.</source>
       <translation>製品版ドライバーで、接続数の制限はありません。</translation>
     </message>

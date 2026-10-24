@@ -21,7 +21,6 @@
     netfilter/driver/demo/netfilter2.sys   (demo driver)
     netfilter/driver/a/netfilter2.sys      (driver A)
     netfilter/driver/b/netfilter2.sys      (driver B)
-    netfilter/driver/c/netfilter2.sys      (driver C)
   The drivers are the WFP x64 builds that NETFILTER_DRIVERS in CMakeLists.txt
   lists; keep the two lists the same.
 
@@ -58,7 +57,6 @@ $files = @(
     Get-Item netfilter/driver/demo/netfilter2.sys
     Get-Item netfilter/driver/a/netfilter2.sys
     Get-Item netfilter/driver/b/netfilter2.sys
-    Get-Item netfilter/driver/c/netfilter2.sys
 )
 
 New-Item -ItemType Directory -Force build | Out-Null

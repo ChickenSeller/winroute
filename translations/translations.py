@@ -575,9 +575,6 @@ T = {
     "The evaluation driver from the NetFilter SDK. It stops capturing connections after a limited number of them, until Windows restarts.":
         ("NetFilter SDK 自带的评估版驱动。拦截的连接数达到上限后会停止工作，重启 Windows 后恢复。",
          "NetFilter SDK に付属する評価版ドライバーです。捕捉した接続数が上限に達すると、Windows を再起動するまで動作しません。"),
-    "A release build of the driver, without a connection limit. In rare cases this driver may need a Windows restart before it can be switched or removed.":
-        ("正式版驱动，没有连接数限制。极少数情况下，切换或卸载此驱动前可能需要重启 Windows。",
-         "製品版ドライバーで、接続数の制限はありません。まれに、このドライバーの切り替えや削除の前に Windows の再起動が必要になることがあります。"),
     "A release build of the driver, without a connection limit.": ("正式版驱动，没有连接数限制。", "製品版ドライバーで、接続数の制限はありません。"),
     "Switch to This Driver": ("切换到此驱动", "このドライバーに切り替え"),
     "Install This Driver": ("安装此驱动", "このドライバーをインストール"),

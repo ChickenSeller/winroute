@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(WinRoute VERSION 0.4.5 LANGUAGES CXX)
+project(WinRoute VERSION 0.4.6 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -10,13 +10,12 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network LinguistTools)
 
 set(NETFILTER_SDK_DIR ${CMAKE_SOURCE_DIR}/netfilter/nfsdk CACHE PATH "NetFilter SDK root (nfsdk folder)")
 # Several drivers ship, the installer lets the user pick one: the NetFilter SDK
-# demo driver (default) and the release drivers "A", "B", "C", each as
+# demo driver (default) and the release drivers "A", "B", each as
 # <driver>/netfilter2.sys under NETFILTER_DRIVER_DIR. All are WFP x64 builds,
-# which serve every Windows version WinRoute runs on. Development builds put
-# driver A next to WinRoute.exe.
+# which serve every Windows version WinRoute runs on. They live only under
+# drivers/<driver>/; there is no stray copy next to WinRoute.exe.
 set(NETFILTER_DRIVER_DIR ${CMAKE_SOURCE_DIR}/netfilter/driver CACHE PATH "Drivers, as <driver>/netfilter2.sys")
-set(NETFILTER_DRIVERS demo a b c)
-set(NETFILTER_DEV_DRIVER ${NETFILTER_DRIVER_DIR}/a/netfilter2.sys)
+set(NETFILTER_DRIVERS demo a b)
 set(NETFILTER_API_DLL ${NETFILTER_SDK_DIR}/wfp/bin/release_c_api/x64/nfapi.dll)
 
 set(CORE_SOURCES
@@ -101,8 +100,8 @@ foreach(qm ${WINROUTE_QM_FILES} ${QT_QM_FILES})
 endforeach()
 qt_add_resources(WinRoute "translations" PREFIX "/i18n" FILES ${WINROUTE_QM_FILES} ${QT_QM_FILES})
 
-# Copy nfapi.dll and driver A next to the exe (A is the dev default), plus every
-# driver to drivers/<key>/ so "Tools > Network Driver" can switch between them.
+# Copy nfapi.dll next to the exe, and every driver to drivers/<key>/ so the app
+# can install one and "Tools > Network Driver" can switch between them.
 set(POSTBUILD_DRIVER_COMMANDS)
 foreach(driver ${NETFILTER_DRIVERS})
     list(APPEND POSTBUILD_DRIVER_COMMANDS
@@ -111,7 +110,6 @@ foreach(driver ${NETFILTER_DRIVERS})
 endforeach()
 add_custom_command(TARGET WinRoute POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NETFILTER_API_DLL} $<TARGET_FILE_DIR:WinRoute>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NETFILTER_DEV_DRIVER} $<TARGET_FILE_DIR:WinRoute>/netfilter2.sys
     ${POSTBUILD_DRIVER_COMMANDS}
 )
 

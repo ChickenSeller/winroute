@@ -85,9 +85,6 @@ void DriverDialog::onSelectionChanged()
     if (key == "demo")
         m_note->setText(tr("The evaluation driver from the NetFilter SDK. It stops capturing "
                            "connections after a limited number of them, until Windows restarts."));
-    else if (key == "b")
-        m_note->setText(tr("A release build of the driver, without a connection limit. In rare cases "
-                           "this driver may need a Windows restart before it can be switched or removed."));
     else
         m_note->setText(tr("A release build of the driver, without a connection limit."));
 

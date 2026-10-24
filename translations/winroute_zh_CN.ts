@@ -152,10 +152,6 @@
       <translation>NetFilter SDK 自带的评估版驱动。拦截的连接数达到上限后会停止工作，重启 Windows 后恢复。</translation>
     </message>
     <message>
-      <source>A release build of the driver, without a connection limit. In rare cases this driver may need a Windows restart before it can be switched or removed.</source>
-      <translation>正式版驱动，没有连接数限制。极少数情况下，切换或卸载此驱动前可能需要重启 Windows。</translation>
-    </message>
-    <message>
       <source>A release build of the driver, without a connection limit.</source>
       <translation>正式版驱动，没有连接数限制。</translation>
     </message>

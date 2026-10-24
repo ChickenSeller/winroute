@@ -31,10 +31,25 @@ int main(int argc, char *argv[])
     // --install-driver / --uninstall-driver are run by the installer; with --quiet
     // errors are only reported through the exit code (0 = success, 1 = failure).
     const QStringList args = QApplication::arguments();
-    const bool installDriver = args.contains("--install-driver");
+    // The installer passes --install-driver=<key> to install the chosen driver;
+    // a bare --install-driver (or an unknown key) installs the default.
+    bool installDriver = false;
+    QString installKey;
+    for (const QString &a : args) {
+        if (a == "--install-driver")
+            installDriver = true;
+        else if (a.startsWith("--install-driver=")) {
+            installDriver = true;
+            installKey = a.mid(QStringLiteral("--install-driver=").size());
+        }
+    }
     if (installDriver || args.contains("--uninstall-driver")) {
         QString error;
-        const bool ok = installDriver ? NetFilterInterceptor::installDriver(&error, true)
+        QString source;
+        for (const auto &d : NetFilterInterceptor::availableDrivers())
+            if (d.key == installKey)
+                source = d.path;
+        const bool ok = installDriver ? NetFilterInterceptor::installDriver(&error, true, source)
                                       : NetFilterInterceptor::uninstallDriver(&error);
         if (!ok && !args.contains("--quiet"))
             QMessageBox::critical(nullptr, "WinRoute",

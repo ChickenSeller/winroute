@@ -12,6 +12,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QSettings>
 #include <QVarLengthArray>
 
 #include <cstring>
@@ -211,15 +212,32 @@ static bool deleteDriverFile(const QString &nativePath, QString *error)
     return false;
 }
 
+// The driver to install when no source is given: the one chosen last (by the
+// installer or Tools > Network Driver, remembered in QSettings), else A, else
+// the demo, else whatever ships. Drivers live only under drivers/<key>/.
+static QString defaultDriverSource()
+{
+    const auto drivers = NetFilterInterceptor::availableDrivers();
+    if (drivers.isEmpty())
+        return {};
+    const QString saved = QSettings().value("driver/active").toString();
+    for (const auto &d : drivers)
+        if (d.key == saved)
+            return d.path;
+    for (const char *pref : {"a", "demo"})
+        for (const auto &d : drivers)
+            if (d.key == QLatin1String(pref))
+                return d.path;
+    return drivers.first().path;
+}
+
 bool NetFilterInterceptor::installDriver(QString *error, bool replaceDifferent, const QString &source)
 {
     const NetFilterApi *api = NetFilterApi::load(error);
     if (!api)
         return false;
     const QString installed = driverInstallPath();
-    const QString bundled = source.isEmpty()
-                                ? QDir(QCoreApplication::applicationDirPath()).filePath(QString("%1.sys").arg(kDriverName))
-                                : source;
+    const QString bundled = source.isEmpty() ? defaultDriverSource() : source;
     // The installer may bring a different driver than the installed one (the user
     // can choose between drivers): stop and remove the old one first.
     if (replaceDifferent && QFileInfo::exists(installed) && QFileInfo::exists(bundled) && !sameFile(installed, bundled)) {
@@ -255,6 +273,13 @@ bool NetFilterInterceptor::installDriver(QString *error, bool replaceDifferent, 
         *error = QCoreApplication::translate("Interceptor", "Cannot register the driver: %1").arg(nfStatusString(st));
         return false;
     }
+    // Remember which driver this is, so a later reinstall without an explicit
+    // source (e.g. on startup) picks the same one.
+    for (const DriverChoice &d : availableDrivers())
+        if (sameFile(bundled, d.path)) {
+            QSettings().setValue("driver/active", d.key);
+            break;
+        }
     logNormal(QCoreApplication::translate("Interceptor", "Network driver %1 installed").arg(kDriverName));
     return true;
 }
@@ -290,7 +315,7 @@ QList<NetFilterInterceptor::DriverChoice> NetFilterInterceptor::availableDrivers
 {
     QList<DriverChoice> out;
     const QDir base(QDir(QCoreApplication::applicationDirPath()).filePath("drivers"));
-    for (const char *key : {"demo", "a", "b", "c"}) {
+    for (const char *key : {"demo", "a", "b"}) {
         const QString path = base.filePath(QString("%1/%2.sys").arg(key, kDriverName));
         if (QFileInfo::exists(path))
             out.append({QString::fromLatin1(key), driverDisplayName(QString::fromLatin1(key)), path});
