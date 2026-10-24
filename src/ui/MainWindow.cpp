@@ -8,6 +8,7 @@
 #include "ProxyServersDialog.h"
 #include "RulesDialog.h"
 #include "StatisticsWidget.h"
+#include "DriverDialog.h"
 #include "TrafficWidget.h"
 #include "Updater.h"
 #include "core/DnsClient.h"
@@ -193,6 +194,12 @@ void MainWindow::createActions()
 
     m_actChecker = act(tr("Proxy &Checker..."), &MainWindow::showProxyChecker, {}, icons::checker());
     m_actChecker->setStatusTip(tr("Test proxy servers"));
+    m_actDriver = act(tr("&Network Driver..."), [this] {
+        DriverDialog dlg(m_engine, this);
+        connect(&dlg, &DriverDialog::log, this, [this](const QString &m) { logNormal(m); });
+        dlg.exec();
+    });
+    m_actDriver->setStatusTip(tr("Install, switch or uninstall the network driver"));
     m_actAbout = act(tr("&About WinRoute..."), &MainWindow::showAbout);
 
     m_updater = new Updater(this);
@@ -310,6 +317,7 @@ void MainWindow::createMenus()
 
     QMenu *tools = menuBar()->addMenu(tr("&Tools"));
     tools->addAction(m_actChecker);
+    tools->addAction(m_actDriver);
 
     QMenu *help = menuBar()->addMenu(tr("&Help"));
     help->addAction(m_actCheckUpdates);

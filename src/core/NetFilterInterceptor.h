@@ -33,8 +33,22 @@ public:
     // the service if needed; removes both again. Used by start() and by the installer
     // through the --install-driver / --uninstall-driver command line switches.
     // With replaceDifferent an installed driver that differs from the bundled one is replaced.
-    static bool installDriver(QString *error, bool replaceDifferent = false);
+    // source overrides which .sys to install (default: <app>/netfilter2.sys).
+    static bool installDriver(QString *error, bool replaceDifferent = false, const QString &source = {});
     static bool uninstallDriver(QString *error);
+
+    // Driver management (Tools > Network Driver). The installer ships every
+    // driver under <app>/drivers/<key>/netfilter2.sys so the user can switch.
+    struct DriverChoice {
+        QString key;    // "demo", "a", "b", "c"
+        QString name;   // display name
+        QString path;   // <app>/drivers/<key>/netfilter2.sys
+    };
+    static QList<DriverChoice> availableDrivers();
+    static QString driverDisplayName(const QString &key);
+    static QString installedDriverKey();   // which shipped driver the installed file matches, or {}
+    static bool driverInstalled();         // the netfilter2 service exists and the file is present
+    static bool driverRunning();           // the service is running
 
     // NF_EventHandler callbacks, dispatched from nfapi worker threads.
     void onTcpConnectRequest(ENDPOINT_ID id, PNF_TCP_CONN_INFO info);

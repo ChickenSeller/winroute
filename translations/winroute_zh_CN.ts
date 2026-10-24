@@ -110,6 +110,97 @@
     </message>
   </context>
   <context>
+    <name>DriverDialog</name>
+    <message>
+      <source>Network Driver</source>
+      <translation>网络驱动</translation>
+    </message>
+    <message>
+      <source>WinRoute captures connections with a NetFilter SDK driver. Choose which driver to use, or uninstall it.</source>
+      <translation>WinRoute 通过 NetFilter SDK 驱动拦截网络连接。请选择要使用的驱动，或卸载它。</translation>
+    </message>
+    <message>
+      <source>Driver:</source>
+      <translation>驱动：</translation>
+    </message>
+    <message>
+      <source>Use This Driver</source>
+      <translation>使用此驱动</translation>
+    </message>
+    <message>
+      <source>Uninstall Driver</source>
+      <translation>卸载驱动</translation>
+    </message>
+    <message>
+      <source>an unrecognized driver</source>
+      <translation>无法识别的驱动</translation>
+    </message>
+    <message>
+      <source>Installed: %1 (running)</source>
+      <translation>已安装：%1（运行中）</translation>
+    </message>
+    <message>
+      <source>Installed: %1 (stopped)</source>
+      <translation>已安装：%1（已停止）</translation>
+    </message>
+    <message>
+      <source>No driver is installed.</source>
+      <translation>未安装驱动。</translation>
+    </message>
+    <message>
+      <source>The evaluation driver from the NetFilter SDK. It stops capturing connections after a limited number of them, until Windows restarts.</source>
+      <translation>NetFilter SDK 自带的评估版驱动。拦截的连接数达到上限后会停止工作，重启 Windows 后恢复。</translation>
+    </message>
+    <message>
+      <source>A release build of the driver, without a connection limit. In rare cases this driver may need a Windows restart before it can be switched or removed.</source>
+      <translation>正式版驱动，没有连接数限制。极少数情况下，切换或卸载此驱动前可能需要重启 Windows。</translation>
+    </message>
+    <message>
+      <source>A release build of the driver, without a connection limit.</source>
+      <translation>正式版驱动，没有连接数限制。</translation>
+    </message>
+    <message>
+      <source>Switch to This Driver</source>
+      <translation>切换到此驱动</translation>
+    </message>
+    <message>
+      <source>Install This Driver</source>
+      <translation>安装此驱动</translation>
+    </message>
+    <message>
+      <source>Network driver switched to %1</source>
+      <translation>网络驱动已切换到 %1</translation>
+    </message>
+    <message>
+      <source>Could not switch the network driver: %1</source>
+      <translation>无法切换网络驱动：%1</translation>
+    </message>
+    <message>
+      <source>Could not switch to %1:
+%2</source>
+      <translation>无法切换到 %1：
+%2</translation>
+    </message>
+    <message>
+      <source>Uninstall the network driver? WinRoute cannot capture connections without it.</source>
+      <translation>卸载网络驱动？没有它 WinRoute 无法拦截连接。</translation>
+    </message>
+    <message>
+      <source>Network driver uninstalled</source>
+      <translation>网络驱动已卸载</translation>
+    </message>
+    <message>
+      <source>Could not uninstall the network driver: %1</source>
+      <translation>无法卸载网络驱动：%1</translation>
+    </message>
+    <message>
+      <source>Could not uninstall the driver:
+%1</source>
+      <translation>无法卸载驱动：
+%1</translation>
+    </message>
+  </context>
+  <context>
     <name>EncryptionDialog</name>
     <message>
       <source>Profile Passwords Encryption</source>
@@ -279,6 +370,14 @@
     <message>
       <source>Cannot delete %1: the driver is still loaded (close WinRoute, or restart Windows)</source>
       <translation>无法删除 %1：驱动仍在内核中（请关闭 WinRoute，或重启 Windows）</translation>
+    </message>
+    <message>
+      <source>NetFilter SDK demo driver</source>
+      <translation>NetFilter SDK 演示驱动</translation>
+    </message>
+    <message>
+      <source>Driver %1</source>
+      <translation>驱动 %1</translation>
     </message>
     <message>
       <source>Cannot add driver rule (%1): %2</source>
@@ -509,6 +608,14 @@
     <message>
       <source>Test proxy servers</source>
       <translation>测试代理服务器</translation>
+    </message>
+    <message>
+      <source>&amp;Network Driver...</source>
+      <translation>网络驱动(&amp;N)...</translation>
+    </message>
+    <message>
+      <source>Install, switch or uninstall the network driver</source>
+      <translation>安装、切换或卸载网络驱动</translation>
     </message>
     <message>
       <source>&amp;About WinRoute...</source>

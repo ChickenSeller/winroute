@@ -110,6 +110,97 @@
     </message>
   </context>
   <context>
+    <name>DriverDialog</name>
+    <message>
+      <source>Network Driver</source>
+      <translation>ネットワークドライバー</translation>
+    </message>
+    <message>
+      <source>WinRoute captures connections with a NetFilter SDK driver. Choose which driver to use, or uninstall it.</source>
+      <translation>WinRoute は NetFilter SDK のドライバーで接続を捕捉します。使用するドライバーを選択するか、アンインストールしてください。</translation>
+    </message>
+    <message>
+      <source>Driver:</source>
+      <translation>ドライバー：</translation>
+    </message>
+    <message>
+      <source>Use This Driver</source>
+      <translation>このドライバーを使用</translation>
+    </message>
+    <message>
+      <source>Uninstall Driver</source>
+      <translation>ドライバーをアンインストール</translation>
+    </message>
+    <message>
+      <source>an unrecognized driver</source>
+      <translation>認識できないドライバー</translation>
+    </message>
+    <message>
+      <source>Installed: %1 (running)</source>
+      <translation>インストール済み：%1（実行中）</translation>
+    </message>
+    <message>
+      <source>Installed: %1 (stopped)</source>
+      <translation>インストール済み：%1（停止中）</translation>
+    </message>
+    <message>
+      <source>No driver is installed.</source>
+      <translation>ドライバーがインストールされていません。</translation>
+    </message>
+    <message>
+      <source>The evaluation driver from the NetFilter SDK. It stops capturing connections after a limited number of them, until Windows restarts.</source>
+      <translation>NetFilter SDK に付属する評価版ドライバーです。捕捉した接続数が上限に達すると、Windows を再起動するまで動作しません。</translation>
+    </message>
+    <message>
+      <source>A release build of the driver, without a connection limit. In rare cases this driver may need a Windows restart before it can be switched or removed.</source>
+      <translation>製品版ドライバーで、接続数の制限はありません。まれに、このドライバーの切り替えや削除の前に Windows の再起動が必要になることがあります。</translation>
+    </message>
+    <message>
+      <source>A release build of the driver, without a connection limit.</source>
+      <translation>製品版ドライバーで、接続数の制限はありません。</translation>
+    </message>
+    <message>
+      <source>Switch to This Driver</source>
+      <translation>このドライバーに切り替え</translation>
+    </message>
+    <message>
+      <source>Install This Driver</source>
+      <translation>このドライバーをインストール</translation>
+    </message>
+    <message>
+      <source>Network driver switched to %1</source>
+      <translation>ネットワークドライバーを %1 に切り替えました</translation>
+    </message>
+    <message>
+      <source>Could not switch the network driver: %1</source>
+      <translation>ネットワークドライバーを切り替えできませんでした：%1</translation>
+    </message>
+    <message>
+      <source>Could not switch to %1:
+%2</source>
+      <translation>%1 に切り替えできませんでした：
+%2</translation>
+    </message>
+    <message>
+      <source>Uninstall the network driver? WinRoute cannot capture connections without it.</source>
+      <translation>ネットワークドライバーをアンインストールしますか？これがないと WinRoute は接続を捕捉できません。</translation>
+    </message>
+    <message>
+      <source>Network driver uninstalled</source>
+      <translation>ネットワークドライバーをアンインストールしました</translation>
+    </message>
+    <message>
+      <source>Could not uninstall the network driver: %1</source>
+      <translation>ネットワークドライバーをアンインストールできませんでした：%1</translation>
+    </message>
+    <message>
+      <source>Could not uninstall the driver:
+%1</source>
+      <translation>ドライバーをアンインストールできませんでした：
+%1</translation>
+    </message>
+  </context>
+  <context>
     <name>EncryptionDialog</name>
     <message>
       <source>Profile Passwords Encryption</source>
@@ -279,6 +370,14 @@
     <message>
       <source>Cannot delete %1: the driver is still loaded (close WinRoute, or restart Windows)</source>
       <translation>%1 を削除できません：ドライバーがまだ読み込まれています（WinRoute を終了するか、Windows を再起動してください）</translation>
+    </message>
+    <message>
+      <source>NetFilter SDK demo driver</source>
+      <translation>NetFilter SDK デモドライバー</translation>
+    </message>
+    <message>
+      <source>Driver %1</source>
+      <translation>ドライバー %1</translation>
     </message>
     <message>
       <source>Cannot add driver rule (%1): %2</source>
@@ -509,6 +608,14 @@
     <message>
       <source>Test proxy servers</source>
       <translation>プロキシサーバーをテストします</translation>
+    </message>
+    <message>
+      <source>&amp;Network Driver...</source>
+      <translation>ネットワークドライバー(&amp;N)...</translation>
+    </message>
+    <message>
+      <source>Install, switch or uninstall the network driver</source>
+      <translation>ネットワークドライバーのインストール・切り替え・アンインストール</translation>
     </message>
     <message>
       <source>&amp;About WinRoute...</source>

@@ -54,6 +54,7 @@ set(UI_SOURCES
     src/ui/Icons.h                src/ui/Icons.cpp
     src/ui/Language.h             src/ui/Language.cpp
     src/ui/Updater.h              src/ui/Updater.cpp
+    src/ui/DriverDialog.h         src/ui/DriverDialog.cpp
 )
 
 set(WINROUTE_HOMEPAGE_URL "https://pages.yanlei.org/kaguya/winroute/" CACHE STRING "WinRoute's homepage")
@@ -100,9 +101,18 @@ foreach(qm ${WINROUTE_QM_FILES} ${QT_QM_FILES})
 endforeach()
 qt_add_resources(WinRoute "translations" PREFIX "/i18n" FILES ${WINROUTE_QM_FILES} ${QT_QM_FILES})
 
+# Copy nfapi.dll and driver A next to the exe (A is the dev default), plus every
+# driver to drivers/<key>/ so "Tools > Network Driver" can switch between them.
+set(POSTBUILD_DRIVER_COMMANDS)
+foreach(driver ${NETFILTER_DRIVERS})
+    list(APPEND POSTBUILD_DRIVER_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:WinRoute>/drivers/${driver}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NETFILTER_DRIVER_DIR}/${driver}/netfilter2.sys $<TARGET_FILE_DIR:WinRoute>/drivers/${driver})
+endforeach()
 add_custom_command(TARGET WinRoute POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NETFILTER_API_DLL} $<TARGET_FILE_DIR:WinRoute>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NETFILTER_DEV_DRIVER} $<TARGET_FILE_DIR:WinRoute>/netfilter2.sys
+    ${POSTBUILD_DRIVER_COMMANDS}
 )
 
 # "cmake --build build --target installer" stages a deployed copy and builds

@@ -204,13 +204,15 @@ static bool deleteDriverFile(const QString &nativePath, QString *error)
     return false;
 }
 
-bool NetFilterInterceptor::installDriver(QString *error, bool replaceDifferent)
+bool NetFilterInterceptor::installDriver(QString *error, bool replaceDifferent, const QString &source)
 {
     const NetFilterApi *api = NetFilterApi::load(error);
     if (!api)
         return false;
     const QString installed = driverInstallPath();
-    const QString bundled = QDir(QCoreApplication::applicationDirPath()).filePath(QString("%1.sys").arg(kDriverName));
+    const QString bundled = source.isEmpty()
+                                ? QDir(QCoreApplication::applicationDirPath()).filePath(QString("%1.sys").arg(kDriverName))
+                                : source;
     // The installer may bring a different driver than the installed one (the user
     // can choose between drivers): stop and remove the old one first.
     if (replaceDifferent && QFileInfo::exists(installed) && QFileInfo::exists(bundled) && !sameFile(installed, bundled)) {
@@ -268,6 +270,46 @@ bool NetFilterInterceptor::uninstallDriver(QString *error)
     if (QFileInfo::exists(file) && !deleteDriverFile(file, error))
         return false;
     return true;
+}
+
+QString NetFilterInterceptor::driverDisplayName(const QString &key)
+{
+    if (key == "demo")
+        return QCoreApplication::translate("Interceptor", "NetFilter SDK demo driver");
+    return QCoreApplication::translate("Interceptor", "Driver %1").arg(key.toUpper());
+}
+
+QList<NetFilterInterceptor::DriverChoice> NetFilterInterceptor::availableDrivers()
+{
+    QList<DriverChoice> out;
+    const QDir base(QDir(QCoreApplication::applicationDirPath()).filePath("drivers"));
+    for (const char *key : {"demo", "a", "b", "c"}) {
+        const QString path = base.filePath(QString("%1/%2.sys").arg(key, kDriverName));
+        if (QFileInfo::exists(path))
+            out.append({QString::fromLatin1(key), driverDisplayName(QString::fromLatin1(key)), path});
+    }
+    return out;
+}
+
+QString NetFilterInterceptor::installedDriverKey()
+{
+    const QString installed = driverInstallPath();
+    if (!QFileInfo::exists(installed))
+        return {};
+    for (const DriverChoice &d : availableDrivers())
+        if (sameFile(installed, d.path))
+            return d.key;
+    return {};
+}
+
+bool NetFilterInterceptor::driverInstalled()
+{
+    return serviceState() != 0 && QFileInfo::exists(driverInstallPath());
+}
+
+bool NetFilterInterceptor::driverRunning()
+{
+    return serviceState() == SERVICE_RUNNING;
 }
 
 bool NetFilterInterceptor::installRules(QString *error)

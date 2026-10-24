@@ -56,7 +56,7 @@ cmake --build build --target installer    # 生成 build/WinRoute-<版本>-setup
 这个目标会把 `WinRoute.exe`、`nfapi.dll` 和四个驱动（`drivers/demo/`、`drivers/a/`、`drivers/b/`、`drivers/c/`）复制到 `build/stage`，用 `windeployqt` 补齐 Qt 和 MinGW 运行库，再调用 `ISCC` 打包。
 
 - **安装**：只支持 x64 版的 Windows 10 1809 及以上（Qt 6 的要求；驱动是 x64 版，Arm 版 Windows 不能装），需要管理员权限，界面支持中文、日语、英语。可选创建桌面快捷方式和开机自启动计划任务。
-- **选择驱动**：“网络驱动”页用下拉框选择，默认 **NetFilter SDK 演示驱动**（1.7.2.9）。演示驱动拦截的连接数有上限，超过后要重启 Windows 才恢复。其余是正式版的**驱动A / B / C**，没有连接数限制，安装界面只显示代号。升级时沿用上次的选择。只安装选中的那个驱动，文件复制完成后执行 `WinRoute.exe --install-driver --quiet` 注册并启动；如果系统里已装的是另一个驱动，会先停掉并替换。
+- **选择驱动**：“网络驱动”页用下拉框选择，默认 **NetFilter SDK 演示驱动**（1.7.2.9）。演示驱动拦截的连接数有上限，超过后要重启 Windows 才恢复。其余是正式版的**驱动A / B / C**，没有连接数限制，安装界面只显示代号。升级时沿用上次的选择。选中的驱动装到 `{app}\netfilter2.sys` 并由 `WinRoute.exe --install-driver --quiet` 注册启动；四个驱动都会装到 `{app}\drivers\<代号>\`，供程序内“工具 > 网络驱动”随时切换。
 - **卸载**：删除开机自启动计划任务，执行 `WinRoute.exe --uninstall-driver --quiet` 停止驱动、删除服务和 `System32\drivers\netfilter2.sys`，再询问是否删除配置文件、设置和日志（静默卸载时保留）。
 - **运行检测**：WinRoute 运行时会创建互斥量 `WinRoute.AppMutex`，安装和卸载前都会提示先关闭程序。
 - **静默安装**：`WinRoute-0.1.0-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /TASKS=autostart /DRIVER=demo`（`/DRIVER=a|b|c` 选择对应的正式版驱动；不写时，首次安装用演示驱动，升级时沿用上次的选择）
@@ -113,6 +113,10 @@ cd site && python -m http.server 8000
 ## 多语言
 
 支持简体中文、日语和英语。默认跟随系统界面语言，可在“视图 > 语言”中切换，切换后需要重启程序。
+
+## 切换网络驱动
+
+“工具 > 网络驱动”对话框可在程序内安装、切换或卸载驱动（demo / A / B / C，安装器已把四个都放到 `{app}\drivers\`）。切换时会先停引擎释放驱动句柄，替换驱动文件后再启动。切换/卸载通常一两秒完成；个别驱动（B）卸载偏慢时会重试，极少数情况下仍需重启 Windows。
 
 - `translations/winroute_zh_CN.ts`、`translations/winroute_ja.ts` 是 Qt Linguist 翻译文件，构建时编译成 `.qm` 并嵌入程序。Qt 自带的 `qtbase_zh_CN` / `qtbase_ja` 也一并嵌入，用于翻译“确定 / 取消”等标准按钮。
 - 中日文译文统一维护在 `translations/translations.py` 中。修改源码里的界面文字后，执行：

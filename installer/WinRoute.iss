@@ -106,12 +106,15 @@ Name: "autostart"; Description: "{cm:AutostartTask}"; Flags: unchecked
 
 [Files]
 Source: "{#StageDir}\*"; Excludes: "\drivers"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Only the driver chosen on the Network Driver page is installed (WinRoute.exe
-; --install-driver puts it in place, replacing a different one).
+; The driver chosen on the Network Driver page becomes the active one
+; (WinRoute.exe --install-driver puts it at {app}\netfilter2.sys).
 Source: "{#StageDir}\drivers\demo\netfilter2.sys"; DestDir: "{app}"; Flags: ignoreversion; Check: DriverIs('demo')
 Source: "{#StageDir}\drivers\a\netfilter2.sys"; DestDir: "{app}"; Flags: ignoreversion; Check: DriverIs('a')
 Source: "{#StageDir}\drivers\b\netfilter2.sys"; DestDir: "{app}"; Flags: ignoreversion; Check: DriverIs('b')
 Source: "{#StageDir}\drivers\c\netfilter2.sys"; DestDir: "{app}"; Flags: ignoreversion; Check: DriverIs('c')
+; All drivers are also shipped under {app}\drivers\<key>\ so Tools > Network
+; Driver can switch between them later.
+Source: "{#StageDir}\drivers\*"; DestDir: "{app}\drivers"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\WinRoute"; Filename: "{app}\WinRoute.exe"

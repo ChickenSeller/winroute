@@ -508,6 +508,40 @@ T = {
         ("%1 - %2 UDP 无法使用代理（%3），改为直接连接", "%1 - %2 UDP はプロキシを使用できません（%3）。直接接続します"),
     "%1 - %2 UDP closed, %3 sent, %4 received": ("%1 - %2 UDP 关闭，发送 %3，接收 %4", "%1 - %2 UDP 切断、送信 %3、受信 %4"),
 
+    # ---- network driver ----
+    "NetFilter SDK demo driver": ("NetFilter SDK 演示驱动", "NetFilter SDK デモドライバー"),
+    "Driver %1": ("驱动 %1", "ドライバー %1"),
+    "&Network Driver...": ("网络驱动(&N)...", "ネットワークドライバー(&N)..."),
+    "Install, switch or uninstall the network driver": ("安装、切换或卸载网络驱动", "ネットワークドライバーのインストール・切り替え・アンインストール"),
+    "Network Driver": ("网络驱动", "ネットワークドライバー"),
+    "WinRoute captures connections with a NetFilter SDK driver. Choose which driver to use, or uninstall it.":
+        ("WinRoute 通过 NetFilter SDK 驱动拦截网络连接。请选择要使用的驱动，或卸载它。",
+         "WinRoute は NetFilter SDK のドライバーで接続を捕捉します。使用するドライバーを選択するか、アンインストールしてください。"),
+    "Driver:": ("驱动：", "ドライバー："),
+    "Use This Driver": ("使用此驱动", "このドライバーを使用"),
+    "Uninstall Driver": ("卸载驱动", "ドライバーをアンインストール"),
+    "an unrecognized driver": ("无法识别的驱动", "認識できないドライバー"),
+    "Installed: %1 (running)": ("已安装：%1（运行中）", "インストール済み：%1（実行中）"),
+    "Installed: %1 (stopped)": ("已安装：%1（已停止）", "インストール済み：%1（停止中）"),
+    "No driver is installed.": ("未安装驱动。", "ドライバーがインストールされていません。"),
+    "The evaluation driver from the NetFilter SDK. It stops capturing connections after a limited number of them, until Windows restarts.":
+        ("NetFilter SDK 自带的评估版驱动。拦截的连接数达到上限后会停止工作，重启 Windows 后恢复。",
+         "NetFilter SDK に付属する評価版ドライバーです。捕捉した接続数が上限に達すると、Windows を再起動するまで動作しません。"),
+    "A release build of the driver, without a connection limit. In rare cases this driver may need a Windows restart before it can be switched or removed.":
+        ("正式版驱动，没有连接数限制。极少数情况下，切换或卸载此驱动前可能需要重启 Windows。",
+         "製品版ドライバーで、接続数の制限はありません。まれに、このドライバーの切り替えや削除の前に Windows の再起動が必要になることがあります。"),
+    "A release build of the driver, without a connection limit.": ("正式版驱动，没有连接数限制。", "製品版ドライバーで、接続数の制限はありません。"),
+    "Switch to This Driver": ("切换到此驱动", "このドライバーに切り替え"),
+    "Install This Driver": ("安装此驱动", "このドライバーをインストール"),
+    "Network driver switched to %1": ("网络驱动已切换到 %1", "ネットワークドライバーを %1 に切り替えました"),
+    "Could not switch the network driver: %1": ("无法切换网络驱动：%1", "ネットワークドライバーを切り替えできませんでした：%1"),
+    "Could not switch to %1:\n%2": ("无法切换到 %1：\n%2", "%1 に切り替えできませんでした：\n%2"),
+    "Uninstall the network driver? WinRoute cannot capture connections without it.":
+        ("卸载网络驱动？没有它 WinRoute 无法拦截连接。", "ネットワークドライバーをアンインストールしますか？これがないと WinRoute は接続を捕捉できません。"),
+    "Network driver uninstalled": ("网络驱动已卸载", "ネットワークドライバーをアンインストールしました"),
+    "Could not uninstall the network driver: %1": ("无法卸载网络驱动：%1", "ネットワークドライバーをアンインストールできませんでした：%1"),
+    "Could not uninstall the driver:\n%1": ("无法卸载驱动：\n%1", "ドライバーをアンインストールできませんでした：\n%1"),
+
     # ---- updates ----
     "Check for &Updates...": ("检查更新(&U)...", "更新の確認(&U)..."),
     "Automatic U&pdates": ("自动更新(&P)", "自動更新(&P)"),
