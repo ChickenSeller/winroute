@@ -11,8 +11,10 @@
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QAction>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMenu>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
@@ -72,8 +74,12 @@ RuleDialog::RuleDialog(const Rule &rule, const Profile &profile, bool isDefault,
     m_apps->setPlaceholderText(tr("Any"));
     m_apps->setMaximumHeight(70);
     auto *browse = new QPushButton(tr("Browse..."));
+    auto *browseMenu = new QMenu(browse);
+    QAction *addFiles = browseMenu->addAction(tr("Add Files..."));
+    QAction *addFolder = browseMenu->addAction(tr("Add Folder..."));
+    browse->setMenu(browseMenu);
     al->addWidget(m_apps, 0, 0, 1, 2);
-    al->addWidget(exampleLabel(tr("Example: iexplore.exe; \"C:\\some app.exe\"; fire*.exe; *.bin")), 1, 0);
+    al->addWidget(exampleLabel(tr("Example: iexplore.exe; \"C:\\some app.exe\"; C:\\Games\\; fire*.exe")), 1, 0);
     al->addWidget(browse, 1, 1);
     layout->addWidget(appBox);
 
@@ -116,19 +122,29 @@ RuleDialog::RuleDialog(const Rule &rule, const Profile &profile, bool isDefault,
     layout->addWidget(bb);
     connect(bb, &QDialogButtonBox::accepted, this, &RuleDialog::accept);
     connect(bb, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    connect(browse, &QPushButton::clicked, this, [this] {
+    auto appendEntry = [this](const QString &entry) {
+        QString text = m_apps->toPlainText().trimmed();
+        if (!text.isEmpty())
+            text += "; ";
+        text += entry.contains(' ') ? '"' + entry + '"' : entry;
+        m_apps->setPlainText(text);
+    };
+    connect(addFiles, &QAction::triggered, this, [this, appendEntry] {
         const QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Applications"), QString(),
                                                                 tr("Applications (*.exe);;All files (*.*)"));
-        if (files.isEmpty())
+        for (const QString &f : files)
+            appendEntry(QFileInfo(f).fileName());
+    });
+    // A folder, stored with a trailing backslash, matches every program under
+    // it, including in subfolders (RuleEngine::matchAppList).
+    connect(addFolder, &QAction::triggered, this, [this, appendEntry] {
+        QString dir = QFileDialog::getExistingDirectory(this, tr("Select a Folder"));
+        if (dir.isEmpty())
             return;
-        QString text = m_apps->toPlainText().trimmed();
-        for (const QString &f : files) {
-            const QString name = QFileInfo(f).fileName();
-            if (!text.isEmpty())
-                text += "; ";
-            text += name.contains(' ') ? '"' + name + '"' : name;
-        }
-        m_apps->setPlainText(text);
+        dir.replace(u'/', u'\\');
+        if (!dir.endsWith(u'\\'))
+            dir += u'\\';
+        appendEntry(dir);
     });
 }
 

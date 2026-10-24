@@ -184,6 +184,15 @@ static void testRules()
     CHECK(!RuleEngine::matchAppList(apps, "D:\\Program Files\\App\\a b.exe", "a b.exe"));
     CHECK(RuleEngine::matchAppList(apps, "C:\\ff\\firefox.exe", "firefox.exe"));
 
+    // A folder pattern (trailing backslash) matches every program under it,
+    // including in subfolders, but not a sibling folder with the same prefix.
+    const QStringList folder = util::splitList("\"C:\\Games\\\"");
+    CHECK(RuleEngine::matchAppList(folder, "C:\\Games\\game.exe", "game.exe"));
+    CHECK(RuleEngine::matchAppList(folder, "C:\\Games\\Steam\\app\\x.exe", "x.exe"));
+    CHECK(RuleEngine::matchAppList(folder, "c:/games/sub/y.exe", "y.exe"));   // slashes, case
+    CHECK(!RuleEngine::matchAppList(folder, "C:\\GamesOld\\z.exe", "z.exe"));
+    CHECK(!RuleEngine::matchAppList(folder, "D:\\Games\\z.exe", "z.exe"));
+
     Profile p;
     p.fromXml(QByteArray(kProxifierProfile));
     RuleEngine engine(p);
