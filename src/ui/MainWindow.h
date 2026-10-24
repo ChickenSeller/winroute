@@ -20,6 +20,7 @@ class ConnectionsModel;
 class DnsClient;
 class StatisticsWidget;
 class TrafficWidget;
+class Updater;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -125,7 +126,8 @@ private:
     QAction *m_actDisconnect, *m_actEndProcess, *m_actCreateRule, *m_actCopyConn;
     QAction *m_actLogCopy, *m_actLogSelectAll, *m_actLogClear;
     QAction *m_actTrayIcon, *m_actTrayTraffic, *m_actToolbar, *m_actStatusBar;
-    QAction *m_actChecker, *m_actAbout;
+    QAction *m_actChecker, *m_actAbout, *m_actCheckUpdates;
+    Updater *m_updater = nullptr;
     QActionGroup *m_logLevelGroup = nullptr;
     QActionGroup *m_logFileGroup = nullptr;
     QActionGroup *m_refreshGroup = nullptr;

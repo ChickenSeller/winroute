@@ -476,6 +476,29 @@ T = {
     "%1 B/sec": ("%1 B/秒", "%1 B/秒"),
     "%1 KB/sec": ("%1 KB/秒", "%1 KB/秒"),
     "%1 MB/sec": ("%1 MB/秒", "%1 MB/秒"),
+
+    # ---- updates ----
+    "Check for &Updates...": ("检查更新(&U)...", "更新の確認(&U)..."),
+    "Automatic U&pdates": ("自动更新(&P)", "自動更新(&P)"),
+    "Install All Updates Automatically": ("自动安装所有更新", "すべての更新を自動でインストール"),
+    "Install Required Updates Automatically": ("自动安装必须的更新", "必須の更新を自動でインストール"),
+    "Ask Before Updating": ("更新前询问", "更新前に確認"),
+    "Never Check": ("从不检查", "確認しない"),
+    "WinRoute Update": ("WinRoute 更新", "WinRoute の更新"),
+    "Could not check for updates:\n%1": ("无法检查更新：\n%1", "更新を確認できませんでした：\n%1"),
+    "WinRoute %1 is the latest version.": ("WinRoute %1 已是最新版本。", "WinRoute %1 は最新バージョンです。"),
+    "WinRoute %1 is available; you have %2.\nUpdate now? WinRoute restarts when it is done.":
+        ("WinRoute %1 已发布，当前版本是 %2。\n现在更新吗？更新完成后 WinRoute 会重新启动。",
+         "WinRoute %1 が利用できます（現在のバージョンは %2）。\n今すぐ更新しますか？完了後に WinRoute が再起動します。"),
+    "Update": ("更新", "更新"),
+    "Later": ("以后再说", "後で"),
+    "Downloading WinRoute %1...": ("正在下载 WinRoute %1...", "WinRoute %1 をダウンロードしています..."),
+    "Downloading WinRoute %1; WinRoute restarts once it is installed.":
+        ("正在下载 WinRoute %1，安装完成后 WinRoute 会重新启动。", "WinRoute %1 をダウンロードしています。インストール後に WinRoute が再起動します。"),
+    "The download is damaged (checksum mismatch).": ("下载的文件已损坏（校验和不一致）。", "ダウンロードしたファイルが壊れています（チェックサムが一致しません）。"),
+    "Could not download WinRoute %1:\n%2": ("无法下载 WinRoute %1：\n%2", "WinRoute %1 をダウンロードできませんでした：\n%2"),
+    "Could not prepare the update.": ("无法准备更新。", "更新を準備できませんでした。"),
+    "Could not start the update.": ("无法开始更新。", "更新を開始できませんでした。"),
 }
 
 

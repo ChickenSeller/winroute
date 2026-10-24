@@ -52,7 +52,12 @@ set(UI_SOURCES
     src/ui/ProxyCheckerDialog.h   src/ui/ProxyCheckerDialog.cpp
     src/ui/Icons.h                src/ui/Icons.cpp
     src/ui/Language.h             src/ui/Language.cpp
+    src/ui/Updater.h              src/ui/Updater.cpp
 )
+
+set(WINROUTE_HOMEPAGE_URL "https://pages.yanlei.org/kaguya/winroute/" CACHE STRING "WinRoute's homepage")
+# The update information the homepage's web server serves (deploy/nginx/).
+set(WINROUTE_UPDATE_URL "${WINROUTE_HOMEPAGE_URL}update.json" CACHE STRING "WinRoute's update information")
 
 set(TS_FILES
     translations/winroute_zh_CN.ts
@@ -74,7 +79,9 @@ qt_add_executable(WinRoute WIN32
     resources/app.rc
 )
 target_link_libraries(WinRoute PRIVATE winroute_core Qt6::Widgets)
-target_compile_definitions(WinRoute PRIVATE WINROUTE_VERSION="${PROJECT_VERSION}")
+target_compile_definitions(WinRoute PRIVATE WINROUTE_VERSION="${PROJECT_VERSION}" WINROUTE_UPDATE_URL="${WINROUTE_UPDATE_URL}")
+# Run by the updater once WinRoute has quit (src/ui/Updater.cpp).
+qt_add_resources(WinRoute "update" PREFIX "/" BASE resources FILES resources/update.ps1)
 if(WINROUTE_REQUIRE_ADMIN)
     target_compile_definitions(WinRoute PRIVATE WINROUTE_REQUIRE_ADMIN)
 endif()

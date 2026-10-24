@@ -93,6 +93,14 @@ NetFilter SDK 和驱动不在仓库里。GitHub 构建时，从私有仓库 `Chi
 
 不经过 GitHub 时，也可以在装有 SDK 的本机执行 `tools\publish-release.ps1 -Notes "..."` 直接发布（需要 `GITLAB_TOKEN`，权限 api）。
 
+## 自动更新
+
+做法与 Glimpse 相同。WinRoute 启动 5 秒后读取 `https://pages.yanlei.org/kaguya/winroute/update.json`（`WINROUTE_UPDATE_URL`），这个文件也由 OpenResty 实时从 GitLab Release 生成，内容是最新版本和必须更新的版本，各带安装包的地址、SHA-256 和大小。
+
+- **方式**：在“帮助 > 自动更新”里选：自动安装所有更新、自动安装必须的更新、更新前询问（默认）、从不检查。“帮助 > 检查更新”随时手动检查。
+- **必须更新的版本**：在服务器的 `pages.yanlei.org.conf` 里 `set $winroute_required_version "x.y.z";`，重载 nginx 后生效。
+- **安装**：下载安装包到 `%TEMP%\winroute-update`，校验 SHA-256，然后由 `resources/update.ps1` 等 WinRoute 退出、静默运行安装包（沿用已选的驱动和任务），再重新启动 WinRoute；原来在托盘里的，重启后仍在托盘。出错记在 `%TEMP%\winroute-update\update.log`。
+
 本地预览主页：
 
 ```sh

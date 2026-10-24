@@ -483,6 +483,10 @@
       <translation>WinRoute について(&amp;A)...</translation>
     </message>
     <message>
+      <source>Check for &amp;Updates...</source>
+      <translation>更新の確認(&amp;U)...</translation>
+    </message>
+    <message>
       <source>&amp;File</source>
       <translation>ファイル(&amp;F)</translation>
     </message>
@@ -581,6 +585,26 @@
     <message>
       <source>&amp;Help</source>
       <translation>ヘルプ(&amp;H)</translation>
+    </message>
+    <message>
+      <source>Automatic U&amp;pdates</source>
+      <translation>自動更新(&amp;P)</translation>
+    </message>
+    <message>
+      <source>Install All Updates Automatically</source>
+      <translation>すべての更新を自動でインストール</translation>
+    </message>
+    <message>
+      <source>Install Required Updates Automatically</source>
+      <translation>必須の更新を自動でインストール</translation>
+    </message>
+    <message>
+      <source>Ask Before Updating</source>
+      <translation>更新前に確認</translation>
+    </message>
+    <message>
+      <source>Never Check</source>
+      <translation>確認しない</translation>
     </message>
     <message>
       <source>Toolbar</source>
@@ -1841,6 +1865,67 @@ Use check boxes to enable/disable a rule.</source>
     <message>
       <source>%1 MB/sec</source>
       <translation>%1 MB/秒</translation>
+    </message>
+  </context>
+  <context>
+    <name>Updater</name>
+    <message>
+      <source>WinRoute Update</source>
+      <translation>WinRoute の更新</translation>
+    </message>
+    <message>
+      <source>Could not check for updates:
+%1</source>
+      <translation>更新を確認できませんでした：
+%1</translation>
+    </message>
+    <message>
+      <source>WinRoute %1 is the latest version.</source>
+      <translation>WinRoute %1 は最新バージョンです。</translation>
+    </message>
+    <message>
+      <source>WinRoute %1 is available; you have %2.
+Update now? WinRoute restarts when it is done.</source>
+      <translation>WinRoute %1 が利用できます（現在のバージョンは %2）。
+今すぐ更新しますか？完了後に WinRoute が再起動します。</translation>
+    </message>
+    <message>
+      <source>Update</source>
+      <translation>更新</translation>
+    </message>
+    <message>
+      <source>Later</source>
+      <translation>後で</translation>
+    </message>
+    <message>
+      <source>Downloading WinRoute %1...</source>
+      <translation>WinRoute %1 をダウンロードしています...</translation>
+    </message>
+    <message>
+      <source>Cancel</source>
+      <translation>キャンセル</translation>
+    </message>
+    <message>
+      <source>Downloading WinRoute %1; WinRoute restarts once it is installed.</source>
+      <translation>WinRoute %1 をダウンロードしています。インストール後に WinRoute が再起動します。</translation>
+    </message>
+    <message>
+      <source>The download is damaged (checksum mismatch).</source>
+      <translation>ダウンロードしたファイルが壊れています（チェックサムが一致しません）。</translation>
+    </message>
+    <message>
+      <source>Could not download WinRoute %1:
+%2</source>
+      <translation>WinRoute %1 をダウンロードできませんでした：
+%2</translation>
+    </message>
+    <message>
+      <source>Could not prepare the update.</source>
+      <translation>更新を準備できませんでした。</translation>
+    </message>
+    <message>
+      <source>Could not start the update.</source>
+      <translation>更新を開始できませんでした。</translation>
     </message>
   </context>
   <context>

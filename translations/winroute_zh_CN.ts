@@ -483,6 +483,10 @@
       <translation>关于 WinRoute(&amp;A)...</translation>
     </message>
     <message>
+      <source>Check for &amp;Updates...</source>
+      <translation>检查更新(&amp;U)...</translation>
+    </message>
+    <message>
       <source>&amp;File</source>
       <translation>文件(&amp;F)</translation>
     </message>
@@ -581,6 +585,26 @@
     <message>
       <source>&amp;Help</source>
       <translation>帮助(&amp;H)</translation>
+    </message>
+    <message>
+      <source>Automatic U&amp;pdates</source>
+      <translation>自动更新(&amp;P)</translation>
+    </message>
+    <message>
+      <source>Install All Updates Automatically</source>
+      <translation>自动安装所有更新</translation>
+    </message>
+    <message>
+      <source>Install Required Updates Automatically</source>
+      <translation>自动安装必须的更新</translation>
+    </message>
+    <message>
+      <source>Ask Before Updating</source>
+      <translation>更新前询问</translation>
+    </message>
+    <message>
+      <source>Never Check</source>
+      <translation>从不检查</translation>
     </message>
     <message>
       <source>Toolbar</source>
@@ -1841,6 +1865,67 @@ Use check boxes to enable/disable a rule.</source>
     <message>
       <source>%1 MB/sec</source>
       <translation>%1 MB/秒</translation>
+    </message>
+  </context>
+  <context>
+    <name>Updater</name>
+    <message>
+      <source>WinRoute Update</source>
+      <translation>WinRoute 更新</translation>
+    </message>
+    <message>
+      <source>Could not check for updates:
+%1</source>
+      <translation>无法检查更新：
+%1</translation>
+    </message>
+    <message>
+      <source>WinRoute %1 is the latest version.</source>
+      <translation>WinRoute %1 已是最新版本。</translation>
+    </message>
+    <message>
+      <source>WinRoute %1 is available; you have %2.
+Update now? WinRoute restarts when it is done.</source>
+      <translation>WinRoute %1 已发布，当前版本是 %2。
+现在更新吗？更新完成后 WinRoute 会重新启动。</translation>
+    </message>
+    <message>
+      <source>Update</source>
+      <translation>更新</translation>
+    </message>
+    <message>
+      <source>Later</source>
+      <translation>以后再说</translation>
+    </message>
+    <message>
+      <source>Downloading WinRoute %1...</source>
+      <translation>正在下载 WinRoute %1...</translation>
+    </message>
+    <message>
+      <source>Cancel</source>
+      <translation>取消</translation>
+    </message>
+    <message>
+      <source>Downloading WinRoute %1; WinRoute restarts once it is installed.</source>
+      <translation>正在下载 WinRoute %1，安装完成后 WinRoute 会重新启动。</translation>
+    </message>
+    <message>
+      <source>The download is damaged (checksum mismatch).</source>
+      <translation>下载的文件已损坏（校验和不一致）。</translation>
+    </message>
+    <message>
+      <source>Could not download WinRoute %1:
+%2</source>
+      <translation>无法下载 WinRoute %1：
+%2</translation>
+    </message>
+    <message>
+      <source>Could not prepare the update.</source>
+      <translation>无法准备更新。</translation>
+    </message>
+    <message>
+      <source>Could not start the update.</source>
+      <translation>无法开始更新。</translation>
     </message>
   </context>
   <context>

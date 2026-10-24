@@ -9,6 +9,7 @@
 #include "RulesDialog.h"
 #include "StatisticsWidget.h"
 #include "TrafficWidget.h"
+#include "Updater.h"
 #include "core/DnsClient.h"
 #include "core/Logger.h"
 #include "core/ProcessInfo.h"
@@ -185,6 +186,20 @@ void MainWindow::createActions()
     m_actChecker = act(tr("Proxy &Checker..."), &MainWindow::showProxyChecker, {}, icons::checker());
     m_actChecker->setStatusTip(tr("Test proxy servers"));
     m_actAbout = act(tr("&About WinRoute..."), &MainWindow::showAbout);
+
+    m_updater = new Updater(this);
+    m_actCheckUpdates = act(tr("Check for &Updates..."), [this] { m_updater->checkNow(); });
+    connect(m_updater, &Updater::notify, this, [this](const QString &title, const QString &message) {
+        if (m_tray->isVisible())
+            m_tray->showMessage(title, message);
+        else
+            logNormal(message);
+    });
+    connect(m_updater, &Updater::quitRequested, this, [this] {
+        m_quitting = true;
+        close();
+    });
+    QTimer::singleShot(5000, m_updater, &Updater::checkAtStartup);
 }
 
 void MainWindow::createMenus()
@@ -288,6 +303,23 @@ void MainWindow::createMenus()
     tools->addAction(m_actChecker);
 
     QMenu *help = menuBar()->addMenu(tr("&Help"));
+    help->addAction(m_actCheckUpdates);
+    QMenu *updates = help->addMenu(tr("Automatic U&pdates"));
+    auto *updateGroup = new QActionGroup(this);
+    const QList<QPair<QString, Updater::Mode>> updateModes = {
+        {tr("Install All Updates Automatically"), Updater::Mode::Automatic},
+        {tr("Install Required Updates Automatically"), Updater::Mode::RequiredOnly},
+        {tr("Ask Before Updating"), Updater::Mode::Ask},
+        {tr("Never Check"), Updater::Mode::Never},
+    };
+    for (const auto &[name, mode] : updateModes) {
+        QAction *a = updates->addAction(name);
+        a->setCheckable(true);
+        a->setChecked(mode == Updater::mode());
+        updateGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [mode] { Updater::setMode(mode); });
+    }
+    help->addSeparator();
     help->addAction(m_actAbout);
 }
 
