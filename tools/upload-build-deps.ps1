@@ -18,8 +18,12 @@
     netfilter/nfsdk/include/*.h
     netfilter/nfsdk/wfp/include/*.h
     netfilter/nfsdk/wfp/bin/release_c_api/x64/nfapi.dll
-    netfilter/nfsdk/wfp/bin/driver/x64/netfilter2.sys   (demo driver)
-    netfilter2.sys                                       (driver signed by Sichuan Zhengyun)
+    netfilter/driver/demo/netfilter2.sys   (demo driver)
+    netfilter/driver/a/netfilter2.sys      (driver A)
+    netfilter/driver/b/netfilter2.sys      (driver B)
+    netfilter/driver/c/netfilter2.sys      (driver C)
+  The drivers are the WFP x64 builds that NETFILTER_DRIVERS in CMakeLists.txt
+  lists; keep the two lists the same.
 
   The private repository needs at least one commit (create it with a README),
   as a release needs a commit to tag.
@@ -35,7 +39,7 @@
 
 .EXAMPLE
   $env:GITHUB_TOKEN = "github_pat_..."
-  tools\upload-build-deps.ps1 -Version 2
+  tools\upload-build-deps.ps1 -Version 4
 #>
 param(
     [Parameter(Mandatory)][string]$Version,
@@ -51,8 +55,10 @@ $files = @(
     Get-ChildItem netfilter/nfsdk/include/*.h
     Get-ChildItem netfilter/nfsdk/wfp/include/*.h
     Get-Item netfilter/nfsdk/wfp/bin/release_c_api/x64/nfapi.dll
-    Get-Item netfilter/nfsdk/wfp/bin/driver/x64/netfilter2.sys
-    Get-Item netfilter2.sys
+    Get-Item netfilter/driver/demo/netfilter2.sys
+    Get-Item netfilter/driver/a/netfilter2.sys
+    Get-Item netfilter/driver/b/netfilter2.sys
+    Get-Item netfilter/driver/c/netfilter2.sys
 )
 
 New-Item -ItemType Directory -Force build | Out-Null

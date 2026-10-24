@@ -27,11 +27,11 @@ Relay (独立线程, 0.0.0.0/:: 随机端口)
 | `src/ui` | 主窗口（连接 / 流量 / 统计 / 日志）和全部设置对话框 |
 | `tests/tests.cpp` | 配置往返、规则匹配、DNS 报文、各代理协议和代理链的握手（进程内假代理） |
 | `netfilter/` | NetFilter SDK（头文件和 `nfapi.dll`，C API 版本）。**不在仓库中**，需自行放置，至少包含 `nfsdk/include`、`nfsdk/wfp/include` 和 `nfsdk/wfp/bin/release_c_api/x64/nfapi.dll` |
-| `netfilter2.sys` | 已签名的驱动。**不在仓库中**，需自行放在仓库根目录 |
+| `netfilter/driver/` | 已签名的驱动，每个都是 `<驱动>/netfilter2.sys`：`demo`（SDK 演示驱动）和 `a`、`b`、`c`（正式版驱动），都是 WFP 的 x64 版。**不在仓库中** |
 
 ## 构建
 
-需要 Qt 6（MinGW 64 位）和 CMake，并按上表放好 NetFilter SDK 和驱动。路径也可以用 `-DNETFILTER_SDK_DIR=...`、`-DNETFILTER_DRIVER=...` 指定。
+需要 Qt 6（MinGW 64 位）和 CMake，并按上表放好 NetFilter SDK 和驱动。路径也可以用 `-DNETFILTER_SDK_DIR=...`、`-DNETFILTER_DRIVER_DIR=...` 指定。
 
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=D:/Qt/6.12.0/mingw_64
@@ -40,7 +40,7 @@ build/winroute_tests.exe
 windeployqt --release build/WinRoute.exe
 ```
 
-构建后，`nfapi.dll` 和 `netfilter2.sys` 会被复制到 `WinRoute.exe` 旁边。程序 manifest 要求管理员权限。首次启动时，程序把驱动复制到 `System32\drivers` 并注册 `netfilter2` 服务。卸载驱动：`WinRoute.exe --uninstall-driver`。
+构建后，`nfapi.dll` 和驱动A（`a/netfilter2.sys`）会被复制到 `WinRoute.exe` 旁边。程序 manifest 要求管理员权限。首次启动时，程序把驱动复制到 `System32\drivers` 并注册 `netfilter2` 服务。卸载驱动：`WinRoute.exe --uninstall-driver`。
 
 加 `-DWINROUTE_REQUIRE_ADMIN=OFF` 可以构建不带管理员 manifest 的开发版，用于不提权调试界面（此时网络拦截不会启动）。
 
@@ -52,13 +52,13 @@ windeployqt --release build/WinRoute.exe
 cmake --build build --target installer    # 生成 build/WinRoute-<版本>-setup.exe
 ```
 
-这个目标会把 `WinRoute.exe`、`nfapi.dll` 和两个驱动（`drivers/demo/`、`drivers/zhengyun/`）复制到 `build/stage`，用 `windeployqt` 补齐 Qt 和 MinGW 运行库，再调用 `ISCC` 打包。
+这个目标会把 `WinRoute.exe`、`nfapi.dll` 和四个驱动（`drivers/demo/`、`drivers/a/`、`drivers/b/`、`drivers/c/`）复制到 `build/stage`，用 `windeployqt` 补齐 Qt 和 MinGW 运行库，再调用 `ISCC` 打包。
 
-- **安装**：需要管理员权限，界面支持中文、日语、英语。可选创建桌面快捷方式和开机自启动计划任务。
-- **选择驱动**：“网络驱动”页用下拉框选择，默认 **NetFilter SDK 演示驱动**（1.7.2.9，`NETFILTER_DEMO_DRIVER`，默认取自 SDK 的 `wfp/bin/driver/x64/`）。演示驱动拦截的连接数有上限，超过后要重启 Windows 才恢复。另一项是四川征云签名的正式版驱动（1.7.1.8，`NETFILTER_DRIVER`）。升级时沿用上次的选择。只安装选中的那个驱动，文件复制完成后执行 `WinRoute.exe --install-driver --quiet` 注册并启动；如果系统里已装的是另一个驱动，会先停掉并替换。
+- **安装**：只支持 x64 版的 Windows 10 1809 及以上（Qt 6 的要求；驱动是 x64 版，Arm 版 Windows 不能装），需要管理员权限，界面支持中文、日语、英语。可选创建桌面快捷方式和开机自启动计划任务。
+- **选择驱动**：“网络驱动”页用下拉框选择，默认 **NetFilter SDK 演示驱动**（1.7.2.9）。演示驱动拦截的连接数有上限，超过后要重启 Windows 才恢复。其余是正式版的**驱动A / B / C**，没有连接数限制，安装界面只显示代号。其中驱动B 停止后不会立即从内核卸载，切换到其他驱动或卸载需要重启 Windows 才能完成。升级时沿用上次的选择。只安装选中的那个驱动，文件复制完成后执行 `WinRoute.exe --install-driver --quiet` 注册并启动；如果系统里已装的是另一个驱动，会先停掉并替换。
 - **卸载**：删除开机自启动计划任务，执行 `WinRoute.exe --uninstall-driver --quiet` 停止驱动、删除服务和 `System32\drivers\netfilter2.sys`，再询问是否删除配置文件、设置和日志（静默卸载时保留）。
 - **运行检测**：WinRoute 运行时会创建互斥量 `WinRoute.AppMutex`，安装和卸载前都会提示先关闭程序。
-- **静默安装**：`WinRoute-0.1.0-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /TASKS=autostart /DRIVER=demo`（`/DRIVER=zhengyun` 选择征云驱动；不写时，首次安装用演示驱动，升级时沿用上次的选择）
+- **静默安装**：`WinRoute-0.1.0-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /TASKS=autostart /DRIVER=demo`（`/DRIVER=a|b|c` 选择对应的正式版驱动；不写时，首次安装用演示驱动，升级时沿用上次的选择）
 - **代码签名**：在 `WinRoute.iss` 中启用 `SignTool` 和 `SignedUninstaller` 两行，并给 ISCC 配置签名工具。
 - `installer/ChineseSimplified.isl` 是 Inno Setup 6.7.3 的简体中文非官方翻译，取自 jrsoftware/issrc。
 

@@ -22,9 +22,12 @@ DefaultDirName={autopf}\WinRoute
 DefaultGroupName=WinRoute
 DisableProgramGroupPage=yes
 PrivilegesRequired=admin
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
-MinVersion=10.0
+; x64 Windows only: the driver is an x64 build, and a kernel driver does not
+; run under the x64 emulation of Windows on Arm.
+ArchitecturesAllowed=x64os
+ArchitecturesInstallIn64BitMode=x64os
+; Qt 6 needs Windows 10 1809 or later.
+MinVersion=10.0.17763
 OutputDir={#OutputDir}
 OutputBaseFilename=WinRoute-{#AppVersion}-setup
 SetupIconFile=..\resources\app.ico
@@ -72,15 +75,27 @@ ja.DriverLabel=WinRoute は NetFilter SDK のドライバーで接続を捕捉�
 en.DriverDemo=NetFilter SDK demo driver
 zh_CN.DriverDemo=NetFilter SDK 演示驱动
 ja.DriverDemo=NetFilter SDK デモドライバー
-en.DriverZhengyun=Driver signed by Sichuan Zhengyun
-zh_CN.DriverZhengyun=四川征云签名驱动
-ja.DriverZhengyun=四川征雲署名のドライバー
+en.DriverA=Driver A
+zh_CN.DriverA=驱动 A
+ja.DriverA=ドライバー A
+en.DriverB=Driver B
+zh_CN.DriverB=驱动 B
+ja.DriverB=ドライバー B
+en.DriverC=Driver C
+zh_CN.DriverC=驱动 C
+ja.DriverC=ドライバー C
 en.DriverDemoNote=The evaluation driver from the NetFilter SDK (version 1.7.2.9). It stops capturing connections after a limited number of them, until Windows restarts.
 zh_CN.DriverDemoNote=NetFilter SDK 自带的评估版驱动（版本 1.7.2.9）。拦截的连接数达到上限后会停止工作，重启 Windows 后恢复。
 ja.DriverDemoNote=NetFilter SDK に付属する評価版ドライバー（バージョン 1.7.2.9）です。捕捉した接続数が上限に達すると、Windows を再起動するまで動作しません。
-en.DriverZhengyunNote=The release build of the driver (version 1.7.1.8), signed by Sichuan Zhengyun Network Technology Co., Ltd., without a connection limit.
-zh_CN.DriverZhengyunNote=正式版驱动（版本 1.7.1.8），由四川征云网络科技有限公司签名，没有连接数限制。
-ja.DriverZhengyunNote=四川征雲網絡科技有限公司が署名した製品版ドライバー（バージョン 1.7.1.8）です。接続数の制限はありません。
+en.DriverANote=A release build of the driver (version 1.7.1.8), without a connection limit.
+zh_CN.DriverANote=正式版驱动（版本 1.7.1.8），没有连接数限制。
+ja.DriverANote=製品版ドライバー（バージョン 1.7.1.8）です。接続数の制限はありません。
+en.DriverBNote=A release build of the driver (version 1.7.1.8), without a connection limit. Changing to another driver or uninstalling needs a Windows restart to finish.
+zh_CN.DriverBNote=正式版驱动（版本 1.7.1.8），没有连接数限制。切换到其他驱动或卸载后，需要重启 Windows 才能完成。
+ja.DriverBNote=製品版ドライバー（バージョン 1.7.1.8）です。接続数の制限はありません。他のドライバーへの切り替えやアンインストールには Windows の再起動が必要です。
+en.DriverCNote=A release build of the driver, without a connection limit.
+zh_CN.DriverCNote=正式版驱动，没有连接数限制。
+ja.DriverCNote=製品版ドライバーです。接続数の制限はありません。
 en.DriverReady=Network driver:
 zh_CN.DriverReady=网络驱动：
 ja.DriverReady=ネットワークドライバー：
@@ -94,7 +109,9 @@ Source: "{#StageDir}\*"; Excludes: "\drivers"; DestDir: "{app}"; Flags: ignoreve
 ; Only the driver chosen on the Network Driver page is installed (WinRoute.exe
 ; --install-driver puts it in place, replacing a different one).
 Source: "{#StageDir}\drivers\demo\netfilter2.sys"; DestDir: "{app}"; Flags: ignoreversion; Check: DriverIs('demo')
-Source: "{#StageDir}\drivers\zhengyun\netfilter2.sys"; DestDir: "{app}"; Flags: ignoreversion; Check: DriverIs('zhengyun')
+Source: "{#StageDir}\drivers\a\netfilter2.sys"; DestDir: "{app}"; Flags: ignoreversion; Check: DriverIs('a')
+Source: "{#StageDir}\drivers\b\netfilter2.sys"; DestDir: "{app}"; Flags: ignoreversion; Check: DriverIs('b')
+Source: "{#StageDir}\drivers\c\netfilter2.sys"; DestDir: "{app}"; Flags: ignoreversion; Check: DriverIs('c')
 
 [Icons]
 Name: "{autoprograms}\WinRoute"; Filename: "{app}\WinRoute.exe"
@@ -115,7 +132,7 @@ Filename: "{app}\WinRoute.exe"; Parameters: "--uninstall-driver --quiet"; Flags:
 
 [Code]
 // The Network Driver page: a drop-down with the two drivers, the demo one by
-// default. An upgrade keeps the previous choice; /DRIVER=demo|zhengyun on the
+// default. An upgrade keeps the previous choice; /DRIVER=demo|a|b|c on the
 // command line picks one for silent installs.
 var
   DriverPage: TWizardPage;
@@ -124,12 +141,37 @@ var
 
 function DriverKey(Index: Integer): String;
 begin
-  if Index = 1 then Result := 'zhengyun' else Result := 'demo';
+  case Index of
+    1: Result := 'a';
+    2: Result := 'b';
+    3: Result := 'c';
+  else
+    Result := 'demo';
+  end;
+end;
+
+function DriverIndex(Key: String): Integer;
+begin
+  if Key = 'a' then Result := 1
+  else if Key = 'b' then Result := 2
+  else if Key = 'c' then Result := 3
+  else Result := 0;
 end;
 
 function DriverName(Key: String): String;
 begin
-  if Key = 'zhengyun' then Result := CustomMessage('DriverZhengyun') else Result := CustomMessage('DriverDemo');
+  if Key = 'a' then Result := CustomMessage('DriverA')
+  else if Key = 'b' then Result := CustomMessage('DriverB')
+  else if Key = 'c' then Result := CustomMessage('DriverC')
+  else Result := CustomMessage('DriverDemo');
+end;
+
+function DriverNoteText(Key: String): String;
+begin
+  if Key = 'a' then Result := CustomMessage('DriverANote')
+  else if Key = 'b' then Result := CustomMessage('DriverBNote')
+  else if Key = 'c' then Result := CustomMessage('DriverCNote')
+  else Result := CustomMessage('DriverDemoNote');
 end;
 
 function SelectedDriver(): String;
@@ -144,10 +186,7 @@ end;
 
 procedure UpdateDriverNote(Sender: TObject);
 begin
-  if SelectedDriver() = 'zhengyun' then
-    DriverNote.Caption := CustomMessage('DriverZhengyunNote')
-  else
-    DriverNote.Caption := CustomMessage('DriverDemoNote');
+  DriverNote.Caption := DriverNoteText(SelectedDriver());
 end;
 
 procedure InitializeWizard();
@@ -171,7 +210,9 @@ begin
   DriverCombo.Top := Intro.Top + Intro.Height + ScaleY(8);
   DriverCombo.Width := DriverPage.SurfaceWidth;
   DriverCombo.Items.Add(DriverName('demo'));
-  DriverCombo.Items.Add(DriverName('zhengyun'));
+  DriverCombo.Items.Add(DriverName('a'));
+  DriverCombo.Items.Add(DriverName('b'));
+  DriverCombo.Items.Add(DriverName('c'));
   DriverCombo.OnChange := @UpdateDriverNote;
 
   DriverNote := TNewStaticText.Create(DriverPage);
@@ -185,7 +226,7 @@ begin
   Initial := Lowercase(ExpandConstant('{param:DRIVER|}'));
   if Initial = '' then
     Initial := GetPreviousData('Driver', 'demo');
-  if Initial = 'zhengyun' then DriverCombo.ItemIndex := 1 else DriverCombo.ItemIndex := 0;
+  DriverCombo.ItemIndex := DriverIndex(Initial);
   UpdateDriverNote(nil);
 end;
 

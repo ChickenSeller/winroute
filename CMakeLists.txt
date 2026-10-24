@@ -9,11 +9,14 @@ set(CMAKE_AUTORCC ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network LinguistTools)
 
 set(NETFILTER_SDK_DIR ${CMAKE_SOURCE_DIR}/netfilter/nfsdk CACHE PATH "NetFilter SDK root (nfsdk folder)")
-# Two drivers ship, the installer lets the user pick one: the NetFilter SDK demo
-# driver (default) and the release driver signed by Sichuan Zhengyun. Development
-# builds put the signed one next to WinRoute.exe.
-set(NETFILTER_DRIVER ${CMAKE_SOURCE_DIR}/netfilter2.sys CACHE FILEPATH "netfilter2.sys driver signed by Sichuan Zhengyun")
-set(NETFILTER_DEMO_DRIVER ${NETFILTER_SDK_DIR}/wfp/bin/driver/x64/netfilter2.sys CACHE FILEPATH "NetFilter SDK demo netfilter2.sys")
+# Several drivers ship, the installer lets the user pick one: the NetFilter SDK
+# demo driver (default) and the release drivers "A", "B", "C", each as
+# <driver>/netfilter2.sys under NETFILTER_DRIVER_DIR. All are WFP x64 builds,
+# which serve every Windows version WinRoute runs on. Development builds put
+# driver A next to WinRoute.exe.
+set(NETFILTER_DRIVER_DIR ${CMAKE_SOURCE_DIR}/netfilter/driver CACHE PATH "Drivers, as <driver>/netfilter2.sys")
+set(NETFILTER_DRIVERS demo a b c)
+set(NETFILTER_DEV_DRIVER ${NETFILTER_DRIVER_DIR}/a/netfilter2.sys)
 set(NETFILTER_API_DLL ${NETFILTER_SDK_DIR}/wfp/bin/release_c_api/x64/nfapi.dll)
 
 set(CORE_SOURCES
@@ -91,7 +94,7 @@ qt_add_resources(WinRoute "translations" PREFIX "/i18n" FILES ${WINROUTE_QM_FILE
 
 add_custom_command(TARGET WinRoute POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NETFILTER_API_DLL} $<TARGET_FILE_DIR:WinRoute>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NETFILTER_DRIVER} $<TARGET_FILE_DIR:WinRoute>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NETFILTER_DEV_DRIVER} $<TARGET_FILE_DIR:WinRoute>/netfilter2.sys
 )
 
 # "cmake --build build --target installer" stages a deployed copy and builds
@@ -100,13 +103,18 @@ find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS ${QT6_INSTALL_PREFIX}/${QT
 find_program(ISCC_EXECUTABLE ISCC PATHS "C:/Program Files (x86)/Inno Setup 6" "C:/Program Files/Inno Setup 6")
 if(WINDEPLOYQT_EXECUTABLE AND ISCC_EXECUTABLE)
     set(INSTALLER_STAGE ${CMAKE_BINARY_DIR}/stage)
+    # Each driver goes to stage/drivers/<driver>/netfilter2.sys.
+    set(STAGE_DRIVER_COMMANDS)
+    foreach(driver ${NETFILTER_DRIVERS})
+        list(APPEND STAGE_DRIVER_COMMANDS
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${INSTALLER_STAGE}/drivers/${driver}
+            COMMAND ${CMAKE_COMMAND} -E copy ${NETFILTER_DRIVER_DIR}/${driver}/netfilter2.sys ${INSTALLER_STAGE}/drivers/${driver})
+    endforeach()
     add_custom_target(installer
         COMMAND ${CMAKE_COMMAND} -E rm -rf ${INSTALLER_STAGE}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${INSTALLER_STAGE}
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:WinRoute> ${NETFILTER_API_DLL} ${INSTALLER_STAGE}
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${INSTALLER_STAGE}/drivers/demo ${INSTALLER_STAGE}/drivers/zhengyun
-        COMMAND ${CMAKE_COMMAND} -E copy ${NETFILTER_DEMO_DRIVER} ${INSTALLER_STAGE}/drivers/demo/netfilter2.sys
-        COMMAND ${CMAKE_COMMAND} -E copy ${NETFILTER_DRIVER} ${INSTALLER_STAGE}/drivers/zhengyun/netfilter2.sys
+        ${STAGE_DRIVER_COMMANDS}
         COMMAND ${WINDEPLOYQT_EXECUTABLE} --release --no-translations --no-system-d3d-compiler --no-opengl-sw
                 ${INSTALLER_STAGE}/WinRoute.exe
         COMMAND ${ISCC_EXECUTABLE} /Q /DAppVersion=${PROJECT_VERSION}

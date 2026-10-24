@@ -19,8 +19,8 @@ permissions:
   contents: write
 
 env:
-  BUILD_DEPS_VERSION: '2'
-  BUILD_DEPS_SHA256: 4136e1c13661a1b18ea96ff41d062e4c35ba5a0bd88dfa8af6d0128b05227d41
+  BUILD_DEPS_VERSION: '4'
+  BUILD_DEPS_SHA256: 5a0504a766ed97028fa194b958fbc390fca6ed568d3adb4ac9b5f32a60fb0270
   BUILD_DEPS_REPO: ChickenSeller/winroute-build-deps
 
 jobs:
@@ -90,7 +90,9 @@ jobs:
       - name: Check the installer
         shell: pwsh
         run: |
-          $missing = 'WinRoute.exe', 'nfapi.dll', 'drivers/demo/netfilter2.sys', 'drivers/zhengyun/netfilter2.sys',
+          $missing = 'WinRoute.exe', 'nfapi.dll',
+                     'drivers/demo/netfilter2.sys', 'drivers/a/netfilter2.sys',
+                     'drivers/b/netfilter2.sys', 'drivers/c/netfilter2.sys',
                      'Qt6Core.dll', 'Qt6Widgets.dll', 'Qt6Network.dll', 'libstdc++-6.dll', 'platforms/qwindows.dll' |
             Where-Object { -not (Test-Path "build/stage/$_") }
           if ($missing) { throw "Missing from the installer: $($missing -join ', ')" }
