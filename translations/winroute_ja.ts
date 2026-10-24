@@ -1182,6 +1182,26 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>プロキシ経由で %1 に接続しました %2（%3 ミリ秒）</translation>
     </message>
     <message>
+      <source>TLS backend unavailable; skipping the HTTPS request test (the tunnel is up).</source>
+      <translation>TLS バックエンドが利用できないため、HTTPS 要求テストをスキップします（トンネルは確立済み）。</translation>
+    </message>
+    <message>
+      <source>&lt;b&gt;TLS Handshake Test&lt;/b&gt;</source>
+      <translation>&lt;b&gt;TLS ハンドシェイクテスト&lt;/b&gt;</translation>
+    </message>
+    <message>
+      <source>TLS handshake %1 (%2 ms)</source>
+      <translation>TLS ハンドシェイク %1（%2 ミリ秒）</translation>
+    </message>
+    <message>
+      <source>TLS warning: %1</source>
+      <translation>TLS 警告：%1</translation>
+    </message>
+    <message>
+      <source>%1 : TLS handshake timed out</source>
+      <translation>%1：TLS ハンドシェイクがタイムアウトしました</translation>
+    </message>
+    <message>
       <source>&lt;b&gt;HTTP Request Test&lt;/b&gt;</source>
       <translation>&lt;b&gt;HTTP 要求テスト&lt;/b&gt;</translation>
     </message>
@@ -1196,6 +1216,74 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     <message>
       <source>%1 : no response within 10 seconds</source>
       <translation>%1：10 秒以内に応答がありません</translation>
+    </message>
+    <message>
+      <source>UDP test skipped: a proxy chain cannot be tested for UDP.</source>
+      <translation>UDP テストをスキップ：プロキシチェーンは UDP をテストできません。</translation>
+    </message>
+    <message>
+      <source>UDP test skipped: UDP applies to SOCKS5 proxies only.</source>
+      <translation>UDP テストをスキップ：UDP は SOCKS5 プロキシにのみ適用されます。</translation>
+    </message>
+    <message>
+      <source>&lt;b&gt;UDP Support Test (SOCKS5 UDP ASSOCIATE)&lt;/b&gt;</source>
+      <translation>&lt;b&gt;UDP 対応テスト（SOCKS5 UDP ASSOCIATE）&lt;/b&gt;</translation>
+    </message>
+    <message>
+      <source>Requesting a UDP relay from %1:%2 ...</source>
+      <translation>%1:%2 に UDP リレーを要求しています ...</translation>
+    </message>
+    <message>
+      <source>the proxy did not grant a UDP relay in time</source>
+      <translation>プロキシが UDP リレーを時間内に割り当てませんでした</translation>
+    </message>
+    <message>
+      <source>not a SOCKS5 proxy</source>
+      <translation>SOCKS5 プロキシではありません</translation>
+    </message>
+    <message>
+      <source>proxy requires authentication</source>
+      <translation>プロキシは認証が必要です</translation>
+    </message>
+    <message>
+      <source>unsupported authentication method</source>
+      <translation>サポートされていない認証方式です</translation>
+    </message>
+    <message>
+      <source>authentication failed</source>
+      <translation>認証に失敗しました</translation>
+    </message>
+    <message>
+      <source>malformed reply</source>
+      <translation>応答の形式が不正です</translation>
+    </message>
+    <message>
+      <source>UDP ASSOCIATE rejected (code %1)</source>
+      <translation>UDP ASSOCIATE が拒否されました（コード %1）</translation>
+    </message>
+    <message>
+      <source>Relay granted at %1:%2</source>
+      <translation>リレーが %1:%2 に割り当てられました</translation>
+    </message>
+    <message>
+      <source>cannot open a local UDP socket</source>
+      <translation>ローカル UDP ソケットを開けません</translation>
+    </message>
+    <message>
+      <source>Sending a DNS query to 8.8.8.8:53 through the relay ...</source>
+      <translation>リレー経由で 8.8.8.8:53 に DNS クエリを送信しています ...</translation>
+    </message>
+    <message>
+      <source>no reply from the relay within 5 seconds (UDP may be blocked)</source>
+      <translation>5 秒以内にリレーから応答がありません（UDP がブロックされている可能性があります）</translation>
+    </message>
+    <message>
+      <source>UDP ASSOCIATE: %1 supported (a DNS reply came back through the relay)</source>
+      <translation>UDP ASSOCIATE：%1 対応（リレー経由で DNS 応答を受信）</translation>
+    </message>
+    <message>
+      <source>UDP ASSOCIATE: %1 not available%2</source>
+      <translation>UDP ASSOCIATE：%1 利用不可%2</translation>
     </message>
     <message>
       <source>&lt;b&gt;Testing Finished.&lt;/b&gt; Proxy server is working correctly!</source>
@@ -1812,8 +1900,16 @@ Default ルールが %1 を使用するように変更されます。
       <translation>参照...</translation>
     </message>
     <message>
-      <source>Example: iexplore.exe; "C:\some app.exe"; fire*.exe; *.bin</source>
-      <translation>例：iexplore.exe; "C:\some app.exe"; fire*.exe; *.bin</translation>
+      <source>Add Files...</source>
+      <translation>ファイルを追加...</translation>
+    </message>
+    <message>
+      <source>Add Folder...</source>
+      <translation>フォルダーを追加...</translation>
+    </message>
+    <message>
+      <source>Example: iexplore.exe; "C:\some app.exe"; C:\Games\; fire*.exe</source>
+      <translation>例：iexplore.exe; "C:\some app.exe"; C:\Games\; fire*.exe</translation>
     </message>
     <message>
       <source>Target hosts</source>
@@ -1850,6 +1946,10 @@ Default ルールが %1 を使用するように変更されます。
     <message>
       <source>Applications (*.exe);;All files (*.*)</source>
       <translation>アプリケーション (*.exe);;すべてのファイル (*.*)</translation>
+    </message>
+    <message>
+      <source>Select a Folder</source>
+      <translation>フォルダーの選択</translation>
     </message>
     <message>
       <source>Please enter the rule name.</source>

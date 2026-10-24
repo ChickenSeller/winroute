@@ -1182,6 +1182,26 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>已通过代理连接到 %1 %2（%3 毫秒）</translation>
     </message>
     <message>
+      <source>TLS backend unavailable; skipping the HTTPS request test (the tunnel is up).</source>
+      <translation>没有可用的 TLS 后端，跳过 HTTPS 请求测试（隧道已建立）。</translation>
+    </message>
+    <message>
+      <source>&lt;b&gt;TLS Handshake Test&lt;/b&gt;</source>
+      <translation>&lt;b&gt;TLS 握手测试&lt;/b&gt;</translation>
+    </message>
+    <message>
+      <source>TLS handshake %1 (%2 ms)</source>
+      <translation>TLS 握手 %1（%2 毫秒）</translation>
+    </message>
+    <message>
+      <source>TLS warning: %1</source>
+      <translation>TLS 警告：%1</translation>
+    </message>
+    <message>
+      <source>%1 : TLS handshake timed out</source>
+      <translation>%1：TLS 握手超时</translation>
+    </message>
+    <message>
       <source>&lt;b&gt;HTTP Request Test&lt;/b&gt;</source>
       <translation>&lt;b&gt;HTTP 请求测试&lt;/b&gt;</translation>
     </message>
@@ -1196,6 +1216,74 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     <message>
       <source>%1 : no response within 10 seconds</source>
       <translation>%1：10 秒内没有响应</translation>
+    </message>
+    <message>
+      <source>UDP test skipped: a proxy chain cannot be tested for UDP.</source>
+      <translation>跳过 UDP 测试：代理链无法测试 UDP。</translation>
+    </message>
+    <message>
+      <source>UDP test skipped: UDP applies to SOCKS5 proxies only.</source>
+      <translation>跳过 UDP 测试：UDP 仅适用于 SOCKS5 代理。</translation>
+    </message>
+    <message>
+      <source>&lt;b&gt;UDP Support Test (SOCKS5 UDP ASSOCIATE)&lt;/b&gt;</source>
+      <translation>&lt;b&gt;UDP 支持测试（SOCKS5 UDP ASSOCIATE）&lt;/b&gt;</translation>
+    </message>
+    <message>
+      <source>Requesting a UDP relay from %1:%2 ...</source>
+      <translation>正在向 %1:%2 请求 UDP 中继 ...</translation>
+    </message>
+    <message>
+      <source>the proxy did not grant a UDP relay in time</source>
+      <translation>代理未能及时分配 UDP 中继</translation>
+    </message>
+    <message>
+      <source>not a SOCKS5 proxy</source>
+      <translation>不是 SOCKS5 代理</translation>
+    </message>
+    <message>
+      <source>proxy requires authentication</source>
+      <translation>代理需要身份验证</translation>
+    </message>
+    <message>
+      <source>unsupported authentication method</source>
+      <translation>不支持的身份验证方法</translation>
+    </message>
+    <message>
+      <source>authentication failed</source>
+      <translation>身份验证失败</translation>
+    </message>
+    <message>
+      <source>malformed reply</source>
+      <translation>回复格式错误</translation>
+    </message>
+    <message>
+      <source>UDP ASSOCIATE rejected (code %1)</source>
+      <translation>UDP ASSOCIATE 被拒绝（代码 %1）</translation>
+    </message>
+    <message>
+      <source>Relay granted at %1:%2</source>
+      <translation>已分配中继 %1:%2</translation>
+    </message>
+    <message>
+      <source>cannot open a local UDP socket</source>
+      <translation>无法打开本地 UDP 套接字</translation>
+    </message>
+    <message>
+      <source>Sending a DNS query to 8.8.8.8:53 through the relay ...</source>
+      <translation>正在通过中继向 8.8.8.8:53 发送 DNS 查询 ...</translation>
+    </message>
+    <message>
+      <source>no reply from the relay within 5 seconds (UDP may be blocked)</source>
+      <translation>5 秒内没有收到中继的回复（UDP 可能被阻止）</translation>
+    </message>
+    <message>
+      <source>UDP ASSOCIATE: %1 supported (a DNS reply came back through the relay)</source>
+      <translation>UDP ASSOCIATE：%1 支持（已通过中继收到 DNS 回复）</translation>
+    </message>
+    <message>
+      <source>UDP ASSOCIATE: %1 not available%2</source>
+      <translation>UDP ASSOCIATE：%1 不可用%2</translation>
     </message>
     <message>
       <source>&lt;b&gt;Testing Finished.&lt;/b&gt; Proxy server is working correctly!</source>
@@ -1812,8 +1900,16 @@ Default 规则将改为使用 %1。
       <translation>浏览...</translation>
     </message>
     <message>
-      <source>Example: iexplore.exe; "C:\some app.exe"; fire*.exe; *.bin</source>
-      <translation>示例：iexplore.exe; "C:\some app.exe"; fire*.exe; *.bin</translation>
+      <source>Add Files...</source>
+      <translation>添加文件...</translation>
+    </message>
+    <message>
+      <source>Add Folder...</source>
+      <translation>添加文件夹...</translation>
+    </message>
+    <message>
+      <source>Example: iexplore.exe; "C:\some app.exe"; C:\Games\; fire*.exe</source>
+      <translation>示例：iexplore.exe; "C:\some app.exe"; C:\Games\; fire*.exe</translation>
     </message>
     <message>
       <source>Target hosts</source>
@@ -1850,6 +1946,10 @@ Default 规则将改为使用 %1。
     <message>
       <source>Applications (*.exe);;All files (*.*)</source>
       <translation>应用程序 (*.exe);;所有文件 (*.*)</translation>
+    </message>
+    <message>
+      <source>Select a Folder</source>
+      <translation>选择文件夹</translation>
     </message>
     <message>
       <source>Please enter the rule name.</source>

@@ -328,10 +328,39 @@ T = {
     "<b>Connection through the Proxy Server Test</b>": ("<b>通过代理服务器连接测试</b>", "<b>プロキシサーバー経由の接続テスト</b>"),
     "Connecting to %1:%2 through the proxy ...": ("正在通过代理连接 %1:%2 ...", "プロキシ経由で %1:%2 に接続しています..."),
     "Connection to %1 established through the proxy %2 (%3 ms)": ("已通过代理连接到 %1 %2（%3 毫秒）", "プロキシ経由で %1 に接続しました %2（%3 ミリ秒）"),
+    "<b>TLS Handshake Test</b>": ("<b>TLS 握手测试</b>", "<b>TLS ハンドシェイクテスト</b>"),
+    "TLS handshake %1 (%2 ms)": ("TLS 握手 %1（%2 毫秒）", "TLS ハンドシェイク %1（%2 ミリ秒）"),
+    "TLS warning: %1": ("TLS 警告：%1", "TLS 警告：%1"),
+    "%1 : TLS handshake timed out": ("%1：TLS 握手超时", "%1：TLS ハンドシェイクがタイムアウトしました"),
+    "TLS backend unavailable; skipping the HTTPS request test (the tunnel is up).":
+        ("没有可用的 TLS 后端，跳过 HTTPS 请求测试（隧道已建立）。", "TLS バックエンドが利用できないため、HTTPS 要求テストをスキップします（トンネルは確立済み）。"),
     "<b>HTTP Request Test</b>": ("<b>HTTP 请求测试</b>", "<b>HTTP 要求テスト</b>"),
     "Response: %1 %2": ("响应：%1 %2", "応答：%1 %2"),
     "%1 : connection closed without a response": ("%1：连接已关闭，没有收到响应", "%1：応答がないまま接続が閉じられました"),
     "%1 : no response within 10 seconds": ("%1：10 秒内没有响应", "%1：10 秒以内に応答がありません"),
+    "UDP test skipped: a proxy chain cannot be tested for UDP.":
+        ("跳过 UDP 测试：代理链无法测试 UDP。", "UDP テストをスキップ：プロキシチェーンは UDP をテストできません。"),
+    "UDP test skipped: UDP applies to SOCKS5 proxies only.":
+        ("跳过 UDP 测试：UDP 仅适用于 SOCKS5 代理。", "UDP テストをスキップ：UDP は SOCKS5 プロキシにのみ適用されます。"),
+    "<b>UDP Support Test (SOCKS5 UDP ASSOCIATE)</b>":
+        ("<b>UDP 支持测试（SOCKS5 UDP ASSOCIATE）</b>", "<b>UDP 対応テスト（SOCKS5 UDP ASSOCIATE）</b>"),
+    "Requesting a UDP relay from %1:%2 ...": ("正在向 %1:%2 请求 UDP 中继 ...", "%1:%2 に UDP リレーを要求しています ..."),
+    "not a SOCKS5 proxy": ("不是 SOCKS5 代理", "SOCKS5 プロキシではありません"),
+    "proxy requires authentication": ("代理需要身份验证", "プロキシは認証が必要です"),
+    "unsupported authentication method": ("不支持的身份验证方法", "サポートされていない認証方式です"),
+    "authentication failed": ("身份验证失败", "認証に失敗しました"),
+    "malformed reply": ("回复格式错误", "応答の形式が不正です"),
+    "UDP ASSOCIATE rejected (code %1)": ("UDP ASSOCIATE 被拒绝（代码 %1）", "UDP ASSOCIATE が拒否されました（コード %1）"),
+    "Relay granted at %1:%2": ("已分配中继 %1:%2", "リレーが %1:%2 に割り当てられました"),
+    "cannot open a local UDP socket": ("无法打开本地 UDP 套接字", "ローカル UDP ソケットを開けません"),
+    "Sending a DNS query to 8.8.8.8:53 through the relay ...":
+        ("正在通过中继向 8.8.8.8:53 发送 DNS 查询 ...", "リレー経由で 8.8.8.8:53 に DNS クエリを送信しています ..."),
+    "no reply from the relay within 5 seconds (UDP may be blocked)":
+        ("5 秒内没有收到中继的回复（UDP 可能被阻止）", "5 秒以内にリレーから応答がありません（UDP がブロックされている可能性があります）"),
+    "the proxy did not grant a UDP relay in time": ("代理未能及时分配 UDP 中继", "プロキシが UDP リレーを時間内に割り当てませんでした"),
+    "UDP ASSOCIATE: %1 supported (a DNS reply came back through the relay)":
+        ("UDP ASSOCIATE：%1 支持（已通过中继收到 DNS 回复）", "UDP ASSOCIATE：%1 対応（リレー経由で DNS 応答を受信）"),
+    "UDP ASSOCIATE: %1 not available%2": ("UDP ASSOCIATE：%1 不可用%2", "UDP ASSOCIATE：%1 利用不可%2"),
     "<b>Testing Finished.</b> Proxy server is working correctly!": ("<b>测试完成。</b>代理服务器工作正常！", "<b>テスト完了。</b>プロキシサーバーは正常に動作しています！"),
     "<b>Testing Finished.</b> <span style='color:#c0201a'>The proxy server test failed.</span>":
         ("<b>测试完成。</b> <span style='color:#c0201a'>代理服务器测试失败。</span>", "<b>テスト完了。</b> <span style='color:#c0201a'>プロキシサーバーのテストに失敗しました。</span>"),
@@ -433,7 +462,10 @@ T = {
     "Applications": ("应用程序", "アプリケーション"),
     "Any": ("任意", "すべて"),
     "Browse...": ("浏览...", "参照..."),
-    "Example: iexplore.exe; \"C:\\some app.exe\"; fire*.exe; *.bin": ("示例：iexplore.exe; \"C:\\some app.exe\"; fire*.exe; *.bin", "例：iexplore.exe; \"C:\\some app.exe\"; fire*.exe; *.bin"),
+    "Add Files...": ("添加文件...", "ファイルを追加..."),
+    "Add Folder...": ("添加文件夹...", "フォルダーを追加..."),
+    "Select a Folder": ("选择文件夹", "フォルダーの選択"),
+    "Example: iexplore.exe; \"C:\\some app.exe\"; C:\\Games\\; fire*.exe": ("示例：iexplore.exe; \"C:\\some app.exe\"; C:\\Games\\; fire*.exe", "例：iexplore.exe; \"C:\\some app.exe\"; C:\\Games\\; fire*.exe"),
     "Target hosts": ("目标主机", "接続先ホスト"),
     "Example: 127.0.0.1; *.example.com; 192.168.1.*; 10.1.0.0-10.5.255.255": ("示例：127.0.0.1; *.example.com; 192.168.1.*; 10.1.0.0-10.5.255.255", "例：127.0.0.1; *.example.com; 192.168.1.*; 10.1.0.0-10.5.255.255"),
     "Target ports": ("目标端口", "接続先ポート"),
