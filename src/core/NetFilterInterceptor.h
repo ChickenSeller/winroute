@@ -50,6 +50,20 @@ public:
     static bool driverInstalled();         // the netfilter2 service exists and the file is present
     static bool driverRunning();           // the service is running
 
+    // Details of the installed driver file, for the status bar.
+    struct DriverInfo {
+        bool installed = false;    // the .sys file is present
+        bool running = false;      // the service is running
+        QString key;               // "demo"/"a"/"b"/"c", or {} if it matches none we ship
+        QString name;              // display name
+        bool demo = false;         // the SDK demo driver (limited) vs. an unlimited one
+        QString version;           // file version, e.g. "1.7.1.8"
+        QString certSubjectCN;     // signer common name
+        QString certSubject;       // full signer subject (multi-line)
+        QString certIssuerCN;      // signer's issuer common name
+    };
+    static DriverInfo installedDriverInfo();
+
     // NF_EventHandler callbacks, dispatched from nfapi worker threads.
     void onTcpConnectRequest(ENDPOINT_ID id, PNF_TCP_CONN_INFO info);
     void onUdpCreated(ENDPOINT_ID id, PNF_UDP_CONN_INFO info);

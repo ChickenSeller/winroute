@@ -248,4 +248,32 @@ QIcon arrowDown()
     });
 }
 
+// A signing seal: a medal disc with two ribbon tails.
+QIcon certificate()
+{
+    return render([](QPainter &p, double s) {
+        const QPointF c(s * 0.5, s * 0.42);
+        const double r = s * 0.30;
+        // ribbon tails
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor(190, 70, 70));
+        QPolygonF left{QPointF(c.x() - r * 0.55, c.y() + r * 0.4), QPointF(c.x() - r * 0.05, c.y() + r * 0.4),
+                       QPointF(c.x() - r * 0.3, s * 0.95), QPointF(c.x() - r * 0.9, s * 0.78)};
+        QPolygonF right{QPointF(c.x() + r * 0.05, c.y() + r * 0.4), QPointF(c.x() + r * 0.55, c.y() + r * 0.4),
+                        QPointF(c.x() + r * 0.9, s * 0.78), QPointF(c.x() + r * 0.3, s * 0.95)};
+        p.drawPolygon(left);
+        p.drawPolygon(right);
+        // disc
+        QRadialGradient g(c - QPointF(r * 0.25, r * 0.25), r * 1.3);
+        g.setColorAt(0, QColor(255, 216, 120));
+        g.setColorAt(1, QColor(214, 162, 48));
+        p.setBrush(g);
+        p.setPen(QPen(QColor(170, 120, 30), qMax(1.0, s / 24)));
+        p.drawEllipse(c, r, r);
+        p.setPen(QPen(QColor(255, 255, 255, 160), qMax(1.0, s / 32)));
+        p.setBrush(Qt::NoBrush);
+        p.drawEllipse(c, r * 0.68, r * 0.68);
+    });
+}
+
 } // namespace icons

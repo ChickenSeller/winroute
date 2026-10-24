@@ -69,7 +69,7 @@ set(TS_FILES
 add_library(winroute_core STATIC ${CORE_SOURCES})
 target_include_directories(winroute_core PUBLIC src ${NETFILTER_SDK_DIR}/wfp/include ${NETFILTER_SDK_DIR}/include)
 target_compile_definitions(winroute_core PUBLIC UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _WIN32_WINNT=0x0A00)
-target_link_libraries(winroute_core PUBLIC Qt6::Core Qt6::Network ws2_32 iphlpapi psapi advapi32 shell32 crypt32)
+target_link_libraries(winroute_core PUBLIC Qt6::Core Qt6::Network ws2_32 iphlpapi psapi advapi32 shell32 crypt32 version)
 
 option(WINROUTE_BUILD_GUI "Build the WinRoute application" ON)
 # Development builds can drop the requireAdministrator manifest to test the UI unelevated.

@@ -13,6 +13,7 @@
 #include "Updater.h"
 #include "core/DnsClient.h"
 #include "core/Logger.h"
+#include "core/NetFilterInterceptor.h"
 #include "core/ProcessInfo.h"
 #include "core/Utils.h"
 
@@ -42,6 +43,7 @@
 #include <QStatusBar>
 #include <QTabWidget>
 #include <QToolBar>
+#include <QToolButton>
 #include <QTreeView>
 #include <QUrl>
 
@@ -191,6 +193,7 @@ void MainWindow::createActions()
         DriverDialog dlg(m_engine, this);
         connect(&dlg, &DriverDialog::log, this, [this](const QString &m) { logNormal(m); });
         dlg.exec();
+        updateDriverStatus();
     });
     m_actDriver->setStatusTip(tr("Install, switch or uninstall the network driver"));
     m_actAbout = act(tr("&About WinRoute..."), &MainWindow::showAbout);
@@ -433,11 +436,71 @@ void MainWindow::createStatusBar()
     m_statusConns = new QLabel(tr("0 active connections"));
     m_statusRate = new QLabel;
     m_statusProfile = new QLabel;
+    m_statusDriver = new QLabel;
+    m_certButton = new QToolButton;
+    m_certButton->setAutoRaise(true);
+    m_certButton->setCursor(Qt::PointingHandCursor);
+    m_certButton->setIcon(icons::certificate());
+    m_certButton->setIconSize(QSize(14, 14));
+    m_certButton->setFocusPolicy(Qt::NoFocus);
+    m_certButton->hide();
+    connect(m_certButton, &QToolButton::clicked, this, &MainWindow::showCertificateDetails);
     statusBar()->addWidget(m_statusState, 1);
+    statusBar()->addPermanentWidget(m_statusDriver);
+    statusBar()->addPermanentWidget(m_certButton);
     statusBar()->addPermanentWidget(m_statusConns);
     statusBar()->addPermanentWidget(m_statusRate);
     statusBar()->addPermanentWidget(m_statusProfile);
     connect(m_actStatusBar, &QAction::toggled, statusBar(), &QStatusBar::setVisible);
+    updateDriverStatus();
+}
+
+void MainWindow::updateDriverStatus()
+{
+    if (!m_statusDriver)
+        return;
+    const auto info = NetFilterInterceptor::installedDriverInfo();
+    m_certSubject = info.certSubject;
+    if (!info.installed) {
+        m_statusDriver->setText(tr("Driver: not installed"));
+        m_statusDriver->setToolTip(QString());
+        m_certButton->hide();
+        return;
+    }
+    const QString kind = info.demo ? tr("Demo") : (info.key.isEmpty() ? tr("Unknown") : tr("Unlimited"));
+    QStringList parts{info.name};
+    if (!info.version.isEmpty())
+        parts << "v" + info.version;
+    parts << kind;
+    m_statusDriver->setText(tr("Driver: %1").arg(parts.join(" · ")));
+    m_statusDriver->setToolTip(info.running ? tr("The network driver is running")
+                                            : tr("The network driver is installed but not running"));
+    if (!info.certSubjectCN.isEmpty()) {
+        m_certButton->setToolTip(tr("Signed by %1 — click for details").arg(info.certSubjectCN));
+        m_certButton->show();
+    } else {
+        m_certButton->hide();
+    }
+}
+
+void MainWindow::showCertificateDetails()
+{
+    const auto info = NetFilterInterceptor::installedDriverInfo();
+    if (info.certSubjectCN.isEmpty() && info.certSubject.isEmpty()) {
+        QMessageBox::information(this, tr("Driver Signature"),
+                                 tr("The installed driver is not signed, or its signature could not be read."));
+        return;
+    }
+    QString body = tr("Signed by: %1").arg(info.certSubjectCN);
+    if (!info.certSubject.isEmpty())
+        body += "\n\n" + tr("Subject:") + "\n" + info.certSubject;
+    if (!info.certIssuerCN.isEmpty())
+        body += "\n\n" + tr("Issued by: %1").arg(info.certIssuerCN);
+    QMessageBox box(QMessageBox::NoIcon, tr("Driver Signature"),
+                    tr("Signing certificate of %1:").arg(info.name), QMessageBox::Ok, this);
+    box.setInformativeText(body);
+    box.setTextInteractionFlags(Qt::TextSelectableByMouse);
+    box.exec();
 }
 
 void MainWindow::createTray()
@@ -478,6 +541,7 @@ void MainWindow::startEngine()
         logError(tr("Cannot start network interception: ") + error);
         m_statusState->setText(tr("Not running: ") + error);
     }
+    updateDriverStatus();
     if (!m_startMinimized || !m_tray->isVisible())
         show();
     if (!m_engine->isRunning() && isVisible()) {

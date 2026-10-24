@@ -12,6 +12,11 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QVarLengthArray>
+
+#include <windows.h>
+#include <wincrypt.h>
+#include <winver.h>
 
 namespace {
 
@@ -310,6 +315,87 @@ bool NetFilterInterceptor::driverInstalled()
 bool NetFilterInterceptor::driverRunning()
 {
     return serviceState() == SERVICE_RUNNING;
+}
+
+// ---- installed driver details (status bar) ---------------------------------
+
+static QString driverFileVersion(const QString &path)
+{
+    const auto *wpath = reinterpret_cast<LPCWSTR>(path.utf16());
+    DWORD handle = 0;
+    const DWORD size = GetFileVersionInfoSizeW(wpath, &handle);
+    if (!size)
+        return {};
+    QByteArray buf(int(size), Qt::Uninitialized);
+    if (!GetFileVersionInfoW(wpath, 0, size, buf.data()))
+        return {};
+    VS_FIXEDFILEINFO *ffi = nullptr;
+    UINT len = 0;
+    if (!VerQueryValueW(buf.data(), L"\\", reinterpret_cast<LPVOID *>(&ffi), &len) || !ffi)
+        return {};
+    return QString("%1.%2.%3.%4")
+        .arg(HIWORD(ffi->dwFileVersionMS))
+        .arg(LOWORD(ffi->dwFileVersionMS))
+        .arg(HIWORD(ffi->dwFileVersionLS))
+        .arg(LOWORD(ffi->dwFileVersionLS));
+}
+
+// Reads the Authenticode signer's common name, full subject and issuer CN.
+static void driverSigner(const QString &path, QString *cn, QString *subject, QString *issuerCn)
+{
+    const auto *wpath = reinterpret_cast<LPCWSTR>(path.utf16());
+    HCERTSTORE store = nullptr;
+    HCRYPTMSG msg = nullptr;
+    if (!CryptQueryObject(CERT_QUERY_OBJECT_FILE, wpath, CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED,
+                          CERT_QUERY_FORMAT_FLAG_BINARY, 0, nullptr, nullptr, nullptr, &store, &msg, nullptr))
+        return;
+    DWORD n = 0;
+    if (CryptMsgGetParam(msg, CMSG_SIGNER_CERT_INFO_PARAM, 0, nullptr, &n) && n) {
+        QByteArray si(int(n), Qt::Uninitialized);
+        if (CryptMsgGetParam(msg, CMSG_SIGNER_CERT_INFO_PARAM, 0, si.data(), &n)) {
+            auto *ci = reinterpret_cast<CERT_INFO *>(si.data());
+            PCCERT_CONTEXT cert = CertFindCertificateInStore(store, X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, 0,
+                                                             CERT_FIND_SUBJECT_CERT, ci, nullptr);
+            if (cert) {
+                wchar_t name[512];
+                if (CertGetNameStringW(cert, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, nullptr, name, 512) > 1)
+                    *cn = QString::fromWCharArray(name);
+                if (CertGetNameStringW(cert, CERT_NAME_SIMPLE_DISPLAY_TYPE, CERT_NAME_ISSUER_FLAG, nullptr, name, 512) > 1)
+                    *issuerCn = QString::fromWCharArray(name);
+                const DWORD want = CertNameToStrW(cert->dwCertEncodingType, &cert->pCertInfo->Subject,
+                                                  CERT_X500_NAME_STR | CERT_NAME_STR_CRLF_FLAG, nullptr, 0);
+                if (want > 1) {
+                    const int sz = int(want);
+                    QVarLengthArray<wchar_t> s(sz);
+                    CertNameToStrW(cert->dwCertEncodingType, &cert->pCertInfo->Subject,
+                                   CERT_X500_NAME_STR | CERT_NAME_STR_CRLF_FLAG, s.data(), want);
+                    *subject = QString::fromWCharArray(s.data()).trimmed();
+                }
+                CertFreeCertificateContext(cert);
+            }
+        }
+    }
+    if (store)
+        CertCloseStore(store, 0);
+    if (msg)
+        CryptMsgClose(msg);
+}
+
+NetFilterInterceptor::DriverInfo NetFilterInterceptor::installedDriverInfo()
+{
+    DriverInfo info;
+    const QString path = driverInstallPath();
+    info.installed = QFileInfo::exists(path);
+    if (!info.installed)
+        return info;
+    info.running = driverRunning();
+    info.key = installedDriverKey();
+    info.demo = info.key == "demo";
+    info.name = info.key.isEmpty() ? QCoreApplication::translate("Interceptor", "Unrecognized driver")
+                                   : driverDisplayName(info.key);
+    info.version = driverFileVersion(path);
+    driverSigner(path, &info.certSubjectCN, &info.certSubject, &info.certIssuerCN);
+    return info;
 }
 
 bool NetFilterInterceptor::installRules(QString *error)

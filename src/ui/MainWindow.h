@@ -15,6 +15,7 @@ class QMenu;
 class QPlainTextEdit;
 class QSortFilterProxyModel;
 class QTabWidget;
+class QToolButton;
 class QTreeView;
 class ConnectionsModel;
 class DnsClient;
@@ -96,6 +97,8 @@ private:
     static bool autostartEnabled();
     void updateTitle();
     void updateTrayIcon();
+    void updateDriverStatus();
+    void showCertificateDetails();
 
     Engine *m_engine;
     Profile m_profile;
@@ -114,6 +117,9 @@ private:
     QLabel *m_statusConns = nullptr;
     QLabel *m_statusRate = nullptr;
     QLabel *m_statusProfile = nullptr;
+    QLabel *m_statusDriver = nullptr;
+    QToolButton *m_certButton = nullptr;
+    QString m_certSubject;   // full signer subject of the installed driver, for the details popup
     QSystemTrayIcon *m_tray = nullptr;
     QMenu *m_trayMenu = nullptr;
     QMenu *m_loadProfileMenu = nullptr;

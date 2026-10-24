@@ -380,6 +380,10 @@
       <translation>驱动 %1</translation>
     </message>
     <message>
+      <source>Unrecognized driver</source>
+      <translation>无法识别的驱动</translation>
+    </message>
+    <message>
       <source>Cannot add driver rule (%1): %2</source>
       <translation>无法添加驱动规则（%1）：%2</translation>
     </message>
@@ -776,6 +780,62 @@
     <message>
       <source>0 active connections</source>
       <translation>0 个活动连接</translation>
+    </message>
+    <message>
+      <source>Driver: not installed</source>
+      <translation>驱动：未安装</translation>
+    </message>
+    <message>
+      <source>Demo</source>
+      <translation>Demo</translation>
+    </message>
+    <message>
+      <source>Unknown</source>
+      <translation>未知</translation>
+    </message>
+    <message>
+      <source>Unlimited</source>
+      <translation>无限制</translation>
+    </message>
+    <message>
+      <source>Driver: %1</source>
+      <translation>驱动：%1</translation>
+    </message>
+    <message>
+      <source>The network driver is running</source>
+      <translation>网络驱动正在运行</translation>
+    </message>
+    <message>
+      <source>The network driver is installed but not running</source>
+      <translation>网络驱动已安装但未运行</translation>
+    </message>
+    <message>
+      <source>Signed by %1 — click for details</source>
+      <translation>签名者：%1 — 点击查看详情</translation>
+    </message>
+    <message>
+      <source>Driver Signature</source>
+      <translation>驱动签名</translation>
+    </message>
+    <message>
+      <source>The installed driver is not signed, or its signature could not be read.</source>
+      <translation>已安装的驱动没有签名，或无法读取其签名。</translation>
+    </message>
+    <message>
+      <source>Signed by: %1</source>
+      <translation>签名者：%1</translation>
+    </message>
+    <message>
+      <source>Subject:</source>
+      <translation>主体：</translation>
+    </message>
+    <message>
+      <source>Issued by: %1</source>
+      <translation>颁发者：%1</translation>
+    </message>
+    <message>
+      <source>Signing certificate of %1:</source>
+      <translation>%1 的签名证书：</translation>
     </message>
     <message>
       <source>&amp;Open WinRoute</source>

@@ -19,5 +19,6 @@ QIcon block();
 QIcon profile();
 QIcon arrowUp();
 QIcon arrowDown();
+QIcon certificate();
 
 } // namespace icons

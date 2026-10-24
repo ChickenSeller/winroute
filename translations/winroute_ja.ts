@@ -380,6 +380,10 @@
       <translation>ドライバー %1</translation>
     </message>
     <message>
+      <source>Unrecognized driver</source>
+      <translation>認識できないドライバー</translation>
+    </message>
+    <message>
       <source>Cannot add driver rule (%1): %2</source>
       <translation>ドライバーのルールを追加できません（%1）：%2</translation>
     </message>
@@ -776,6 +780,62 @@
     <message>
       <source>0 active connections</source>
       <translation>アクティブな接続 0 件</translation>
+    </message>
+    <message>
+      <source>Driver: not installed</source>
+      <translation>ドライバー：未インストール</translation>
+    </message>
+    <message>
+      <source>Demo</source>
+      <translation>Demo</translation>
+    </message>
+    <message>
+      <source>Unknown</source>
+      <translation>不明</translation>
+    </message>
+    <message>
+      <source>Unlimited</source>
+      <translation>無制限</translation>
+    </message>
+    <message>
+      <source>Driver: %1</source>
+      <translation>ドライバー：%1</translation>
+    </message>
+    <message>
+      <source>The network driver is running</source>
+      <translation>ネットワークドライバーは実行中です</translation>
+    </message>
+    <message>
+      <source>The network driver is installed but not running</source>
+      <translation>ネットワークドライバーはインストール済みですが実行されていません</translation>
+    </message>
+    <message>
+      <source>Signed by %1 — click for details</source>
+      <translation>署名者：%1 — クリックで詳細</translation>
+    </message>
+    <message>
+      <source>Driver Signature</source>
+      <translation>ドライバーの署名</translation>
+    </message>
+    <message>
+      <source>The installed driver is not signed, or its signature could not be read.</source>
+      <translation>インストールされているドライバーは署名されていないか、署名を読み取れませんでした。</translation>
+    </message>
+    <message>
+      <source>Signed by: %1</source>
+      <translation>署名者：%1</translation>
+    </message>
+    <message>
+      <source>Subject:</source>
+      <translation>サブジェクト：</translation>
+    </message>
+    <message>
+      <source>Issued by: %1</source>
+      <translation>発行者：%1</translation>
+    </message>
+    <message>
+      <source>Signing certificate of %1:</source>
+      <translation>%1 の署名証明書：</translation>
     </message>
     <message>
       <source>&amp;Open WinRoute</source>
