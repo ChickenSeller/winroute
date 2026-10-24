@@ -583,5 +583,13 @@ QByteArray Profile::toXml() const
 
     w.writeEndElement(); // ProxifierProfile
     w.writeEndDocument();
+
+    // Proxifier does not decode &quot; in an Applications list: it reads the
+    // entity literally, so a quoted name with a space ("League of Legends.exe")
+    // still trips "Unexpected blank space found". Its own profiles keep the
+    // quotes literal, which is well-formed in element text, so undo the
+    // escaping. No user text is ever written into an attribute (only fixed
+    // enums, ids and booleans), so this only ever affects element content.
+    out.replace("&quot;", "\"");
     return out;
 }

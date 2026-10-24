@@ -131,11 +131,15 @@ static void testProfile()
     }
 
     // Application names with spaces must be quoted on export, or Proxifier
-    // rejects the profile ("Unexpected blank space found"); they round-trip back
-    // unquoted. A plain name is left as-is.
+    // rejects the profile ("Unexpected blank space found"). The quotes must be
+    // literal: Proxifier does not decode &quot;. They round-trip back unquoted,
+    // and a plain name is left as-is.
     p.rules[1].applications = "chrome.exe; C:\\Program Files\\App\\a b.exe";
+    const QByteArray xml = p.toXml();
+    CHECK(xml.contains("\"C:\\Program Files\\App\\a b.exe\""));
+    CHECK(!xml.contains("&quot;"));
     Profile q;
-    CHECK(q.fromXml(p.toXml(), &err));
+    CHECK(q.fromXml(xml, &err));
     CHECK(q.rules[1].applications == "chrome.exe; \"C:\\Program Files\\App\\a b.exe\"");
     CHECK(util::splitList(q.rules[1].applications)
           == (QStringList{"chrome.exe", "C:\\Program Files\\App\\a b.exe"}));
