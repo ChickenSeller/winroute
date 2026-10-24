@@ -277,6 +277,10 @@
       <translation>%1 を削除できません（エラー %2）</translation>
     </message>
     <message>
+      <source>Cannot delete %1: the driver is still loaded (close WinRoute, or restart Windows)</source>
+      <translation>%1 を削除できません：ドライバーがまだ読み込まれています（WinRoute を終了するか、Windows を再起動してください）</translation>
+    </message>
+    <message>
       <source>Cannot add driver rule (%1): %2</source>
       <translation>ドライバーのルールを追加できません（%1）：%2</translation>
     </message>

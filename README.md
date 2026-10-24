@@ -56,7 +56,7 @@ cmake --build build --target installer    # 生成 build/WinRoute-<版本>-setup
 这个目标会把 `WinRoute.exe`、`nfapi.dll` 和四个驱动（`drivers/demo/`、`drivers/a/`、`drivers/b/`、`drivers/c/`）复制到 `build/stage`，用 `windeployqt` 补齐 Qt 和 MinGW 运行库，再调用 `ISCC` 打包。
 
 - **安装**：只支持 x64 版的 Windows 10 1809 及以上（Qt 6 的要求；驱动是 x64 版，Arm 版 Windows 不能装），需要管理员权限，界面支持中文、日语、英语。可选创建桌面快捷方式和开机自启动计划任务。
-- **选择驱动**：“网络驱动”页用下拉框选择，默认 **NetFilter SDK 演示驱动**（1.7.2.9）。演示驱动拦截的连接数有上限，超过后要重启 Windows 才恢复。其余是正式版的**驱动A / B / C**，没有连接数限制，安装界面只显示代号。其中驱动B 停止后不会立即从内核卸载，切换到其他驱动或卸载需要重启 Windows 才能完成。升级时沿用上次的选择。只安装选中的那个驱动，文件复制完成后执行 `WinRoute.exe --install-driver --quiet` 注册并启动；如果系统里已装的是另一个驱动，会先停掉并替换。
+- **选择驱动**：“网络驱动”页用下拉框选择，默认 **NetFilter SDK 演示驱动**（1.7.2.9）。演示驱动拦截的连接数有上限，超过后要重启 Windows 才恢复。其余是正式版的**驱动A / B / C**，没有连接数限制，安装界面只显示代号。升级时沿用上次的选择。只安装选中的那个驱动，文件复制完成后执行 `WinRoute.exe --install-driver --quiet` 注册并启动；如果系统里已装的是另一个驱动，会先停掉并替换。
 - **卸载**：删除开机自启动计划任务，执行 `WinRoute.exe --uninstall-driver --quiet` 停止驱动、删除服务和 `System32\drivers\netfilter2.sys`，再询问是否删除配置文件、设置和日志（静默卸载时保留）。
 - **运行检测**：WinRoute 运行时会创建互斥量 `WinRoute.AppMutex`，安装和卸载前都会提示先关闭程序。
 - **静默安装**：`WinRoute-0.1.0-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /TASKS=autostart /DRIVER=demo`（`/DRIVER=a|b|c` 选择对应的正式版驱动；不写时，首次安装用演示驱动，升级时沿用上次的选择）

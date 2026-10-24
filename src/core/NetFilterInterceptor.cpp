@@ -180,6 +180,30 @@ static bool sameFile(const QString &a, const QString &b)
     return fa.readAll() == fb.readAll();
 }
 
+// Deletes the installed driver .sys, retrying for a few seconds. After the
+// service reports STOPPED the kernel image can take a moment to finish
+// unloading, during which the file stays locked; some drivers (e.g. one that
+// registers many WFP callouts) are slower than others. Retrying avoids a
+// spurious "reboot required" when the image just needs a little longer.
+static bool deleteDriverFile(const QString &nativePath, QString *error)
+{
+    const auto *wpath = reinterpret_cast<LPCWSTR>(nativePath.utf16());
+    for (int i = 0; i < 60; ++i) {   // up to ~15 s
+        if (DeleteFileW(wpath))
+            return true;
+        const DWORD err = GetLastError();
+        if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND)
+            return true;
+        if (err != ERROR_ACCESS_DENIED && err != ERROR_SHARING_VIOLATION) {
+            *error = QCoreApplication::translate("Interceptor", "Cannot delete %1 (error %2)").arg(nativePath).arg(err);
+            return false;
+        }
+        Sleep(250);
+    }
+    *error = QCoreApplication::translate("Interceptor", "Cannot delete %1: the driver is still loaded (close WinRoute, or restart Windows)").arg(nativePath);
+    return false;
+}
+
 bool NetFilterInterceptor::installDriver(QString *error, bool replaceDifferent)
 {
     const NetFilterApi *api = NetFilterApi::load(error);
@@ -190,12 +214,17 @@ bool NetFilterInterceptor::installDriver(QString *error, bool replaceDifferent)
     // The installer may bring a different driver than the installed one (the user
     // can choose between drivers): stop and remove the old one first.
     if (replaceDifferent && QFileInfo::exists(installed) && QFileInfo::exists(bundled) && !sameFile(installed, bundled)) {
-        if (serviceState() != 0 && !stopAndDeleteService(error))
-            return false;
-        if (!DeleteFileW(reinterpret_cast<LPCWSTR>(QDir::toNativeSeparators(installed).utf16()))) {
-            *error = QCoreApplication::translate("Interceptor", "Cannot delete %1 (error %2)").arg(QDir::toNativeSeparators(installed)).arg(GetLastError());
-            return false;
+        if (serviceState() != 0) {
+            // Ask the driver to release first, so its image unloads promptly when
+            // the service stops; otherwise the .sys can stay locked for a while
+            // (some drivers longer than others) and the switch would seem to need
+            // a reboot. uninstallDriver() does the same before stopping.
+            api->unRegisterDriver(kDriverName);
+            if (!stopAndDeleteService(error))
+                return false;
         }
+        if (!deleteDriverFile(QDir::toNativeSeparators(installed), error))
+            return false;
     }
     // A disabled or stopped service (e.g. left by an earlier uninstall) is registered again.
     if (serviceState() == SERVICE_RUNNING && QFileInfo::exists(installed))
@@ -236,10 +265,8 @@ bool NetFilterInterceptor::uninstallDriver(QString *error)
             return false;
     }
     const QString file = QDir::toNativeSeparators(driverInstallPath());
-    if (QFileInfo::exists(file) && !DeleteFileW(reinterpret_cast<LPCWSTR>(file.utf16()))) {
-        *error = QCoreApplication::translate("Interceptor", "Cannot delete %1 (error %2)").arg(file).arg(GetLastError());
+    if (QFileInfo::exists(file) && !deleteDriverFile(file, error))
         return false;
-    }
     return true;
 }
 

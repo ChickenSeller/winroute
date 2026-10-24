@@ -277,6 +277,10 @@
       <translation>无法删除 %1（错误 %2）</translation>
     </message>
     <message>
+      <source>Cannot delete %1: the driver is still loaded (close WinRoute, or restart Windows)</source>
+      <translation>无法删除 %1：驱动仍在内核中（请关闭 WinRoute，或重启 Windows）</translation>
+    </message>
+    <message>
       <source>Cannot add driver rule (%1): %2</source>
       <translation>无法添加驱动规则（%1）：%2</translation>
     </message>

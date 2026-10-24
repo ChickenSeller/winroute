@@ -491,6 +491,8 @@ T = {
         ("%1 - %2 匹配规则 %3：代理链不支持 UDP，直接连接", "%1 - %2 がルール %3 に一致：プロキシチェーンは UDP に対応していないため直接接続します"),
     "%1 - UDP proxy #%2 used by rule %3 does not exist":
         ("%1 - 规则 %3 使用的 UDP 代理 #%2 不存在", "%1 - ルール %3 が使用する UDP プロキシ #%2 は存在しません"),
+    "Cannot delete %1: the driver is still loaded (close WinRoute, or restart Windows)":
+        ("无法删除 %1：驱动仍在内核中（请关闭 WinRoute，或重启 Windows）", "%1 を削除できません：ドライバーがまだ読み込まれています（WinRoute を終了するか、Windows を再起動してください）"),
     "the network driver API is unavailable": ("网络驱动接口不可用", "ネットワークドライバー API を利用できません"),
     "no resolver available": ("解析器不可用", "リゾルバーを利用できません"),
     "could not resolve proxy %1 - %2": ("无法解析代理 %1 - %2", "プロキシ %1 を解決できませんでした - %2"),
