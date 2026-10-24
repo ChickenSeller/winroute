@@ -44,10 +44,10 @@ void ProxyCheckerDialog::build()
         m_choice->addItem(c.first);
     form->addRow(tr("Proxy server:"), m_choice);
     auto *target = new QHBoxLayout;
-    m_host = new QLineEdit("www.google.com");
+    m_host = new QLineEdit("example.com");
     m_port = new QSpinBox;
     m_port->setRange(1, 65535);
-    m_port->setValue(80);
+    m_port->setValue(443);
     target->addWidget(m_host, 1);
     target->addWidget(new QLabel(tr("Port:")));
     target->addWidget(m_port);
