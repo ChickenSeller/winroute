@@ -12,7 +12,7 @@ class QProgressDialog;
 class QSaveFile;
 
 // Keeps WinRoute up to date from the homepage's update.json (which the web
-// server reads live from the GitLab releases, see deploy/nginx/), as Glimpse does:
+// server reads live from the GitLab releases), as Glimpse does:
 //
 //   {"latest":   {"version", "url", "sha256", "size", "notes"} or null,
 //    "required": the same, or null}

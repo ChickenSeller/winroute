@@ -57,7 +57,7 @@ set(UI_SOURCES
 )
 
 set(WINROUTE_HOMEPAGE_URL "https://pages.yanlei.org/kaguya/winroute/" CACHE STRING "WinRoute's homepage")
-# The update information the homepage's web server serves (deploy/nginx/).
+# The update information the homepage's web server serves.
 set(WINROUTE_UPDATE_URL "${WINROUTE_HOMEPAGE_URL}update.json" CACHE STRING "WinRoute's update information")
 
 set(TS_FILES

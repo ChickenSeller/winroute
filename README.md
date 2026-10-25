@@ -3,8 +3,7 @@
 用 Qt 实现的 Proxifier 替代品：按规则把 Windows 上任意程序的 TCP 连接转发到 SOCKS4/4A、SOCKS5、HTTPS 代理或代理链。配置文件直接使用 Proxifier 的 `.ppx` 格式，首次启动会自动导入 `%APPDATA%\Proxifier4\Profiles\Default.ppx`。
 
 - 项目主页：<https://pages.yanlei.org/kaguya/winroute/>
-- 源码（GitLab）：<https://git.yanlei.org/kaguya/winroute>
-- 源码镜像（GitHub）：<https://github.com/ChickenSeller/winroute>
+- 源码（GitHub）：<https://github.com/ChickenSeller/winroute>
 
 ## 架构
 
@@ -66,53 +65,6 @@ cmake --build build --target installer    # 生成 build/WinRoute-<版本>-setup
 - **静默安装**：`WinRoute-0.1.0-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /TASKS=autostart /DRIVER=demo`（`/DRIVER=a|b` 选择对应的正式版驱动；不写时，首次安装用演示驱动，升级时沿用上次的选择）
 - **代码签名**：在 `WinRoute.iss` 中启用 `SignTool` 和 `SignedUninstaller` 两行，并给 ISCC 配置签名工具。
 - `installer/ChineseSimplified.isl` 是 Inno Setup 6.7.3 的简体中文非官方翻译，取自 jrsoftware/issrc。
-
-## 项目主页和发布
-
-主页在 `site/`，做法与 Glimpse 相同：
-
-- **主页**：`index.html` 和版本页 `releases.html`，中日英三语，语言切换和译文在 `i18n.js`。图标是 Material Symbols（Apache-2.0）。
-- **部署**：`.gitlab-ci.yml` 的 `pages` 任务在 `site/` 有改动时，把它发布到 GitLab Pages，并替换 `%PROJECT_URL%` 等占位符。
-- **版本列表**：版本页读取 `releases.json`，由 pages.yanlei.org 上的 OpenResty 实时从 GitLab 的 Release 生成。安装包通过 `/winroute-downloads/<版本>/<文件>` 转发自项目的软件包仓库。服务器端配置在 `deploy/nginx/`（项目 ID 151），两个令牌文件只放在服务器上。
-
-## 发布新版本
-
-GitLab Runner 是 Linux，Windows 安装包由 GitHub Actions 构建，流程与 Glimpse 相同：
-
-1. 修改 `CMakeLists.txt` 里的版本号，提交并推送；
-2. 打带说明的标签并推送：`git tag -a v0.1.0 -m "WinRoute 0.1.0"`，然后 `git push origin v0.1.0`。标签说明会成为版本说明：以 `- ` 开头的行是列表项，`New`、`Fixes` 这类短行是小标题。
-
-接下来自动完成：
-
-1. GitLab 的 `sync-tag-github` 把标签推到 GitHub；
-2. `.github/workflows/release.yml` 在 Windows 上构建、跑测试、打安装包，并创建 GitHub Release；
-3. GitLab 的 `release-from-github` 等它完成后，把安装包存进本项目的软件包仓库，并创建 GitLab Release；
-4. 一分钟内主页的版本列表就会出现新版本。
-
-NetFilter SDK 和驱动不在仓库里。GitHub 构建时，从私有仓库 `ChickenSeller/winroute-build-deps` 的 Release `deps-<版本>` 下载 `winroute-build-deps.zip`，并按 `release.yml` 中的 SHA-256 校验。不从 GitLab 下载，是因为 git.yanlei.org 前面的 Cloudflare Bot Fight Mode 会拦截 GitHub 的构建机。SDK 或驱动有变化时，执行 `tools\upload-build-deps.ps1 -Version <新版本>`（需要 `GITHUB_TOKEN`：只限这个私有仓库的细粒度令牌，Contents 读写），再把输出的版本和 SHA-256 填进 `release.yml`。
-
-需要设置的密钥：
-
-- GitLab CI/CD 变量：`GITHUB_REPO`（如 `kaguya/winroute`）、`GITHUB_TOKEN`（只限这个仓库的细粒度令牌：Contents 和 Workflows 读写，Actions 只读；设为 Masked、Protected，并保护 `v*` 标签）。
-- GitHub 仓库 secret：`BUILD_DEPS_GITHUB_TOKEN`，是只限私有仓库 `winroute-build-deps` 的细粒度令牌，Contents 只读。
-
-不经过 GitHub 时，也可以在装有 SDK 的本机执行 `tools\publish-release.ps1 -Notes "..."` 直接发布（需要 `GITLAB_TOKEN`，权限 api）。
-
-## 自动更新
-
-做法与 Glimpse 相同。WinRoute 启动 5 秒后读取 `https://pages.yanlei.org/kaguya/winroute/update.json`（`WINROUTE_UPDATE_URL`），这个文件也由 OpenResty 实时从 GitLab Release 生成，内容是最新版本和必须更新的版本，各带安装包的地址、SHA-256 和大小。
-
-- **方式**：在“帮助 > 自动更新”里选：自动安装所有更新、自动安装必须的更新、更新前询问（默认）、从不检查。“帮助 > 检查更新”随时手动检查。
-- **必须更新的版本**：在服务器的 `pages.yanlei.org.conf` 里 `set $winroute_required_version "x.y.z";`，重载 nginx 后生效。
-- **安装**：下载安装包到 `%TEMP%\winroute-update`，校验 SHA-256，然后由 `resources/update.ps1` 等 WinRoute 退出、静默运行安装包（沿用已选的驱动和任务），再重新启动 WinRoute；原来在托盘里的，重启后仍在托盘。出错记在 `%TEMP%\winroute-update\update.log`。
-
-本地预览主页：
-
-```sh
-cd site && python -m http.server 8000
-```
-
-占位符不会被替换，所以页面上的链接无效；`releases.json` 需要自己准备一份测试数据。
 
 ## 多语言
 

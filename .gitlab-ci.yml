@@ -44,7 +44,7 @@ sync-github:
 #      publishes a GitHub release with it;
 #   3. release-from-github waits for that, copies the installer into this
 #      project's package registry and creates the GitLab release, which the
-#      homepage's release list shows (deploy/nginx/).
+#      homepage's release list shows.
 # The tag must match project(... VERSION) in CMakeLists.txt; its message
 # becomes the release notes.
 .version-tag:
@@ -122,7 +122,7 @@ pages:
     # Stylesheet and scripts are linked with the commit (style.css?v=<sha>):
     # caches such as Cloudflare keep them for a day, while the page itself is
     # fetched fresh. The release list (releases.json) is not part of the site:
-    # the web server reads it live from the GitLab releases (deploy/nginx/).
+    # the web server reads it live from the GitLab releases.
     - >
       sed -i
       -e "s|%PROJECT_URL%|${CI_PROJECT_URL}|g"

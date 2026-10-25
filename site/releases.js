@@ -1,5 +1,5 @@
 // The release page's list, from releases.json: the web server reads it live
-// from the GitLab releases (see deploy/nginx/).
+// from the GitLab releases.
 (function () {
   function el(tag, className, text) {
     var node = document.createElement(tag);

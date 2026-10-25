@@ -12,7 +12,7 @@
     4. creates the release v<version> on the current commit, linking the package.
 
   The home page's release list (site/releases.html) reads the releases through
-  the web server (deploy/nginx/), at most a minute later.
+  the web server, at most a minute later.
 
   Push the commit first: GitLab creates the tag v<version> on it.
 
