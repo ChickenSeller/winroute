@@ -2110,6 +2110,10 @@ Use check boxes to enable/disable a rule.</source>
       <translation>默认情况下 WinRoute 只处理当前用户的连接。如有需要可以更改此行为。</translation>
     </message>
     <message>
+      <source>Note: these options only affect TCP and UDP. ICMP traffic, such as ping and tracert, cannot be routed through a proxy regardless of this setting.</source>
+      <translation>注意：这些选项只对 TCP 和 UDP 生效。ICMP 流量（如 ping、tracert）无论此设置如何都无法经由代理转发。</translation>
+    </message>
+    <message>
       <source>Additional WinRoute targets</source>
       <translation>WinRoute 额外处理的对象</translation>
     </message>

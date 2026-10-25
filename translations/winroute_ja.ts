@@ -2110,6 +2110,10 @@ Use check boxes to enable/disable a rule.</source>
       <translation>通常、WinRoute は現在のユーザーの接続のみを処理します。必要に応じてこの動作を変更できます。</translation>
     </message>
     <message>
+      <source>Note: these options only affect TCP and UDP. ICMP traffic, such as ping and tracert, cannot be routed through a proxy regardless of this setting.</source>
+      <translation>注意：これらのオプションは TCP と UDP にのみ有効です。ICMP トラフィック（ping や tracert など）は、この設定に関わらずプロキシ経由で転送できません。</translation>
+    </message>
+    <message>
       <source>Additional WinRoute targets</source>
       <translation>WinRoute の追加対象</translation>
     </message>

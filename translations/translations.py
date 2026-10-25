@@ -75,6 +75,8 @@ T = {
     "Info": ("说明", "情報"),
     "Normally WinRoute processes connections for the current user only. You can change this behavior if needed.":
         ("默认情况下 WinRoute 只处理当前用户的连接。如有需要可以更改此行为。", "通常、WinRoute は現在のユーザーの接続のみを処理します。必要に応じてこの動作を変更できます。"),
+    "Note: these options only affect TCP and UDP. ICMP traffic, such as ping and tracert, cannot be routed through a proxy regardless of this setting.":
+        ("注意：这些选项只对 TCP 和 UDP 生效。ICMP 流量（如 ping、tracert）无论此设置如何都无法经由代理转发。", "注意：これらのオプションは TCP と UDP にのみ有効です。ICMP トラフィック（ping や tracert など）は、この設定に関わらずプロキシ経由で転送できません。"),
     "Additional WinRoute targets": ("WinRoute 额外处理的对象", "WinRoute の追加対象"),
     "Applications run by other users on this computer": ("此计算机上其他用户运行的应用程序", "このコンピューターで他のユーザーが実行するアプリケーション"),
     "Windows services and other system processes": ("Windows 服务和其他系统进程", "Windows サービスとその他のシステムプロセス"),

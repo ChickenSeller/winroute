@@ -60,6 +60,8 @@ ServicesDialog::ServicesDialog(const ProfileOptions &o, QWidget *parent)
     auto *il = new QVBoxLayout(info);
     il->addWidget(wrapped(tr("Normally WinRoute processes connections for the current user only. "
                           "You can change this behavior if needed.")));
+    il->addWidget(wrapped(tr("Note: these options only affect TCP and UDP. ICMP traffic, such as "
+                          "ping and tracert, cannot be routed through a proxy regardless of this setting.")));
     layout->addWidget(info);
     auto *targets = new QGroupBox(tr("Additional WinRoute targets"));
     auto *tl = new QVBoxLayout(targets);
