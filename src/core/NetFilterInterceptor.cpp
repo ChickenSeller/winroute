@@ -178,6 +178,49 @@ static bool stopAndDeleteService(QString *error)
     return true;
 }
 
+// Stops and starts the driver service to clear stale state. After an abnormal
+// termination the service keeps running with the previous (now dead) client
+// still attached, which makes the next nf_init fail to open the driver; a
+// stop/start unloads the driver image and lets a fresh client connect. Returns
+// true when the service does not exist (nothing to recover) or is running again.
+static bool restartService(QString *error)
+{
+    SC_HANDLE scm = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+    if (!scm) {
+        *error = QCoreApplication::translate("Interceptor", "Cannot open the service manager (error %1)").arg(GetLastError());
+        return false;
+    }
+    SC_HANDLE svc = OpenServiceW(scm, L"netfilter2", SERVICE_START | SERVICE_STOP | SERVICE_QUERY_STATUS);
+    if (!svc) {
+        const DWORD err = GetLastError();
+        CloseServiceHandle(scm);
+        if (err == ERROR_SERVICE_DOES_NOT_EXIST)
+            return true;
+        *error = QCoreApplication::translate("Interceptor", "Cannot open the driver service (error %1)").arg(err);
+        return false;
+    }
+    SERVICE_STATUS st{};
+    if (QueryServiceStatus(svc, &st) && st.dwCurrentState != SERVICE_STOPPED) {
+        ControlService(svc, SERVICE_CONTROL_STOP, &st);
+        for (int i = 0; i < 100 && QueryServiceStatus(svc, &st) && st.dwCurrentState != SERVICE_STOPPED; ++i)
+            Sleep(100);
+    }
+    bool ok = StartServiceW(svc, 0, nullptr);
+    DWORD err = GetLastError();
+    if (!ok && err == ERROR_SERVICE_ALREADY_RUNNING)
+        ok = true;
+    if (ok)
+        for (int i = 0; i < 100 && QueryServiceStatus(svc, &st) && st.dwCurrentState == SERVICE_START_PENDING; ++i)
+            Sleep(100);
+    CloseServiceHandle(svc);
+    CloseServiceHandle(scm);
+    if (!ok) {
+        *error = QCoreApplication::translate("Interceptor", "Cannot restart the driver service (error %1)").arg(err);
+        return false;
+    }
+    return true;
+}
+
 static bool sameFile(const QString &a, const QString &b)
 {
     QFile fa(a), fb(b);
@@ -438,7 +481,18 @@ bool NetFilterInterceptor::start(const InterceptorContext &ctx, QString *error)
     g_instance = this;
     m_api->adjustProcessPriviledges();
     m_api->setOptions(4, 0);
-    const NF_STATUS st = m_api->init(kDriverName, &g_handler);
+    NF_STATUS st = m_api->init(kDriverName, &g_handler);
+    if (st != NF_STATUS_SUCCESS) {
+        // A previous abnormal exit can leave the running driver with the dead
+        // client still attached, so nf_init fails. Restart the service to clear
+        // that stale state and try once more before giving up.
+        QString recoverError;
+        if (restartService(&recoverError)) {
+            logNormal(QCoreApplication::translate("Interceptor", "Restarting the network driver to recover from an unclean shutdown"));
+            m_api->setOptions(4, 0);
+            st = m_api->init(kDriverName, &g_handler);
+        }
+    }
     if (st != NF_STATUS_SUCCESS) {
         g_instance = nullptr;
         *error = QCoreApplication::translate("Interceptor", "Cannot connect to the network driver %1: %2").arg(kDriverName, nfStatusString(st));

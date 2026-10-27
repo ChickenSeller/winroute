@@ -420,6 +420,10 @@
       <translation>%1 を削除できません（エラー %2）</translation>
     </message>
     <message>
+      <source>Cannot restart the driver service (error %1)</source>
+      <translation>ドライバーのサービスを再起動できません（エラー %1）</translation>
+    </message>
+    <message>
       <source>Cannot delete %1: the driver is still loaded (close WinRoute, or restart Windows)</source>
       <translation>%1 を削除できません：ドライバーがまだ読み込まれています（WinRoute を終了するか、Windows を再起動してください）</translation>
     </message>
@@ -442,6 +446,10 @@
     <message>
       <source>Administrator rights are required to control the network driver</source>
       <translation>ネットワークドライバーの制御には管理者権限が必要です</translation>
+    </message>
+    <message>
+      <source>Restarting the network driver to recover from an unclean shutdown</source>
+      <translation>異常終了から復旧するためにネットワークドライバーを再起動しています</translation>
     </message>
     <message>
       <source>Cannot connect to the network driver %1: %2</source>
