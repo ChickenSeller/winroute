@@ -165,9 +165,12 @@ void WinDivertInterceptor::stop()
     if (!m_running.exchange(false))
         return;
     const WinDivertApi *api = WinDivertApi::instance();
-    // Unblock the recv loops, then close.
+    // Shut down the recv side only: new packets then pass through natively while
+    // the loop drains and reinjects whatever is already queued, so no in-flight
+    // packet is dropped (closing with packets queued would hiccup even direct
+    // connections). The DNS handle only sniffs, so a full shutdown is fine.
     if (m_networkHandle != INVALID_HANDLE_VALUE)
-        api->shutdown(m_networkHandle, WINDIVERT_SHUTDOWN_BOTH);
+        api->shutdown(m_networkHandle, WINDIVERT_SHUTDOWN_RECV);
     if (m_dnsHandle != INVALID_HANDLE_VALUE)
         api->shutdown(m_dnsHandle, WINDIVERT_SHUTDOWN_BOTH);
     if (m_networkThread.joinable())
@@ -276,7 +279,11 @@ void WinDivertInterceptor::networkLoop()
     qint64 lastStat = QDateTime::currentMSecsSinceEpoch();
     long nCap = 0, nDnat = 0, nRev = 0, nBlock = 0, nSendFail = 0;
 
-    while (m_running) {
+    // Runs until the recv side is shut down and the queue drains (stop() uses
+    // SHUTDOWN_RECV): remaining packets are still received and reinjected here,
+    // and new packets pass through natively, so stopping does not drop in-flight
+    // traffic - direct connections keep flowing.
+    while (true) {
         if (!api->recv(m_networkHandle, buf.data(), UINT(buf.size()), &len, &addr)) {
             if (!m_running)
                 break;
