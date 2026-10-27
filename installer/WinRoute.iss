@@ -3,7 +3,7 @@
 ;   ISCC /DAppVersion=x.y.z /DStageDir=<dir> /DOutputDir=<dir> WinRoute.iss
 
 #ifndef AppVersion
-  #define AppVersion "0.5.0"
+  #define AppVersion "0.5.1"
 #endif
 #ifndef StageDir
   #define StageDir "..\build\stage"
@@ -69,9 +69,9 @@ ja.DriverPageTitle=ネットワークドライバー
 en.DriverPageDescription=Which network driver should WinRoute use?
 zh_CN.DriverPageDescription=WinRoute 要使用哪个网络驱动？
 ja.DriverPageDescription=WinRoute で使用するネットワークドライバーを選択してください。
-en.DriverLabel=WinRoute captures connections with a NetFilter SDK driver. Select the driver to install, then click Next.
-zh_CN.DriverLabel=WinRoute 通过 NetFilter SDK 驱动拦截网络连接。请选择要安装的驱动，然后点击“下一步”。
-ja.DriverLabel=WinRoute は NetFilter SDK のドライバーで接続を捕捉します。インストールするドライバーを選択して「次へ」をクリックしてください。
+en.DriverLabel=WinRoute captures connections with a NetFilter SDK driver or with WinDivert. Choose one, then click Next. You can switch later in Tools > Network Driver.
+zh_CN.DriverLabel=WinRoute 通过 NetFilter SDK 驱动或 WinDivert 拦截网络连接。请选择其一，然后点击“下一步”。之后也可在“工具 > 网络驱动”中切换。
+ja.DriverLabel=WinRoute は NetFilter SDK ドライバーまたは WinDivert で接続を捕捉します。いずれかを選んで「次へ」をクリックしてください。後で「ツール > ネットワークドライバー」から切り替えられます。
 en.DriverDemo=NetFilter SDK demo driver
 zh_CN.DriverDemo=NetFilter SDK 演示驱动
 ja.DriverDemo=NetFilter SDK デモドライバー
@@ -90,12 +90,20 @@ ja.DriverANote=製品版ドライバー（バージョン 1.7.1.8）です。接
 en.DriverBNote=A release build of the driver, without a connection limit.
 zh_CN.DriverBNote=正式版驱动，没有连接数限制。
 ja.DriverBNote=製品版ドライバーです。接続数の制限はありません。
+en.DriverWinDivert=WinDivert (TCP + UDP)
+zh_CN.DriverWinDivert=WinDivert（TCP + UDP）
+ja.DriverWinDivert=WinDivert（TCP + UDP）
+en.DriverWinDivertNote=An alternative backend based on WinDivert. Captures TCP and UDP at the packet level and installs its own driver on first use. Does not support fake-DNS name resolution.
+zh_CN.DriverWinDivertNote=基于 WinDivert 的备选后端。在数据包层面拦截 TCP 和 UDP，首次使用时自行安装其驱动。不支持假 DNS 解析。
+ja.DriverWinDivertNote=WinDivert ベースの代替バックエンド。パケットレベルで TCP と UDP を捕捉し、初回使用時に自身のドライバーをインストールします。偽 DNS 解決には対応しません。
 en.DriverReady=Network driver:
 zh_CN.DriverReady=网络驱动：
 ja.DriverReady=ネットワークドライバー：
 
+; No GroupDescription: the Tasks page is shown through our own checkboxes (see
+; [Code]), which index the list items directly, so group headers must not shift them.
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Flags: unchecked
 Name: "autostart"; Description: "{cm:AutostartTask}"; Flags: unchecked
 
 [Files]
@@ -131,12 +139,16 @@ var
   DriverPage: TWizardPage;
   DriverCombo: TNewComboBox;
   DriverNote: TNewStaticText;
+  // Own checkboxes for the Tasks page: the modern wizard clips the left edge of
+  // the TNewCheckListBox's own checkboxes, so we hide it and mirror its items.
+  DesktopCheck, AutostartCheck: TNewCheckBox;
 
 function DriverKey(Index: Integer): String;
 begin
   case Index of
     1: Result := 'a';
     2: Result := 'b';
+    3: Result := 'windivert';
   else
     Result := 'demo';
   end;
@@ -146,6 +158,7 @@ function DriverIndex(Key: String): Integer;
 begin
   if Key = 'a' then Result := 1
   else if Key = 'b' then Result := 2
+  else if Key = 'windivert' then Result := 3
   else Result := 0;
 end;
 
@@ -153,6 +166,7 @@ function DriverName(Key: String): String;
 begin
   if Key = 'a' then Result := CustomMessage('DriverA')
   else if Key = 'b' then Result := CustomMessage('DriverB')
+  else if Key = 'windivert' then Result := CustomMessage('DriverWinDivert')
   else Result := CustomMessage('DriverDemo');
 end;
 
@@ -160,6 +174,7 @@ function DriverNoteText(Key: String): String;
 begin
   if Key = 'a' then Result := CustomMessage('DriverANote')
   else if Key = 'b' then Result := CustomMessage('DriverBNote')
+  else if Key = 'windivert' then Result := CustomMessage('DriverWinDivertNote')
   else Result := CustomMessage('DriverDemoNote');
 end;
 
@@ -201,6 +216,7 @@ begin
   DriverCombo.Items.Add(DriverName('demo'));
   DriverCombo.Items.Add(DriverName('a'));
   DriverCombo.Items.Add(DriverName('b'));
+  DriverCombo.Items.Add(DriverName('windivert'));
   DriverCombo.OnChange := @UpdateDriverNote;
 
   DriverNote := TNewStaticText.Create(DriverPage);
@@ -243,6 +259,47 @@ begin
               ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) then
     SuppressibleMsgBox(FmtMessage(CustomMessage('DriverFailed'), [IntToStr(ResultCode)]),
                        mbError, MB_OK, IDOK);
+end;
+
+// On the Tasks page, hide the (left-clipped) check-list and show our own
+// checkboxes mirroring its items. The underlying tasks still drive [Icons]/[Run]
+// and silent /TASKS; we only change how they are displayed and sync on Next.
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if CurPageID <> wpSelectTasks then
+    Exit;
+  if DesktopCheck = nil then
+  begin
+    WizardForm.TasksList.Visible := False;
+
+    DesktopCheck := TNewCheckBox.Create(WizardForm);
+    DesktopCheck.Parent := WizardForm.TasksList.Parent;
+    DesktopCheck.Left := WizardForm.TasksList.Left;
+    DesktopCheck.Top := WizardForm.TasksList.Top;
+    DesktopCheck.Width := WizardForm.TasksList.Width;
+    DesktopCheck.Height := ScaleY(18);
+    DesktopCheck.Caption := WizardForm.TasksList.ItemCaption[0];
+
+    AutostartCheck := TNewCheckBox.Create(WizardForm);
+    AutostartCheck.Parent := WizardForm.TasksList.Parent;
+    AutostartCheck.Left := WizardForm.TasksList.Left;
+    AutostartCheck.Top := DesktopCheck.Top + ScaleY(28);
+    AutostartCheck.Width := WizardForm.TasksList.Width;
+    AutostartCheck.Height := ScaleY(18);
+    AutostartCheck.Caption := WizardForm.TasksList.ItemCaption[1];
+  end;
+  DesktopCheck.Checked := WizardForm.TasksList.Checked[0];
+  AutostartCheck.Checked := WizardForm.TasksList.Checked[1];
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  if (CurPageID = wpSelectTasks) and (DesktopCheck <> nil) then
+  begin
+    WizardForm.TasksList.Checked[0] := DesktopCheck.Checked;
+    WizardForm.TasksList.Checked[1] := AutostartCheck.Checked;
+  end;
+  Result := True;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);

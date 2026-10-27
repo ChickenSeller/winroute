@@ -131,7 +131,7 @@
     </div>
     <div>
       <ol class="steps">
-        <li><strong data-i18n="how.s1.t">Catch</strong> <span data-i18n="how.s1.d">The NetFilter SDK WFP driver reports every outgoing TCP connection — and UDP, when you turn it on — with the program that opened it.</span></li>
+        <li><strong data-i18n="how.s1.t">Catch</strong> <span data-i18n="how.s1.d">A network driver — the NetFilter SDK WFP driver, or WinDivert — reports every outgoing TCP connection (and UDP, when you turn it on) with the program that opened it.</span></li>
         <li><strong data-i18n="how.s2.t">Decide</strong> <span data-i18n="how.s2.d">The first rule that matches the program, host and port picks the action: a proxy, a chain, direct, or block.</span></li>
         <li><strong data-i18n="how.s3.t">Redirect</strong> <span data-i18n="how.s3.d">Proxied connections are pointed at WinRoute's local relay; direct ones go on untouched.</span></li>
         <li><strong data-i18n="how.s4.t">Tunnel</strong> <span data-i18n="how.s4.d">The relay talks SOCKS or HTTPS to the proxies, then passes the data through and counts it.</span></li>
@@ -184,7 +184,7 @@ cmake --build build --target installer</code></pre>
     <span><img src="logo.svg" alt="" width="20" height="20"> WinRoute</span>
     <span>
       <a href="%PROJECT_URL%/-/blob/%DEFAULT_BRANCH%/README.md" target="_blank" rel="noopener" data-i18n="foot.readme">Documentation</a> ·
-      <span data-i18n="foot.driver">Network driver: NetFilter SDK</span> ·
+      <span data-i18n="foot.driver">Network driver: NetFilter SDK or WinDivert</span> ·
       <a href="icons/LICENSE-Apache-2.0.txt" data-i18n="foot.icons">Icons: Material Symbols</a>
     </span>
   </div>

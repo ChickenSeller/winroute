@@ -8,6 +8,7 @@
 
 #include <QApplication>
 #include <QLocalServer>
+#include <QSettings>
 #include <QLocalSocket>
 #include <QMessageBox>
 #include <QThread>
@@ -44,6 +45,12 @@ int main(int argc, char *argv[])
             installKey = a.mid(QStringLiteral("--install-driver=").size());
         }
     }
+    // The installer selects the capture backend here. WinDivert installs its own
+    // driver on first use, so it only needs the backend preference recorded.
+    if (installDriver && installKey == QLatin1String("windivert")) {
+        QSettings().setValue("backend/active", "windivert");
+        return 0;
+    }
     if (installDriver || args.contains("--uninstall-driver")) {
         QString error;
         QString source;
@@ -52,6 +59,7 @@ int main(int argc, char *argv[])
                 source = d.path;
         bool ok;
         if (installDriver) {
+            QSettings().setValue("backend/active", "netfilter");
             ok = NetFilterInterceptor::installDriver(&error, true, source);
         } else {
             // Remove both backends' drivers; WinDivert installs itself on first
