@@ -80,7 +80,12 @@ cmake --build build --target installer    # 生成 build/WinRoute-<版本>-setup
 
 ## 切换网络驱动
 
-“工具 > 网络驱动”对话框可在程序内安装、切换或卸载驱动（demo / A / B，安装器已把三个都放到 `{app}\drivers\`）。切换时会先停引擎释放驱动句柄，替换驱动文件后再启动，通常一两秒完成。
+“工具 > 网络驱动”对话框可切换**拦截后端**：
+
+- **NetFilter**：在程序内安装、切换或卸载驱动（demo / A / B，安装器已把三个都放到 `{app}\drivers\`）。切换时会先停引擎释放驱动句柄，替换驱动文件后再启动，通常一两秒完成。
+- **WinDivert**：选择即生效，无需单独安装驱动——首次启动引擎时 WinDivert 自行安装其内核服务（`WinDivert.dll`、`WinDivert64.sys` 随程序分发）。可在同一对话框里卸载该服务。
+
+后端选择持久化在 `QSettings` 的 `backend/active`，安装器的“网络驱动”页也能选（选 WinDivert 时只记录后端偏好）。
 
 - `translations/winroute_zh_CN.ts`、`translations/winroute_ja.ts` 是 Qt Linguist 翻译文件，构建时编译成 `.qm` 并嵌入程序。Qt 自带的 `qtbase_zh_CN` / `qtbase_ja` 也一并嵌入，用于翻译“确定 / 取消”等标准按钮。
 - 中日文译文统一维护在 `translations/translations.py` 中。修改源码里的界面文字后，执行：
