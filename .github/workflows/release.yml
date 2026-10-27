@@ -19,8 +19,9 @@ permissions:
   contents: write
 
 env:
-  BUILD_DEPS_VERSION: '5'
-  BUILD_DEPS_SHA256: 9b2fdf8fe7dd47ea74e1f05168b2fb7cb38becdbb439c83af793f4106e24b019
+  BUILD_DEPS_VERSION: '6'
+  # TODO: fill in after running tools/upload-build-deps.ps1 -Version 6 (adds WinDivert).
+  BUILD_DEPS_SHA256: 0000000000000000000000000000000000000000000000000000000000000000
   BUILD_DEPS_REPO: ChickenSeller/winroute-build-deps
 
 jobs:
@@ -90,7 +91,7 @@ jobs:
       - name: Check the installer
         shell: pwsh
         run: |
-          $missing = 'WinRoute.exe', 'nfapi.dll',
+          $missing = 'WinRoute.exe', 'nfapi.dll', 'WinDivert.dll', 'WinDivert64.sys',
                      'drivers/demo/netfilter2.sys', 'drivers/a/netfilter2.sys', 'drivers/b/netfilter2.sys',
                      'Qt6Core.dll', 'Qt6Widgets.dll', 'Qt6Network.dll', 'libstdc++-6.dll', 'platforms/qwindows.dll' |
             Where-Object { -not (Test-Path "build/stage/$_") }

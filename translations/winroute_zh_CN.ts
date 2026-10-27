@@ -116,8 +116,24 @@
       <translation>网络驱动</translation>
     </message>
     <message>
-      <source>WinRoute captures connections with a NetFilter SDK driver. Choose which driver to use, or uninstall it.</source>
-      <translation>WinRoute 通过 NetFilter SDK 驱动拦截网络连接。请选择要使用的驱动，或卸载它。</translation>
+      <source>WinRoute can capture connections with the NetFilter SDK driver or with WinDivert. Choose a backend; for NetFilter, choose which driver to use.</source>
+      <translation>WinRoute 可以用 NetFilter SDK 驱动或 WinDivert 拦截连接。请选择后端；选 NetFilter 时再选择使用哪个驱动。</translation>
+    </message>
+    <message>
+      <source>NetFilter SDK driver</source>
+      <translation>NetFilter SDK 驱动</translation>
+    </message>
+    <message>
+      <source>WinDivert</source>
+      <translation>WinDivert</translation>
+    </message>
+    <message>
+      <source>WinDivert (not available)</source>
+      <translation>WinDivert（不可用）</translation>
+    </message>
+    <message>
+      <source>Backend:</source>
+      <translation>后端：</translation>
     </message>
     <message>
       <source>Driver:</source>
@@ -144,8 +160,64 @@
       <translation>已安装：%1（已停止）</translation>
     </message>
     <message>
-      <source>No driver is installed.</source>
-      <translation>未安装驱动。</translation>
+      <source>No NetFilter driver is installed.</source>
+      <translation>未安装 NetFilter 驱动。</translation>
+    </message>
+    <message>
+      <source>WinDivert.dll or its driver is missing next to WinRoute.exe, so this backend cannot be used.</source>
+      <translation>WinRoute.exe 旁缺少 WinDivert.dll 或其驱动，无法使用此后端。</translation>
+    </message>
+    <message>
+      <source>WinDivert captures TCP connections at the packet level. It does not support UDP over the proxy or fake-DNS name resolution; host names come from observed DNS responses.</source>
+      <translation>WinDivert 在数据包层面拦截 TCP 连接。不支持经代理的 UDP 和假 DNS 解析；主机名来自嗅探到的 DNS 应答。</translation>
+    </message>
+    <message>
+      <source>running</source>
+      <translation>运行中</translation>
+    </message>
+    <message>
+      <source>not loaded</source>
+      <translation>未加载</translation>
+    </message>
+    <message>
+      <source>WinDivert: %1</source>
+      <translation>WinDivert：%1</translation>
+    </message>
+    <message>
+      <source>Uninstall WinDivert</source>
+      <translation>卸载 WinDivert</translation>
+    </message>
+    <message>
+      <source>Capture backend switched to WinDivert</source>
+      <translation>拦截后端已切换到 WinDivert</translation>
+    </message>
+    <message>
+      <source>Could not switch the capture backend: %1</source>
+      <translation>无法切换拦截后端：%1</translation>
+    </message>
+    <message>
+      <source>Could not apply the change:
+%1</source>
+      <translation>无法应用更改：
+%1</translation>
+    </message>
+    <message>
+      <source>Uninstall the NetFilter driver? WinRoute cannot capture connections with this backend without it.</source>
+      <translation>卸载 NetFilter 驱动？没有它，此后端无法拦截连接。</translation>
+    </message>
+    <message>
+      <source>Uninstall the WinDivert driver service?</source>
+      <translation>卸载 WinDivert 驱动服务？</translation>
+    </message>
+    <message>
+      <source>WinDivert service uninstalled</source>
+      <translation>WinDivert 服务已卸载</translation>
+    </message>
+    <message>
+      <source>Could not uninstall:
+%1</source>
+      <translation>无法卸载：
+%1</translation>
     </message>
     <message>
       <source>The evaluation driver from the NetFilter SDK. It stops capturing connections after a limited number of them, until Windows restarts.</source>
@@ -164,36 +236,16 @@
       <translation>安装此驱动</translation>
     </message>
     <message>
+      <source>Use WinDivert</source>
+      <translation>使用 WinDivert</translation>
+    </message>
+    <message>
       <source>Network driver switched to %1</source>
       <translation>网络驱动已切换到 %1</translation>
     </message>
     <message>
-      <source>Could not switch the network driver: %1</source>
-      <translation>无法切换网络驱动：%1</translation>
-    </message>
-    <message>
-      <source>Could not switch to %1:
-%2</source>
-      <translation>无法切换到 %1：
-%2</translation>
-    </message>
-    <message>
-      <source>Uninstall the network driver? WinRoute cannot capture connections without it.</source>
-      <translation>卸载网络驱动？没有它 WinRoute 无法拦截连接。</translation>
-    </message>
-    <message>
       <source>Network driver uninstalled</source>
       <translation>网络驱动已卸载</translation>
-    </message>
-    <message>
-      <source>Could not uninstall the network driver: %1</source>
-      <translation>无法卸载网络驱动：%1</translation>
-    </message>
-    <message>
-      <source>Could not uninstall the driver:
-%1</source>
-      <translation>无法卸载驱动：
-%1</translation>
     </message>
   </context>
   <context>
@@ -245,6 +297,10 @@
   </context>
   <context>
     <name>Engine</name>
+    <message>
+      <source>WinDivert is not available (WinDivert.dll or its driver is missing).</source>
+      <translation>WinDivert 不可用（缺少 WinDivert.dll 或其驱动）。</translation>
+    </message>
     <message>
       <source>Local relay is listening on port %1</source>
       <translation>本地中继正在监听端口 %1</translation>
@@ -430,6 +486,26 @@
     <message>
       <source>%1 - %2 matching %3 rule : proxy chains do not support UDP, sending directly</source>
       <translation>%1 - %2 匹配规则 %3：代理链不支持 UDP，直接连接</translation>
+    </message>
+    <message>
+      <source>Cannot open the WinDivert service (error %1)</source>
+      <translation>无法打开 WinDivert 服务（错误 %1）</translation>
+    </message>
+    <message>
+      <source>Cannot delete the WinDivert service (error %1)</source>
+      <translation>无法删除 WinDivert 服务（错误 %1）</translation>
+    </message>
+    <message>
+      <source>WinDivert.dll could not be loaded; is it next to WinRoute.exe?</source>
+      <translation>无法加载 WinDivert.dll；它是否在 WinRoute.exe 旁边？</translation>
+    </message>
+    <message>
+      <source>WinDivert could not open the socket layer (error %1). Administrator rights are required.</source>
+      <translation>WinDivert 无法打开 socket 层（错误 %1）。需要管理员权限。</translation>
+    </message>
+    <message>
+      <source>WinDivert could not open the network layer (error %1).</source>
+      <translation>WinDivert 无法打开网络层（错误 %1）。</translation>
     </message>
   </context>
   <context>
@@ -778,6 +854,30 @@
       <translation>0 个活动连接</translation>
     </message>
     <message>
+      <source>Backend: WinDivert (unavailable)</source>
+      <translation>后端：WinDivert（不可用）</translation>
+    </message>
+    <message>
+      <source>running</source>
+      <translation>运行中</translation>
+    </message>
+    <message>
+      <source>not loaded</source>
+      <translation>未加载</translation>
+    </message>
+    <message>
+      <source>Backend: %1</source>
+      <translation>后端：%1</translation>
+    </message>
+    <message>
+      <source>WinDivert is capturing connections</source>
+      <translation>WinDivert 正在拦截连接</translation>
+    </message>
+    <message>
+      <source>WinDivert is not loaded</source>
+      <translation>WinDivert 未加载</translation>
+    </message>
+    <message>
       <source>Driver: not installed</source>
       <translation>驱动：未安装</translation>
     </message>
@@ -816,10 +916,6 @@
     <message>
       <source>Driver Signature</source>
       <translation>驱动签名</translation>
-    </message>
-    <message>
-      <source>The installed driver is not signed, or its signature could not be read.</source>
-      <translation>已安装的驱动没有签名，或无法读取其签名。</translation>
     </message>
     <message>
       <source>Subject:</source>
@@ -986,6 +1082,10 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>End Process</source>
       <translation>结束进程</translation>
+    </message>
+    <message>
+      <source>The driver is not signed, or its signature could not be read.</source>
+      <translation>驱动未签名，或无法读取其签名。</translation>
     </message>
     <message>
       <source>Signing certificates of %1:</source>

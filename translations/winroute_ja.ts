@@ -116,8 +116,24 @@
       <translation>ネットワークドライバー</translation>
     </message>
     <message>
-      <source>WinRoute captures connections with a NetFilter SDK driver. Choose which driver to use, or uninstall it.</source>
-      <translation>WinRoute は NetFilter SDK のドライバーで接続を捕捉します。使用するドライバーを選択するか、アンインストールしてください。</translation>
+      <source>WinRoute can capture connections with the NetFilter SDK driver or with WinDivert. Choose a backend; for NetFilter, choose which driver to use.</source>
+      <translation>WinRoute は NetFilter SDK ドライバーまたは WinDivert で接続を捕捉できます。バックエンドを選び、NetFilter の場合は使用するドライバーも選択してください。</translation>
+    </message>
+    <message>
+      <source>NetFilter SDK driver</source>
+      <translation>NetFilter SDK ドライバー</translation>
+    </message>
+    <message>
+      <source>WinDivert</source>
+      <translation>WinDivert</translation>
+    </message>
+    <message>
+      <source>WinDivert (not available)</source>
+      <translation>WinDivert（利用不可）</translation>
+    </message>
+    <message>
+      <source>Backend:</source>
+      <translation>バックエンド：</translation>
     </message>
     <message>
       <source>Driver:</source>
@@ -144,8 +160,64 @@
       <translation>インストール済み：%1（停止中）</translation>
     </message>
     <message>
-      <source>No driver is installed.</source>
-      <translation>ドライバーがインストールされていません。</translation>
+      <source>No NetFilter driver is installed.</source>
+      <translation>NetFilter ドライバーがインストールされていません。</translation>
+    </message>
+    <message>
+      <source>WinDivert.dll or its driver is missing next to WinRoute.exe, so this backend cannot be used.</source>
+      <translation>WinRoute.exe の隣に WinDivert.dll またはそのドライバーがないため、このバックエンドは使用できません。</translation>
+    </message>
+    <message>
+      <source>WinDivert captures TCP connections at the packet level. It does not support UDP over the proxy or fake-DNS name resolution; host names come from observed DNS responses.</source>
+      <translation>WinDivert はパケットレベルで TCP 接続を捕捉します。プロキシ経由の UDP や偽 DNS 解決には対応せず、ホスト名は観測した DNS 応答から取得します。</translation>
+    </message>
+    <message>
+      <source>running</source>
+      <translation>実行中</translation>
+    </message>
+    <message>
+      <source>not loaded</source>
+      <translation>未読み込み</translation>
+    </message>
+    <message>
+      <source>WinDivert: %1</source>
+      <translation>WinDivert：%1</translation>
+    </message>
+    <message>
+      <source>Uninstall WinDivert</source>
+      <translation>WinDivert をアンインストール</translation>
+    </message>
+    <message>
+      <source>Capture backend switched to WinDivert</source>
+      <translation>捕捉バックエンドを WinDivert に切り替えました</translation>
+    </message>
+    <message>
+      <source>Could not switch the capture backend: %1</source>
+      <translation>捕捉バックエンドを切り替えできませんでした：%1</translation>
+    </message>
+    <message>
+      <source>Could not apply the change:
+%1</source>
+      <translation>変更を適用できませんでした：
+%1</translation>
+    </message>
+    <message>
+      <source>Uninstall the NetFilter driver? WinRoute cannot capture connections with this backend without it.</source>
+      <translation>NetFilter ドライバーをアンインストールしますか？これがないと、このバックエンドでは接続を捕捉できません。</translation>
+    </message>
+    <message>
+      <source>Uninstall the WinDivert driver service?</source>
+      <translation>WinDivert ドライバーサービスをアンインストールしますか？</translation>
+    </message>
+    <message>
+      <source>WinDivert service uninstalled</source>
+      <translation>WinDivert サービスをアンインストールしました</translation>
+    </message>
+    <message>
+      <source>Could not uninstall:
+%1</source>
+      <translation>アンインストールできませんでした：
+%1</translation>
     </message>
     <message>
       <source>The evaluation driver from the NetFilter SDK. It stops capturing connections after a limited number of them, until Windows restarts.</source>
@@ -164,36 +236,16 @@
       <translation>このドライバーをインストール</translation>
     </message>
     <message>
+      <source>Use WinDivert</source>
+      <translation>WinDivert を使用</translation>
+    </message>
+    <message>
       <source>Network driver switched to %1</source>
       <translation>ネットワークドライバーを %1 に切り替えました</translation>
     </message>
     <message>
-      <source>Could not switch the network driver: %1</source>
-      <translation>ネットワークドライバーを切り替えできませんでした：%1</translation>
-    </message>
-    <message>
-      <source>Could not switch to %1:
-%2</source>
-      <translation>%1 に切り替えできませんでした：
-%2</translation>
-    </message>
-    <message>
-      <source>Uninstall the network driver? WinRoute cannot capture connections without it.</source>
-      <translation>ネットワークドライバーをアンインストールしますか？これがないと WinRoute は接続を捕捉できません。</translation>
-    </message>
-    <message>
       <source>Network driver uninstalled</source>
       <translation>ネットワークドライバーをアンインストールしました</translation>
-    </message>
-    <message>
-      <source>Could not uninstall the network driver: %1</source>
-      <translation>ネットワークドライバーをアンインストールできませんでした：%1</translation>
-    </message>
-    <message>
-      <source>Could not uninstall the driver:
-%1</source>
-      <translation>ドライバーをアンインストールできませんでした：
-%1</translation>
     </message>
   </context>
   <context>
@@ -245,6 +297,10 @@
   </context>
   <context>
     <name>Engine</name>
+    <message>
+      <source>WinDivert is not available (WinDivert.dll or its driver is missing).</source>
+      <translation>WinDivert は利用できません（WinDivert.dll またはそのドライバーがありません）。</translation>
+    </message>
     <message>
       <source>Local relay is listening on port %1</source>
       <translation>ローカルリレーはポート %1 で待ち受けています</translation>
@@ -430,6 +486,26 @@
     <message>
       <source>%1 - %2 matching %3 rule : proxy chains do not support UDP, sending directly</source>
       <translation>%1 - %2 がルール %3 に一致：プロキシチェーンは UDP に対応していないため直接接続します</translation>
+    </message>
+    <message>
+      <source>Cannot open the WinDivert service (error %1)</source>
+      <translation>WinDivert サービスを開けません（エラー %1）</translation>
+    </message>
+    <message>
+      <source>Cannot delete the WinDivert service (error %1)</source>
+      <translation>WinDivert サービスを削除できません（エラー %1）</translation>
+    </message>
+    <message>
+      <source>WinDivert.dll could not be loaded; is it next to WinRoute.exe?</source>
+      <translation>WinDivert.dll を読み込めませんでした。WinRoute.exe の隣にありますか？</translation>
+    </message>
+    <message>
+      <source>WinDivert could not open the socket layer (error %1). Administrator rights are required.</source>
+      <translation>WinDivert はソケット層を開けませんでした（エラー %1）。管理者権限が必要です。</translation>
+    </message>
+    <message>
+      <source>WinDivert could not open the network layer (error %1).</source>
+      <translation>WinDivert はネットワーク層を開けませんでした（エラー %1）。</translation>
     </message>
   </context>
   <context>
@@ -778,6 +854,30 @@
       <translation>アクティブな接続 0 件</translation>
     </message>
     <message>
+      <source>Backend: WinDivert (unavailable)</source>
+      <translation>バックエンド：WinDivert（利用不可）</translation>
+    </message>
+    <message>
+      <source>running</source>
+      <translation>実行中</translation>
+    </message>
+    <message>
+      <source>not loaded</source>
+      <translation>未読み込み</translation>
+    </message>
+    <message>
+      <source>Backend: %1</source>
+      <translation>バックエンド：%1</translation>
+    </message>
+    <message>
+      <source>WinDivert is capturing connections</source>
+      <translation>WinDivert が接続を捕捉しています</translation>
+    </message>
+    <message>
+      <source>WinDivert is not loaded</source>
+      <translation>WinDivert は読み込まれていません</translation>
+    </message>
+    <message>
       <source>Driver: not installed</source>
       <translation>ドライバー：未インストール</translation>
     </message>
@@ -816,10 +916,6 @@
     <message>
       <source>Driver Signature</source>
       <translation>ドライバーの署名</translation>
-    </message>
-    <message>
-      <source>The installed driver is not signed, or its signature could not be read.</source>
-      <translation>インストールされているドライバーは署名されていないか、署名を読み取れませんでした。</translation>
     </message>
     <message>
       <source>Subject:</source>
@@ -986,6 +1082,10 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>End Process</source>
       <translation>プロセスの終了</translation>
+    </message>
+    <message>
+      <source>The driver is not signed, or its signature could not be read.</source>
+      <translation>ドライバーは署名されていないか、署名を読み取れませんでした。</translation>
     </message>
     <message>
       <source>Signing certificates of %1:</source>

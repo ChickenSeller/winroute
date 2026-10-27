@@ -18,6 +18,12 @@ set(NETFILTER_DRIVER_DIR ${CMAKE_SOURCE_DIR}/netfilter/driver CACHE PATH "Driver
 set(NETFILTER_DRIVERS demo a b)
 set(NETFILTER_API_DLL ${NETFILTER_SDK_DIR}/wfp/bin/release_c_api/x64/nfapi.dll)
 
+# WinDivert is the alternative backend: its headers and x64 binaries are not in
+# the repository (see README); place them under windivert/ or point here. Only
+# the headers are needed to build; the DLL and .sys are copied next to the exe
+# and loaded at run time (the backend is optional).
+set(WINDIVERT_DIR ${CMAKE_SOURCE_DIR}/windivert CACHE PATH "WinDivert root (include/ and x64/)")
+
 set(CORE_SOURCES
     src/core/Profile.h            src/core/Profile.cpp
     src/core/RuleEngine.h         src/core/RuleEngine.cpp
@@ -32,6 +38,10 @@ set(CORE_SOURCES
     src/core/Interceptor.h
     src/core/NetFilterApi.h       src/core/NetFilterApi.cpp
     src/core/NetFilterInterceptor.h src/core/NetFilterInterceptor.cpp
+    src/core/WinDivertApi.h       src/core/WinDivertApi.cpp
+    src/core/WinDivertPacket.h    src/core/WinDivertPacket.cpp
+    src/core/WinDivertInterceptor.h src/core/WinDivertInterceptor.cpp
+    src/core/CodeSignature.h      src/core/CodeSignature.cpp
     src/core/Engine.h             src/core/Engine.cpp
     src/core/Logger.h             src/core/Logger.cpp
     src/core/Utils.h              src/core/Utils.cpp
@@ -66,7 +76,7 @@ set(TS_FILES
 )
 
 add_library(winroute_core STATIC ${CORE_SOURCES})
-target_include_directories(winroute_core PUBLIC src ${NETFILTER_SDK_DIR}/wfp/include ${NETFILTER_SDK_DIR}/include)
+target_include_directories(winroute_core PUBLIC src ${NETFILTER_SDK_DIR}/wfp/include ${NETFILTER_SDK_DIR}/include ${WINDIVERT_DIR}/include)
 target_compile_definitions(winroute_core PUBLIC UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _WIN32_WINNT=0x0A00)
 target_link_libraries(winroute_core PUBLIC Qt6::Core Qt6::Network ws2_32 iphlpapi psapi advapi32 shell32 crypt32 version)
 
@@ -113,6 +123,14 @@ add_custom_command(TARGET WinRoute POST_BUILD
     ${POSTBUILD_DRIVER_COMMANDS}
 )
 
+# WinDivert.dll and its driver are loaded at run time from next to the exe. Copy
+# them when present; the backend is optional, so a missing WinDivert is not fatal.
+if(EXISTS ${WINDIVERT_DIR}/x64/WinDivert.dll)
+    add_custom_command(TARGET WinRoute POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WINDIVERT_DIR}/x64/WinDivert.dll
+                ${WINDIVERT_DIR}/x64/WinDivert64.sys $<TARGET_FILE_DIR:WinRoute>)
+endif()
+
 # "cmake --build build --target installer" stages a deployed copy and builds
 # build/WinRoute-<version>-setup.exe with Inno Setup 6.
 find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS ${QT6_INSTALL_PREFIX}/${QT6_INSTALL_BINS})
@@ -129,7 +147,8 @@ if(WINDEPLOYQT_EXECUTABLE AND ISCC_EXECUTABLE)
     add_custom_target(installer
         COMMAND ${CMAKE_COMMAND} -E rm -rf ${INSTALLER_STAGE}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${INSTALLER_STAGE}
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:WinRoute> ${NETFILTER_API_DLL} ${INSTALLER_STAGE}
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:WinRoute> ${NETFILTER_API_DLL}
+                ${WINDIVERT_DIR}/x64/WinDivert.dll ${WINDIVERT_DIR}/x64/WinDivert64.sys ${INSTALLER_STAGE}
         ${STAGE_DRIVER_COMMANDS}
         COMMAND ${WINDEPLOYQT_EXECUTABLE} --release --no-translations --no-system-d3d-compiler --no-opengl-sw
                 ${INSTALLER_STAGE}/WinRoute.exe

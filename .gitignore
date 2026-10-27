@@ -6,3 +6,11 @@ build-*/
 # place them here locally before building (see README).
 netfilter/
 netfilter2.sys
+
+# WinDivert (the alternative backend) is likewise not in the repository; place
+# its include/ and x64/ under windivert/ locally before building (see README).
+windivert/
+WinDivert-2.2.2-A/
+WinDivert*.dll
+WinDivert*.sys
+WinDivert*.lib

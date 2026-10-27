@@ -10,9 +10,10 @@ class QLabel;
 class QPushButton;
 class Engine;
 
-// Tools > Network Driver: install, switch or uninstall the network driver.
-// The installer ships every driver under <app>/drivers/<key>/; switching stops
-// the engine, swaps the driver, and starts it again.
+// Tools > Network Driver: choose the capture backend (NetFilter or WinDivert),
+// and for NetFilter install, switch or uninstall its driver. The installer ships
+// every NetFilter driver under <app>/drivers/<key>/; switching stops the engine,
+// swaps the driver or backend, and starts it again.
 class DriverDialog : public QDialog {
     Q_OBJECT
 public:
@@ -22,6 +23,7 @@ signals:
     void log(const QString &message);   // forwarded to the main window log
 
 private:
+    QString selectedBackend() const;   // "netfilter" or "windivert"
     void refresh();
     void onSelectionChanged();
     void apply();
@@ -30,7 +32,9 @@ private:
 
     Engine *m_engine;
     QList<NetFilterInterceptor::DriverChoice> m_drivers;
+    QComboBox *m_backendCombo;
     QComboBox *m_combo;
+    QLabel *m_driverLabel;
     QLabel *m_status;
     QLabel *m_note;
     QPushButton *m_apply;

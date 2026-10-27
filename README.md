@@ -23,6 +23,13 @@ Relay (独立线程, 0.0.0.0/:: 随机端口)
 - **代理链**：简单链、冗余（失败切换下一个，可设重检间隔和全部失败时直连）、负载均衡（随机，或同一 PID 固定用一个代理）。
 - **UDP**：默认直接放行（`mode_bypass`）。在“配置 > 高级 > 通过 SOCKS5 转发 UDP”开启后，命中规则且代理是单个 SOCKS5 的 UDP 会通过 SOCKS5 UDP ASSOCIATE 转发（驱动改为过滤全部出站 UDP，中继线程为每个 UDP 套接字建一个关联，回包用 `nf_udpPostReceive` 注回）。代理链或非 SOCKS5（SOCKS4/HTTPS）不支持 UDP，会直接放行并在日志提示一次；关联失败也回退为直连。
 
+### 拦截后端
+
+有两种拦截后端，在“工具 > 网络驱动”里选择（`QSettings` 的 `backend/active`）：
+
+- **NetFilter（默认）**：上图所示，`netfilter2.sys` 在 connect 回调里改写目标，支持 UDP 代理与假 DNS。
+- **WinDivert（`WinDivertInterceptor`）**：仅 TCP。SOCKET 层句柄取每条出站连接的 PID 做规则匹配，NETWORK 层句柄把要代理的连接的数据包做 NAT 重定向到本地中继（目标改成源 IP 的中继端口，**保留应用源端口**，中继据此从 `FlowTable` 还原原始目标）；自身与中继上行流量不在 NAT 表中，天然防环。**不支持** UDP 代理和假 DNS——主机名只来自嗅探到的真实 DNS 应答。首次使用时 WinDivert 自行安装其内核服务（需管理员）。
+
 ## 目录
 
 | 路径 | 内容 |
@@ -32,6 +39,7 @@ Relay (独立线程, 0.0.0.0/:: 随机端口)
 | `tests/tests.cpp` | 配置往返、规则匹配、DNS 报文、各代理协议和代理链的握手（进程内假代理） |
 | `netfilter/` | NetFilter SDK（头文件和 `nfapi.dll`，C API 版本）。**不在仓库中**，需自行放置，至少包含 `nfsdk/include`、`nfsdk/wfp/include` 和 `nfsdk/wfp/bin/release_c_api/x64/nfapi.dll` |
 | `netfilter/driver/` | 已签名的驱动，每个都是 `<驱动>/netfilter2.sys`：`demo`（SDK 演示驱动）和 `a`、`b`（正式版驱动），都是 WFP 的 x64 版。**不在仓库中** |
+| `windivert/` | WinDivert 后端资产，`include/windivert.h` 和 `x64/`（`WinDivert.dll`、`WinDivert64.sys`）。**不在仓库中**，自行放置或用 `-DWINDIVERT_DIR=...` 指定 |
 
 ## 构建
 
@@ -44,7 +52,7 @@ build/winroute_tests.exe
 windeployqt --release build/WinRoute.exe
 ```
 
-构建后，`nfapi.dll` 复制到 `WinRoute.exe` 旁边，三个驱动复制到 `drivers/<代号>/`（没有多余的顶层 `netfilter2.sys`）。程序 manifest 要求管理员权限。首次启动时，程序把选定的驱动从 `drivers/<代号>/` 复制到 `System32\drivers` 并注册 `netfilter2` 服务。卸载驱动：`WinRoute.exe --uninstall-driver`。
+构建后，`nfapi.dll` 复制到 `WinRoute.exe` 旁边，三个驱动复制到 `drivers/<代号>/`（没有多余的顶层 `netfilter2.sys`）。放好 `windivert/` 时，`WinDivert.dll` 和 `WinDivert64.sys` 也一并复制到 exe 旁（供 WinDivert 后端运行时加载）。程序 manifest 要求管理员权限。首次启动时，程序把选定的驱动从 `drivers/<代号>/` 复制到 `System32\drivers` 并注册 `netfilter2` 服务。卸载驱动：`WinRoute.exe --uninstall-driver`（同时移除 WinDivert 服务）。
 
 加 `-DWINROUTE_REQUIRE_ADMIN=OFF` 可以构建不带管理员 manifest 的开发版，用于不提权调试界面（此时网络拦截不会启动）。
 

@@ -589,6 +589,53 @@ T = {
     "Could not uninstall the network driver: %1": ("无法卸载网络驱动：%1", "ネットワークドライバーをアンインストールできませんでした：%1"),
     "Could not uninstall the driver:\n%1": ("无法卸载驱动：\n%1", "ドライバーをアンインストールできませんでした：\n%1"),
 
+    # ---- capture backends (NetFilter / WinDivert) ----
+    "WinRoute can capture connections with the NetFilter SDK driver or with WinDivert. Choose a backend; for NetFilter, choose which driver to use.":
+        ("WinRoute 可以用 NetFilter SDK 驱动或 WinDivert 拦截连接。请选择后端；选 NetFilter 时再选择使用哪个驱动。",
+         "WinRoute は NetFilter SDK ドライバーまたは WinDivert で接続を捕捉できます。バックエンドを選び、NetFilter の場合は使用するドライバーも選択してください。"),
+    "NetFilter SDK driver": ("NetFilter SDK 驱动", "NetFilter SDK ドライバー"),
+    "WinDivert": ("WinDivert", "WinDivert"),
+    "WinDivert (not available)": ("WinDivert（不可用）", "WinDivert（利用不可）"),
+    "Backend:": ("后端：", "バックエンド："),
+    "No NetFilter driver is installed.": ("未安装 NetFilter 驱动。", "NetFilter ドライバーがインストールされていません。"),
+    "WinDivert.dll or its driver is missing next to WinRoute.exe, so this backend cannot be used.":
+        ("WinRoute.exe 旁缺少 WinDivert.dll 或其驱动，无法使用此后端。",
+         "WinRoute.exe の隣に WinDivert.dll またはそのドライバーがないため、このバックエンドは使用できません。"),
+    "WinDivert captures TCP connections at the packet level. It does not support UDP over the proxy or fake-DNS name resolution; host names come from observed DNS responses.":
+        ("WinDivert 在数据包层面拦截 TCP 连接。不支持经代理的 UDP 和假 DNS 解析；主机名来自嗅探到的 DNS 应答。",
+         "WinDivert はパケットレベルで TCP 接続を捕捉します。プロキシ経由の UDP や偽 DNS 解決には対応せず、ホスト名は観測した DNS 応答から取得します。"),
+    "running": ("运行中", "実行中"),
+    "not loaded": ("未加载", "未読み込み"),
+    "WinDivert: %1": ("WinDivert：%1", "WinDivert：%1"),
+    "Uninstall WinDivert": ("卸载 WinDivert", "WinDivert をアンインストール"),
+    "Use WinDivert": ("使用 WinDivert", "WinDivert を使用"),
+    "Capture backend switched to WinDivert": ("拦截后端已切换到 WinDivert", "捕捉バックエンドを WinDivert に切り替えました"),
+    "Could not switch the capture backend: %1": ("无法切换拦截后端：%1", "捕捉バックエンドを切り替えできませんでした：%1"),
+    "Could not apply the change:\n%1": ("无法应用更改：\n%1", "変更を適用できませんでした：\n%1"),
+    "Uninstall the NetFilter driver? WinRoute cannot capture connections with this backend without it.":
+        ("卸载 NetFilter 驱动？没有它，此后端无法拦截连接。",
+         "NetFilter ドライバーをアンインストールしますか？これがないと、このバックエンドでは接続を捕捉できません。"),
+    "Uninstall the WinDivert driver service?": ("卸载 WinDivert 驱动服务？", "WinDivert ドライバーサービスをアンインストールしますか？"),
+    "WinDivert service uninstalled": ("WinDivert 服务已卸载", "WinDivert サービスをアンインストールしました"),
+    "Could not uninstall:\n%1": ("无法卸载：\n%1", "アンインストールできませんでした：\n%1"),
+    "Backend: %1": ("后端：%1", "バックエンド：%1"),
+    "Backend: WinDivert (unavailable)": ("后端：WinDivert（不可用）", "バックエンド：WinDivert（利用不可）"),
+    "WinDivert is capturing connections": ("WinDivert 正在拦截连接", "WinDivert が接続を捕捉しています"),
+    "WinDivert is not loaded": ("WinDivert 未加载", "WinDivert は読み込まれていません"),
+    "The driver is not signed, or its signature could not be read.":
+        ("驱动未签名，或无法读取其签名。", "ドライバーは署名されていないか、署名を読み取れませんでした。"),
+    "WinDivert is not available (WinDivert.dll or its driver is missing).":
+        ("WinDivert 不可用（缺少 WinDivert.dll 或其驱动）。", "WinDivert は利用できません（WinDivert.dll またはそのドライバーがありません）。"),
+    "WinDivert.dll could not be loaded; is it next to WinRoute.exe?":
+        ("无法加载 WinDivert.dll；它是否在 WinRoute.exe 旁边？", "WinDivert.dll を読み込めませんでした。WinRoute.exe の隣にありますか？"),
+    "WinDivert could not open the socket layer (error %1). Administrator rights are required.":
+        ("WinDivert 无法打开 socket 层（错误 %1）。需要管理员权限。",
+         "WinDivert はソケット層を開けませんでした（エラー %1）。管理者権限が必要です。"),
+    "WinDivert could not open the network layer (error %1).":
+        ("WinDivert 无法打开网络层（错误 %1）。", "WinDivert はネットワーク層を開けませんでした（エラー %1）。"),
+    "Cannot open the WinDivert service (error %1)": ("无法打开 WinDivert 服务（错误 %1）", "WinDivert サービスを開けません（エラー %1）"),
+    "Cannot delete the WinDivert service (error %1)": ("无法删除 WinDivert 服务（错误 %1）", "WinDivert サービスを削除できません（エラー %1）"),
+
     # ---- updates ----
     "Check for &Updates...": ("检查更新(&U)...", "更新の確認(&U)..."),
     "Automatic U&pdates": ("自动更新(&P)", "自動更新(&P)"),

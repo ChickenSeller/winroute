@@ -10,6 +10,7 @@
 #include "core/RuleEngine.h"
 #include "core/UdpRelaySession.h"
 #include "core/Utils.h"
+#include "core/WinDivertPacket.h"
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
@@ -18,6 +19,7 @@
 #include <QUdpSocket>
 #include <QtEndian>
 #include <cstdio>
+#include <cstring>
 
 static int g_failures = 0;
 static int g_checks = 0;
@@ -683,6 +685,92 @@ static void testUdpProxy()
     CHECK(bypassed);
 }
 
+// ---- WinDivert packet rewriting -------------------------------------------
+
+// Folds a 16-bit ones-complement sum over bytes read big-endian; a correct
+// checksum makes the sum over the covered area (checksum field included) 0xFFFF.
+static quint16 onesSum(const unsigned char *p, int n, quint32 acc = 0)
+{
+    for (; n > 1; n -= 2, p += 2)
+        acc += (quint32(p[0]) << 8) | p[1];
+    if (n)
+        acc += quint32(p[0]) << 8;
+    while (acc >> 16)
+        acc = (acc & 0xffff) + (acc >> 16);
+    return quint16(acc);
+}
+
+static void testWinDivertPacket()
+{
+    // --- IPv4 TCP SYN -------------------------------------------------------
+    unsigned char pkt[40] = {
+        0x45, 0x00, 0x00, 0x28,            // ver/ihl, tos, total length 40
+        0x12, 0x34, 0x00, 0x00,            // id, flags/frag
+        0x40, 0x06, 0x00, 0x00,            // ttl, proto=TCP, checksum
+        10, 0, 0, 5,                       // src 10.0.0.5
+        93, 184, 216, 34,                  // dst 93.184.216.34
+        0x30, 0x39, 0x01, 0xbb,            // sport 12345, dport 443
+        0x00, 0x00, 0x00, 0x01,            // seq
+        0x00, 0x00, 0x00, 0x00,            // ack
+        0x50, 0x02, 0xfa, 0xf0,            // data offset 5, SYN, window
+        0x00, 0x00, 0x00, 0x00,            // checksum, urg
+    };
+    CHECK(wdpkt::recalcTcpChecksums(pkt, sizeof(pkt)));
+    CHECK(onesSum(pkt, 20) == 0xffff);              // IPv4 header checksum valid
+
+    wdpkt::Endpoints ep;
+    CHECK(wdpkt::readTcp(pkt, sizeof(pkt), &ep));
+    CHECK(!ep.v6);
+    CHECK(ep.srcPort == 12345 && ep.dstPort == 443);
+    const unsigned char src[4] = {10, 0, 0, 5};
+    const unsigned char dst[4] = {93, 184, 216, 34};
+    CHECK(std::memcmp(ep.src, src, 4) == 0);
+    CHECK(std::memcmp(ep.dst, dst, 4) == 0);
+
+    // Redirect to the source IP:relayPort, preserving the source port.
+    CHECK(wdpkt::setTcpDst(pkt, sizeof(pkt), src, 8888));
+    CHECK(wdpkt::readTcp(pkt, sizeof(pkt), &ep));
+    CHECK(std::memcmp(ep.dst, src, 4) == 0 && ep.dstPort == 8888 && ep.srcPort == 12345);
+    CHECK(onesSum(pkt, 20) == 0xffff);
+    {
+        // The TCP checksum (pseudo-header + segment) must validate too.
+        quint32 acc = 0;
+        acc += onesSum(pkt + 12, 8);        // src + dst
+        acc += 6 + 20;                      // protocol + TCP length
+        CHECK(onesSum(pkt + 20, 20, acc) == 0xffff);
+    }
+
+    // Restore the original server as the source on the reply path.
+    CHECK(wdpkt::setTcpSrc(pkt, sizeof(pkt), dst, 443));
+    CHECK(wdpkt::readTcp(pkt, sizeof(pkt), &ep));
+    CHECK(std::memcmp(ep.src, dst, 4) == 0 && ep.srcPort == 443);
+
+    // --- IPv6 TCP -----------------------------------------------------------
+    unsigned char p6[60] = {
+        0x60, 0x00, 0x00, 0x00,            // version, traffic class, flow label
+        0x00, 0x14, 0x06, 0x40,            // payload length 20, next header TCP, hop limit
+        0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,   // src 2001:db8::1
+        0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,   // dst 2001:db8::2
+        0xd4, 0x31, 0x01, 0xbb,            // sport 54321, dport 443
+        0, 0, 0, 1, 0, 0, 0, 0,
+        0x50, 0x02, 0xfa, 0xf0,
+        0x00, 0x00, 0x00, 0x00,
+    };
+    CHECK(wdpkt::recalcTcpChecksums(p6, sizeof(p6)));
+    CHECK(wdpkt::readTcp(p6, sizeof(p6), &ep));
+    CHECK(ep.v6 && ep.srcPort == 54321 && ep.dstPort == 443);
+    {
+        quint32 acc = 0;
+        acc += onesSum(p6 + 8, 32);         // src + dst
+        acc += 20 + 6;                      // TCP length + next header
+        CHECK(onesSum(p6 + 40, 20, acc) == 0xffff);
+    }
+
+    // Non-TCP / too-short buffers are rejected.
+    unsigned char bad[8] = {0x45, 0, 0, 8, 0, 0, 0, 0};
+    CHECK(!wdpkt::readTcp(bad, sizeof(bad), &ep));
+}
+
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
@@ -691,6 +779,7 @@ int main(int argc, char **argv)
     testDns();
     testProxies();
     testUdpProxy();
+    testWinDivertPacket();
     std::printf("%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
 }

@@ -1,6 +1,7 @@
 #include "core/Engine.h"
 #include "core/Logger.h"
 #include "core/NetFilterInterceptor.h"
+#include "core/WinDivertInterceptor.h"
 #include "core/ProcessInfo.h"
 #include "ui/Language.h"
 #include "ui/MainWindow.h"
@@ -49,8 +50,16 @@ int main(int argc, char *argv[])
         for (const auto &d : NetFilterInterceptor::availableDrivers())
             if (d.key == installKey)
                 source = d.path;
-        const bool ok = installDriver ? NetFilterInterceptor::installDriver(&error, true, source)
-                                      : NetFilterInterceptor::uninstallDriver(&error);
+        bool ok;
+        if (installDriver) {
+            ok = NetFilterInterceptor::installDriver(&error, true, source);
+        } else {
+            // Remove both backends' drivers; WinDivert installs itself on first
+            // use, so a missing service is not an error.
+            ok = NetFilterInterceptor::uninstallDriver(&error);
+            QString wdError;
+            WinDivertInterceptor::uninstall(&wdError);
+        }
         if (!ok && !args.contains("--quiet"))
             QMessageBox::critical(nullptr, "WinRoute",
                                   installDriver

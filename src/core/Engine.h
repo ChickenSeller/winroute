@@ -22,6 +22,12 @@ public:
     bool isRunning() const { return m_running; }
     QString backendName() const;
 
+    // The active interceptor backend: "netfilter" (default) or "windivert".
+    // Persisted in QSettings under "backend/active". Switching stops the engine
+    // and replaces the interceptor; the caller restarts it if it was running.
+    QString backendKey() const { return m_backendKey; }
+    bool setBackend(const QString &key, QString *error);
+
     void setProfile(const Profile &profile);
     RuleEnginePtr rules() const { return m_rules; }
 
@@ -37,6 +43,7 @@ private:
     QThread m_relayThread;
     Relay *m_relay = nullptr;
     std::unique_ptr<Interceptor> m_interceptor;
+    QString m_backendKey;
     RuleEnginePtr m_rules;
     bool m_running = false;
 };

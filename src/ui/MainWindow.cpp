@@ -14,6 +14,7 @@
 #include "core/DnsClient.h"
 #include "core/Logger.h"
 #include "core/NetFilterInterceptor.h"
+#include "core/WinDivertInterceptor.h"
 #include "core/ProcessInfo.h"
 #include "core/Utils.h"
 
@@ -467,6 +468,39 @@ void MainWindow::updateDriverStatus()
 {
     if (!m_statusDriver)
         return;
+
+    // Shows the certificate button for a backend's signatures. A generic lambda
+    // serves both backends, whose cert lists have the same name/subject/issuer.
+    auto applyCerts = [this](const auto &certs) {
+        if (certs.isEmpty()) {
+            m_certButton->hide();
+        } else {
+            m_certButton->setToolTip(certs.size() == 1
+                                         ? tr("Signed by %1 — click for details").arg(certs.first().name)
+                                         : tr("%1 signatures — click for details").arg(certs.size()));
+            m_certButton->show();
+        }
+    };
+
+    if (m_engine->backendKey() == QLatin1String("windivert")) {
+        const auto info = WinDivertInterceptor::info();
+        if (!info.available) {
+            m_statusDriver->setText(tr("Backend: WinDivert (unavailable)"));
+            m_statusDriver->setToolTip(QString());
+            m_certButton->hide();
+            return;
+        }
+        QStringList parts{"WinDivert"};
+        if (!info.version.isEmpty())
+            parts << "v" + info.version;
+        parts << (info.running ? tr("running") : tr("not loaded"));
+        m_statusDriver->setText(tr("Backend: %1").arg(parts.join(" · ")));
+        m_statusDriver->setToolTip(info.running ? tr("WinDivert is capturing connections")
+                                                : tr("WinDivert is not loaded"));
+        applyCerts(info.certs);
+        return;
+    }
+
     const auto info = NetFilterInterceptor::installedDriverInfo();
     if (!info.installed) {
         m_statusDriver->setText(tr("Driver: not installed"));
@@ -482,47 +516,51 @@ void MainWindow::updateDriverStatus()
     m_statusDriver->setText(tr("Driver: %1").arg(parts.join(" · ")));
     m_statusDriver->setToolTip(info.running ? tr("The network driver is running")
                                             : tr("The network driver is installed but not running"));
-    if (info.certs.isEmpty()) {
-        m_certButton->hide();
-    } else {
-        m_certButton->setToolTip(info.certs.size() == 1
-                                     ? tr("Signed by %1 — click for details").arg(info.certs.first().name)
-                                     : tr("%1 signatures — click for details").arg(info.certs.size()));
-        m_certButton->show();
-    }
+    applyCerts(info.certs);
 }
 
 void MainWindow::showCertificateDetails()
 {
-    const auto info = NetFilterInterceptor::installedDriverInfo();
-    if (info.certs.isEmpty()) {
-        QMessageBox::information(this, tr("Driver Signature"),
-                                 tr("The installed driver is not signed, or its signature could not be read."));
-        return;
-    }
-    QDialog dlg(this);
-    dlg.setWindowTitle(tr("Driver Signature"));
-    auto *lay = new QVBoxLayout(&dlg);
-    lay->addWidget(new QLabel(tr("Signing certificates of %1:").arg(info.name)));
-    auto *tabs = new QTabWidget;
-    for (int i = 0; i < info.certs.size(); ++i) {
-        const auto &c = info.certs[i];
-        QString body = tr("Subject:") + "\n" + (c.subject.isEmpty() ? c.name : c.subject);
-        if (!c.issuer.isEmpty())
-            body += "\n\n" + tr("Issued by: %1").arg(c.issuer);
-        auto *view = new QPlainTextEdit(body);
-        view->setReadOnly(true);
-        QString title = c.name.isEmpty() ? tr("Certificate %1").arg(i + 1) : c.name;
-        if (title.size() > 28)
-            title = title.left(27) + QChar(0x2026);
-        tabs->addTab(view, title);
-    }
-    lay->addWidget(tabs, 1);
-    auto *bb = new QDialogButtonBox(QDialogButtonBox::Ok, &dlg);
-    connect(bb, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    lay->addWidget(bb);
-    dlg.resize(480, 320);
-    dlg.exec();
+    const bool windivert = m_engine->backendKey() == QLatin1String("windivert");
+    const QString name = windivert ? QStringLiteral("WinDivert")
+                                    : NetFilterInterceptor::installedDriverInfo().name;
+
+    // A generic lambda builds the tabbed dialog from either backend's cert list.
+    auto show = [this, &name](const auto &certs) {
+        if (certs.isEmpty()) {
+            QMessageBox::information(this, tr("Driver Signature"),
+                                     tr("The driver is not signed, or its signature could not be read."));
+            return;
+        }
+        QDialog dlg(this);
+        dlg.setWindowTitle(tr("Driver Signature"));
+        auto *lay = new QVBoxLayout(&dlg);
+        lay->addWidget(new QLabel(tr("Signing certificates of %1:").arg(name)));
+        auto *tabs = new QTabWidget;
+        for (int i = 0; i < certs.size(); ++i) {
+            const auto &c = certs[i];
+            QString body = tr("Subject:") + "\n" + (c.subject.isEmpty() ? c.name : c.subject);
+            if (!c.issuer.isEmpty())
+                body += "\n\n" + tr("Issued by: %1").arg(c.issuer);
+            auto *view = new QPlainTextEdit(body);
+            view->setReadOnly(true);
+            QString title = c.name.isEmpty() ? tr("Certificate %1").arg(i + 1) : c.name;
+            if (title.size() > 28)
+                title = title.left(27) + QChar(0x2026);
+            tabs->addTab(view, title);
+        }
+        lay->addWidget(tabs, 1);
+        auto *bb = new QDialogButtonBox(QDialogButtonBox::Ok, &dlg);
+        connect(bb, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+        lay->addWidget(bb);
+        dlg.resize(480, 320);
+        dlg.exec();
+    };
+
+    if (windivert)
+        show(WinDivertInterceptor::info().certs);
+    else
+        show(NetFilterInterceptor::installedDriverInfo().certs);
 }
 
 void MainWindow::createTray()
