@@ -630,11 +630,9 @@ T = {
         ("WinDivert 不可用（缺少 WinDivert.dll 或其驱动）。", "WinDivert は利用できません（WinDivert.dll またはそのドライバーがありません）。"),
     "WinDivert.dll could not be loaded; is it next to WinRoute.exe?":
         ("无法加载 WinDivert.dll；它是否在 WinRoute.exe 旁边？", "WinDivert.dll を読み込めませんでした。WinRoute.exe の隣にありますか？"),
-    "WinDivert could not open the socket layer (error %1). Administrator rights are required.":
-        ("WinDivert 无法打开 socket 层（错误 %1）。需要管理员权限。",
-         "WinDivert はソケット層を開けませんでした（エラー %1）。管理者権限が必要です。"),
-    "WinDivert could not open the network layer (error %1).":
-        ("WinDivert 无法打开网络层（错误 %1）。", "WinDivert はネットワーク層を開けませんでした（エラー %1）。"),
+    "WinDivert could not open the network layer (error %1). Administrator rights are required.":
+        ("WinDivert 无法打开网络层（错误 %1）。需要管理员权限。",
+         "WinDivert はネットワーク層を開けませんでした（エラー %1）。管理者権限が必要です。"),
     "Cannot open the WinDivert service (error %1)": ("无法打开 WinDivert 服务（错误 %1）", "WinDivert サービスを開けません（エラー %1）"),
     "Cannot delete the WinDivert service (error %1)": ("无法删除 WinDivert 服务（错误 %1）", "WinDivert サービスを削除できません（エラー %1）"),
 

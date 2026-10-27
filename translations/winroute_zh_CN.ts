@@ -508,12 +508,8 @@
       <translation>无法加载 WinDivert.dll；它是否在 WinRoute.exe 旁边？</translation>
     </message>
     <message>
-      <source>WinDivert could not open the socket layer (error %1). Administrator rights are required.</source>
-      <translation>WinDivert 无法打开 socket 层（错误 %1）。需要管理员权限。</translation>
-    </message>
-    <message>
-      <source>WinDivert could not open the network layer (error %1).</source>
-      <translation>WinDivert 无法打开网络层（错误 %1）。</translation>
+      <source>WinDivert could not open the network layer (error %1). Administrator rights are required.</source>
+      <translation>WinDivert 无法打开网络层（错误 %1）。需要管理员权限。</translation>
     </message>
   </context>
   <context>

@@ -122,6 +122,8 @@ bool readTcp(const uint8_t *data, unsigned len, Endpoints *out)
     }
     out->srcPort = (uint16_t(v.tcp[0]) << 8) | v.tcp[1];
     out->dstPort = (uint16_t(v.tcp[2]) << 8) | v.tcp[3];
+    const uint8_t flags = v.tcp[13];   // CWR ECE URG ACK PSH RST SYN FIN
+    out->syn = (flags & 0x02) != 0 && (flags & 0x10) == 0;
     return true;
 }
 
@@ -153,6 +155,35 @@ bool recalcTcpChecksums(uint8_t *data, unsigned len)
     if (!parse(data, len, &v))
         return false;
     recalc(v);
+    return true;
+}
+
+bool udpPayload(const uint8_t *data, unsigned len, const uint8_t **payload, unsigned *payloadLen)
+{
+    if (len < 20)
+        return false;
+    constexpr uint8_t kProtoUdp = 17;
+    unsigned ipHdr;
+    const uint8_t version = data[0] >> 4;
+    if (version == 4) {
+        ipHdr = (data[0] & 0x0f) * 4u;
+        if (ipHdr < 20 || data[9] != kProtoUdp)
+            return false;
+    } else if (version == 6) {
+        ipHdr = 40;
+        if (len < 40 || data[6] != kProtoUdp)
+            return false;
+    } else {
+        return false;
+    }
+    if (len < ipHdr + 8)
+        return false;
+    const uint8_t *udp = data + ipHdr;
+    const unsigned udpLen = (unsigned(udp[4]) << 8) | udp[5];   // header + data
+    if (udpLen < 8 || ipHdr + udpLen > len)
+        return false;
+    *payload = udp + 8;
+    *payloadLen = udpLen - 8;
     return true;
 }
 

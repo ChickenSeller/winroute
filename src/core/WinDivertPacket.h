@@ -12,6 +12,7 @@ namespace wdpkt {
 
 struct Endpoints {
     bool v6 = false;
+    bool syn = false;       // a connection-opening SYN (SYN set, ACK clear)
     uint8_t src[16] = {};   // network order; first 4 bytes for IPv4
     uint8_t dst[16] = {};
     uint16_t srcPort = 0;   // host order
@@ -30,5 +31,9 @@ bool setTcpSrc(uint8_t *data, unsigned len, const uint8_t *addr, uint16_t portHo
 
 // Recomputes the IPv4 header checksum (IPv4 only) and the TCP checksum.
 bool recalcTcpChecksums(uint8_t *data, unsigned len);
+
+// Points payload/payloadLen at the UDP payload of an IPv4/IPv6 UDP packet.
+// Returns false if the buffer is not a parseable UDP datagram. Read-only.
+bool udpPayload(const uint8_t *data, unsigned len, const uint8_t **payload, unsigned *payloadLen);
 
 } // namespace wdpkt

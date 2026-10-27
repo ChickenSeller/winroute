@@ -49,14 +49,15 @@ public:
     static bool uninstall(QString *error); // stop and delete the WinDivert service
 
 private:
-    void socketLoop();
     void networkLoop();
+    void dnsLoop();          // sniffs DNS responses to learn IP -> host names
     RuleEnginePtr rules() const;
 
     // One tracked outgoing TCP connection, keyed by the application's local port.
-    enum class State { Pending, Active, Passthrough, Blocked };
+    // Classified once, on its SYN; later packets are matched to the record.
+    enum class State { Active, Passthrough, Blocked };
     struct Conn {
-        State state = State::Pending;
+        State state = State::Passthrough;
         quint32 pid = 0;
         QString appName;
         QString appPath;
@@ -64,12 +65,13 @@ private:
         bool v6 = false;
         quint8 realDst[16] = {};   // original destination (network order), set on the first packet
         quint16 realPort = 0;
+        qint64 createdMs = 0;      // for bounding the table if CLOSE events are missed
         QString hostname;          // resolved target host name, for the flow record
         RuleMatch match;           // the matched rule/action, for the flow record
     };
 
-    // Decides and, for proxied/handled-direct connections, records the flow; sets
-    // c.state. Runs on the first captured packet of the connection.
+    // Decides proxy/direct/block for a connection (sets c.state), using c.pid and
+    // the process fields already filled in. Runs once, on the connection's SYN.
     void decide(Conn &c, const QHostAddress &dst, quint16 dport);
 
     InterceptorContext m_ctx;
@@ -79,10 +81,10 @@ private:
     quint32 m_selfSession = 0;
     quint16 m_relayPort = 0;
 
-    HANDLE m_socketHandle = INVALID_HANDLE_VALUE;
     HANDLE m_networkHandle = INVALID_HANDLE_VALUE;
-    std::thread m_socketThread;
+    HANDLE m_dnsHandle = INVALID_HANDLE_VALUE;
     std::thread m_networkThread;
+    std::thread m_dnsThread;
 
     mutable QMutex m_rulesMutex;
     RuleEnginePtr m_rules;

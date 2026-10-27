@@ -508,12 +508,8 @@
       <translation>WinDivert.dll を読み込めませんでした。WinRoute.exe の隣にありますか？</translation>
     </message>
     <message>
-      <source>WinDivert could not open the socket layer (error %1). Administrator rights are required.</source>
-      <translation>WinDivert はソケット層を開けませんでした（エラー %1）。管理者権限が必要です。</translation>
-    </message>
-    <message>
-      <source>WinDivert could not open the network layer (error %1).</source>
-      <translation>WinDivert はネットワーク層を開けませんでした（エラー %1）。</translation>
+      <source>WinDivert could not open the network layer (error %1). Administrator rights are required.</source>
+      <translation>WinDivert はネットワーク層を開けませんでした（エラー %1）。管理者権限が必要です。</translation>
     </message>
   </context>
   <context>

@@ -1,5 +1,6 @@
 #include "WinDivertInterceptor.h"
 
+#include "DnsMessage.h"
 #include "FakeDns.h"      // DnsCache
 #include "FlowTable.h"
 #include "Logger.h"
@@ -125,38 +126,37 @@ bool WinDivertInterceptor::start(const InterceptorContext &ctx, QString *error)
     m_ctx = ctx;
     m_relayPort = ctx.relayPort;
 
-    const std::string socketFilter = "tcp and (event == CONNECT or event == CLOSE)";
+    // Everything is done at the network layer: WinDivert's socket layer is
+    // read-only (it cannot hold a connect), so it cannot be used to classify a
+    // connection before its first packet without a race. Instead each outbound
+    // SYN is classified in place, taking the owning process from the TCP table.
     const std::string netFilter =
         "tcp and not impostor and ((outbound and not loopback) or (loopback and (tcp.SrcPort == "
         + std::to_string(m_relayPort) + " or tcp.DstPort == " + std::to_string(m_relayPort) + ")))";
 
-    m_socketHandle = api->open(socketFilter.c_str(), WINDIVERT_LAYER_SOCKET, 0,
-                               WINDIVERT_FLAG_SNIFF | WINDIVERT_FLAG_RECV_ONLY);
-    if (m_socketHandle == INVALID_HANDLE_VALUE) {
-        const DWORD err = GetLastError();
-        if (error)
-            *error = QCoreApplication::translate("Interceptor",
-                         "WinDivert could not open the socket layer (error %1). Administrator rights are required.").arg(err);
-        return false;
-    }
     m_networkHandle = api->open(netFilter.c_str(), WINDIVERT_LAYER_NETWORK, -100, 0);
     if (m_networkHandle == INVALID_HANDLE_VALUE) {
         const DWORD err = GetLastError();
-        api->close(m_socketHandle);
-        m_socketHandle = INVALID_HANDLE_VALUE;
         if (error)
             *error = QCoreApplication::translate("Interceptor",
-                         "WinDivert could not open the network layer (error %1).").arg(err);
+                         "WinDivert could not open the network layer (error %1). Administrator rights are required.").arg(err);
         return false;
     }
+
+    // Read-only sniff of DNS responses, to learn IP -> host name mappings (the
+    // relay then offers the proxy the host name, which matters for proxies that
+    // reject raw addresses). Non-fatal if it cannot be opened.
+    m_dnsHandle = api->open("inbound and udp and udp.SrcPort == 53", WINDIVERT_LAYER_NETWORK, -101,
+                            WINDIVERT_FLAG_SNIFF | WINDIVERT_FLAG_RECV_ONLY);
 
     {
         QMutexLocker lock(&m_connMutex);
         m_conns.clear();
     }
     m_running = true;
-    m_socketThread = std::thread([this] { socketLoop(); });
     m_networkThread = std::thread([this] { networkLoop(); });
+    if (m_dnsHandle != INVALID_HANDLE_VALUE)
+        m_dnsThread = std::thread([this] { dnsLoop(); });
     return true;
 }
 
@@ -166,21 +166,21 @@ void WinDivertInterceptor::stop()
         return;
     const WinDivertApi *api = WinDivertApi::instance();
     // Unblock the recv loops, then close.
-    if (m_socketHandle != INVALID_HANDLE_VALUE)
-        api->shutdown(m_socketHandle, WINDIVERT_SHUTDOWN_BOTH);
     if (m_networkHandle != INVALID_HANDLE_VALUE)
         api->shutdown(m_networkHandle, WINDIVERT_SHUTDOWN_BOTH);
-    if (m_socketThread.joinable())
-        m_socketThread.join();
+    if (m_dnsHandle != INVALID_HANDLE_VALUE)
+        api->shutdown(m_dnsHandle, WINDIVERT_SHUTDOWN_BOTH);
     if (m_networkThread.joinable())
         m_networkThread.join();
-    if (m_socketHandle != INVALID_HANDLE_VALUE) {
-        api->close(m_socketHandle);
-        m_socketHandle = INVALID_HANDLE_VALUE;
-    }
+    if (m_dnsThread.joinable())
+        m_dnsThread.join();
     if (m_networkHandle != INVALID_HANDLE_VALUE) {
         api->close(m_networkHandle);
         m_networkHandle = INVALID_HANDLE_VALUE;
+    }
+    if (m_dnsHandle != INVALID_HANDLE_VALUE) {
+        api->close(m_dnsHandle);
+        m_dnsHandle = INVALID_HANDLE_VALUE;
     }
     QMutexLocker lock(&m_connMutex);
     m_conns.clear();
@@ -205,42 +205,6 @@ RuleEnginePtr WinDivertInterceptor::rules() const
 {
     QMutexLocker lock(&m_rulesMutex);
     return m_rules;
-}
-
-void WinDivertInterceptor::socketLoop()
-{
-    const WinDivertApi *api = WinDivertApi::instance();
-    WINDIVERT_ADDRESS addr;
-    while (m_running) {
-        if (!api->recv(m_socketHandle, nullptr, 0, nullptr, &addr)) {
-            if (!m_running)
-                break;
-            continue;
-        }
-        const quint32 pid = addr.Socket.ProcessId;
-        const quint16 localPort = addr.Socket.LocalPort;
-        if (pid == m_selfPid || localPort == 0)
-            continue;
-        if (addr.Event == WINDIVERT_EVENT_SOCKET_CLOSE) {
-            QMutexLocker lock(&m_connMutex);
-            m_conns.remove(localPort);
-            continue;
-        }
-        if (addr.Event != WINDIVERT_EVENT_SOCKET_CONNECT)
-            continue;
-        procinfo::Info pinfo = procinfo::lookup(pid);
-        if (!pinfo.path.isEmpty())
-            pinfo.name = QFileInfo(pinfo.path).fileName();
-        Conn c;
-        c.state = State::Pending;
-        c.pid = pid;
-        c.appName = pinfo.name;
-        c.appPath = pinfo.path;
-        c.sessionId = pinfo.sessionId;
-        c.v6 = addr.IPv6;
-        QMutexLocker lock(&m_connMutex);
-        m_conns.insert(localPort, c);   // a new connect replaces any stale entry on this port
-    }
 }
 
 void WinDivertInterceptor::decide(Conn &c, const QHostAddress &dst, quint16 dport)
@@ -308,12 +272,17 @@ void WinDivertInterceptor::networkLoop()
     WINDIVERT_ADDRESS addr;
     UINT len = 0;
 
+    // Diagnostics (visible at Debug log level).
+    qint64 lastStat = QDateTime::currentMSecsSinceEpoch();
+    long nCap = 0, nDnat = 0, nRev = 0, nBlock = 0, nSendFail = 0;
+
     while (m_running) {
         if (!api->recv(m_networkHandle, buf.data(), UINT(buf.size()), &len, &addr)) {
             if (!m_running)
                 break;
             continue;
         }
+        ++nCap;
         wdpkt::Endpoints ep;
         if (!wdpkt::readTcp(buf.data(), len, &ep)) {
             api->send(m_networkHandle, buf.data(), len, nullptr, &addr);   // not TCP we can parse; pass through
@@ -324,46 +293,92 @@ void WinDivertInterceptor::networkLoop()
         bool drop = false;
 
         if (addr.Outbound && !addr.Loopback) {
-            // Application -> server. Redirect the proxied ones to the relay.
-            QMutexLocker lock(&m_connMutex);
-            auto it = m_conns.find(ep.srcPort);
-            if (it != m_conns.end()) {
-                if (it->state == State::Pending) {
-                    const QHostAddress dst = hostFromBytes(ep.dst, ep.v6);
-                    decide(*it, dst, ep.dstPort);
-                    if (it->state == State::Active) {
-                        std::memcpy(it->realDst, ep.dst, 16);
-                        it->v6 = ep.v6;
+            // Application -> server. Look up this connection's record (keyed by the
+            // application's local port); classify it on its SYN if new.
+            State st = State::Passthrough;
+            quint8 rdst[16] = {};
+            quint16 rport = 0;
+            bool have = false;
+            {
+                QMutexLocker lock(&m_connMutex);
+                auto it = m_conns.find(ep.srcPort);
+                if (it != m_conns.end()) {
+                    st = it->state;
+                    std::memcpy(rdst, it->realDst, 16);
+                    rport = it->realPort;
+                    have = true;
+                }
+            }
+            if (!have && ep.syn) {
+                // A new outbound connection: take its owning process from the TCP
+                // table (the socket is already in SYN_SENT), then decide. Doing
+                // this on the SYN - which WinDivert holds until we reinject - is
+                // race-free, and the relay's own upstream connections resolve to
+                // our pid and are left alone.
+                const QHostAddress src = hostFromBytes(ep.src, ep.v6);
+                const QHostAddress dst = hostFromBytes(ep.dst, ep.v6);
+                Conn c;
+                c.pid = procinfo::tcpOwnerPid(src, ep.srcPort);
+                c.v6 = ep.v6;
+                std::memcpy(c.realDst, ep.dst, 16);
+                c.realPort = ep.dstPort;
+                c.createdMs = QDateTime::currentMSecsSinceEpoch();
+                if (c.pid == 0 || c.pid == m_selfPid) {
+                    c.state = State::Passthrough;   // unknown, or our own traffic
+                } else {
+                    procinfo::Info pinfo = procinfo::lookup(c.pid);
+                    c.appPath = pinfo.path;
+                    c.appName = pinfo.path.isEmpty() ? pinfo.name : QFileInfo(pinfo.path).fileName();
+                    c.sessionId = pinfo.sessionId;
+                    decide(c, dst, ep.dstPort);
+                    if (c.state == State::Active) {
                         RedirectInfo info;
-                        info.pid = it->pid;
-                        info.appPath = it->appPath;
-                        info.appName = it->appName;
-                        info.srcAddr = hostFromBytes(ep.src, ep.v6);
+                        info.pid = c.pid;
+                        info.appPath = c.appPath;
+                        info.appName = c.appName;
+                        info.srcAddr = src;
                         info.srcPort = ep.srcPort;
                         info.dstAddr = dst;
                         info.dstPort = ep.dstPort;
-                        info.hostname = it->hostname;
-                        info.match = it->match;
-                        info.createdMs = QDateTime::currentMSecsSinceEpoch();
+                        info.hostname = c.hostname;
+                        info.match = c.match;
+                        info.createdMs = c.createdMs;
                         if (m_ctx.flows)
                             m_ctx.flows->add(info);
                     }
                 }
-                switch (it->state) {
-                case State::Active:
+                QMutexLocker lock(&m_connMutex);
+                if (m_conns.size() > 8192) {   // bound growth if some closes are missed
+                    const qint64 cutoff = c.createdMs - 120000;
+                    for (auto i = m_conns.begin(); i != m_conns.end();) {
+                        if (i->createdMs < cutoff)
+                            i = m_conns.erase(i);
+                        else
+                            ++i;
+                    }
+                }
+                st = c.state;
+                std::memcpy(rdst, c.realDst, 16);
+                rport = c.realPort;
+                have = true;
+                m_conns.insert(ep.srcPort, c);
+            }
+            if (have) {
+                // Scope the action to this connection's real destination: the
+                // source port alone is not unique (the relay's own upstream
+                // connections draw from the same ephemeral range).
+                const bool toRealDst = ep.dstPort == rport && std::memcmp(ep.dst, rdst, 16) == 0;
+                if (st == State::Active && toRealDst) {
                     // Self-redirect: destination becomes the source IP, relay port;
-                    // the source port is preserved so the relay can match the flow.
-                    lock.unlock();
+                    // the source port is preserved so the relay recovers the flow.
                     wdpkt::setTcpDst(buf.data(), len, ep.src, m_relayPort);
                     addr.Outbound = 0;   // deliver inbound to the local relay
                     addr.Loopback = 1;
                     rewritten = true;
-                    break;
-                case State::Blocked:
+                    ++nDnat;
+                } else if (st == State::Blocked && toRealDst) {
                     drop = true;
-                    break;
-                default:   // Passthrough / Pending-not-ours
-                    break;
+                    ++nBlock;
                 }
             }
         } else if (addr.Loopback && ep.srcPort == m_relayPort) {
@@ -379,12 +394,50 @@ void WinDivertInterceptor::networkLoop()
                 addr.Outbound = 0;   // deliver inbound to the application
                 addr.Loopback = 0;
                 rewritten = true;
+                ++nRev;
             }
         }
 
         if (drop)
             continue;
         (void)rewritten;
-        api->send(m_networkHandle, buf.data(), len, nullptr, &addr);
+        if (!api->send(m_networkHandle, buf.data(), len, nullptr, &addr))
+            ++nSendFail;
+
+        const qint64 now = QDateTime::currentMSecsSinceEpoch();
+        if (now - lastStat >= 2000) {
+            lastStat = now;
+            int conns;
+            { QMutexLocker lock(&m_connMutex); conns = m_conns.size(); }
+            logDebug(QStringLiteral("WinDivert: cap=%1 dnat=%2 rev=%3 block=%4 sendfail=%5 conns=%6")
+                         .arg(nCap).arg(nDnat).arg(nRev).arg(nBlock).arg(nSendFail).arg(conns));
+        }
+    }
+}
+
+void WinDivertInterceptor::dnsLoop()
+{
+    const WinDivertApi *api = WinDivertApi::instance();
+    std::vector<unsigned char> buf(WINDIVERT_MTU_MAX);
+    WINDIVERT_ADDRESS addr;
+    UINT len = 0;
+    while (m_running) {
+        if (!api->recv(m_dnsHandle, buf.data(), UINT(buf.size()), &len, &addr)) {
+            if (!m_running)
+                break;
+            continue;
+        }
+        const unsigned char *payload = nullptr;
+        unsigned plen = 0;
+        if (!wdpkt::udpPayload(buf.data(), len, &payload, &plen) || !m_ctx.dnsCache)
+            continue;   // sniffing only; nothing is reinjected
+        dns::Question q;
+        QList<dns::Answer> answers;
+        if (!dns::parseAnswers(QByteArray::fromRawData(reinterpret_cast<const char *>(payload), int(plen)), &q, &answers))
+            continue;
+        for (const auto &a : answers) {
+            if ((a.type == dns::TypeA || a.type == dns::TypeAAAA) && !a.address.isNull() && !FakeDns::isFake(a.address))
+                m_ctx.dnsCache->insert(a.address, q.name);
+        }
     }
 }
