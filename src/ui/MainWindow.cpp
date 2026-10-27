@@ -393,6 +393,7 @@ void MainWindow::createCentral()
     auto *h = m_connView->header();
     h->resizeSection(ConnectionsModel::ColApplication, 190);
     h->resizeSection(ConnectionsModel::ColTarget, 260);
+    h->resizeSection(ConnectionsModel::ColProto, 90);
     h->resizeSection(ConnectionsModel::ColTimeStatus, 110);
     h->resizeSection(ConnectionsModel::ColRuleProxy, 280);
     h->resizeSection(ConnectionsModel::ColSent, 90);

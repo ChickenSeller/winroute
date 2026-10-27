@@ -134,6 +134,7 @@ public:
         ev.ruleName = m_info.match.ruleName;
         ev.actionText = m_actionText;
         ev.actionType = m_info.match.action.type;
+        ev.v6 = m_info.srcAddr.protocol() == QAbstractSocket::IPv6Protocol;
         ev.startMs = m_start;
         emit m_relay->opened(ev);
         m_announced = true;
@@ -267,6 +268,7 @@ private:
             ev.ruleName = m_info.match.ruleName;
             ev.actionText = m_actionText;
         ev.actionType = m_info.match.action.type;
+            ev.v6 = m_info.srcAddr.protocol() == QAbstractSocket::IPv6Protocol;
             ev.startMs = m_start;
             emit m_relay->opened(ev);
         }
@@ -400,6 +402,15 @@ void Relay::udpOut(const UdpDatagram &dg)
     }
     // The constructor takes the first datagram, so do not send it again here.
     auto *s = new UdpRelaySession(this, dg, *p, this);
+    // With a backend injector (WinDivert), the session delivers replies and
+    // bypassed datagrams through it instead of the NetFilter driver API.
+    if (m_udpInjector.deliver) {
+        const QByteArray local = dg.localEndpoint;
+        const UdpInjector inj = m_udpInjector;
+        s->setSinks(
+            [inj, local](const QByteArray &appRemote, const QByteArray &payload) { inj.deliver(local, appRemote, payload); },
+            [inj](const UdpDatagram &d) { inj.bypass(d); });
+    }
     m_udpSessions.insert(dg.id, s);
 
     ConnectionEvent ev;
@@ -412,6 +423,7 @@ void Relay::udpOut(const UdpDatagram &dg)
     ev.actionText = QString("%1:%2 %3").arg(p->address).arg(p->port).arg(proxyTypeToString(p->type));
     ev.actionType = ActionType::Proxy;
     ev.udp = true;
+    ev.v6 = dg.v6;
     ev.startMs = QDateTime::currentMSecsSinceEpoch();
     emit opened(ev);
 }

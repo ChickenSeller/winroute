@@ -884,6 +884,7 @@ void NetFilterInterceptor::handleUdpProxy(ENDPOINT_ID id, const unsigned char *r
         int salen = sizeof(sockaddr_in);
         if (sa->sa_family == AF_INET6)
             salen = sizeof(sockaddr_in6);
+        dg.v6 = sa->sa_family == AF_INET6;
         dg.remote = QByteArray(reinterpret_cast<const char *>(remote), salen);
         dg.hostname = host;
         dg.fakeIp = fake;

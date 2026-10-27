@@ -626,8 +626,8 @@ static QByteArray runUdp(Relay *relay, const ProxyServer &proxy, const UdpDatagr
 {
     QByteArray payload;
     auto *s = new UdpRelaySession(relay, dg, proxy);
-    s->setTestSinks([&](const QByteArray &r, const QByteArray &pl) { if (gotRemote) *gotRemote = r; payload = pl; },
-                    [&](const UdpDatagram &) { if (bypassed) *bypassed = true; });
+    s->setSinks([&](const QByteArray &r, const QByteArray &pl) { if (gotRemote) *gotRemote = r; payload = pl; },
+                [&](const UdpDatagram &) { if (bypassed) *bypassed = true; });
     QElapsedTimer t;
     t.start();
     while (payload.isEmpty() && (!bypassed || !*bypassed) && t.elapsed() < 5000)
@@ -769,6 +769,39 @@ static void testWinDivertPacket()
     // Non-TCP / too-short buffers are rejected.
     unsigned char bad[8] = {0x45, 0, 0, 8, 0, 0, 0, 0};
     CHECK(!wdpkt::readTcp(bad, sizeof(bad), &ep));
+
+    // --- UDP build + parse round-trip (IPv4) ----------------------------------
+    const unsigned char us[4] = {192, 168, 1, 10};
+    const unsigned char ud[4] = {8, 8, 8, 8};
+    const unsigned char msg[9] = {'h', 'e', 'l', 'l', 'o', '-', 'u', 'd', 'p'};
+    unsigned char ub[64];
+    const unsigned un = wdpkt::buildUdp(false, us, 5555, ud, 53, msg, sizeof(msg), ub, sizeof(ub));
+    CHECK(un == 20 + 8 + sizeof(msg));
+    CHECK(onesSum(ub, 20) == 0xffff);                 // IPv4 header checksum valid
+    {
+        // UDP checksum (pseudo-header + segment) valid.
+        quint32 pseudo = (quint32(ub[12]) << 8 | ub[13]) + (quint32(ub[14]) << 8 | ub[15])
+                         + (quint32(ub[16]) << 8 | ub[17]) + (quint32(ub[18]) << 8 | ub[19])
+                         + 17u /*proto*/ + (8u + sizeof(msg)) /*udp length*/;
+        CHECK(onesSum(ub + 20, int(8 + sizeof(msg)), pseudo) == 0xffff);
+    }
+    wdpkt::Endpoints uep;
+    const unsigned char *up = nullptr;
+    unsigned upl = 0;
+    CHECK(wdpkt::readUdp(ub, un, &uep, &up, &upl));
+    CHECK(!uep.v6 && uep.srcPort == 5555 && uep.dstPort == 53 && upl == sizeof(msg));
+    CHECK(std::memcmp(up, msg, sizeof(msg)) == 0);
+    CHECK(std::memcmp(uep.src, us, 4) == 0 && std::memcmp(uep.dst, ud, 4) == 0);
+
+    // --- UDP build + parse round-trip (IPv6) ----------------------------------
+    unsigned char us6[16] = {0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x0a};
+    unsigned char ud6[16] = {0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0, 0, 0, 0, 0, 0, 0, 0, 0x88, 0x88};
+    unsigned char ub6[80];
+    const unsigned un6 = wdpkt::buildUdp(true, us6, 6000, ud6, 53, msg, sizeof(msg), ub6, sizeof(ub6));
+    CHECK(un6 == 40 + 8 + sizeof(msg));
+    CHECK(wdpkt::readUdp(ub6, un6, &uep, &up, &upl));
+    CHECK(uep.v6 && uep.srcPort == 6000 && uep.dstPort == 53 && upl == sizeof(msg));
+    CHECK(std::memcmp(uep.src, us6, 16) == 0 && std::memcmp(uep.dst, ud6, 16) == 0);
 }
 
 int main(int argc, char **argv)

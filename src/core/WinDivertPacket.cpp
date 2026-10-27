@@ -158,33 +158,126 @@ bool recalcTcpChecksums(uint8_t *data, unsigned len)
     return true;
 }
 
-bool udpPayload(const uint8_t *data, unsigned len, const uint8_t **payload, unsigned *payloadLen)
+namespace {
+constexpr uint8_t kProtoUdp = 17;
+
+// Locates the UDP header of an IPv4/IPv6 packet. Returns the IP header length
+// via ipHdr and whether it is IPv6; false if not a parseable UDP datagram.
+bool parseUdp(const uint8_t *data, unsigned len, unsigned *ipHdr, bool *v6)
 {
     if (len < 20)
         return false;
-    constexpr uint8_t kProtoUdp = 17;
-    unsigned ipHdr;
     const uint8_t version = data[0] >> 4;
     if (version == 4) {
-        ipHdr = (data[0] & 0x0f) * 4u;
-        if (ipHdr < 20 || data[9] != kProtoUdp)
+        *ipHdr = (data[0] & 0x0f) * 4u;
+        if (*ipHdr < 20 || data[9] != kProtoUdp)
             return false;
+        *v6 = false;
     } else if (version == 6) {
-        ipHdr = 40;
+        *ipHdr = 40;
         if (len < 40 || data[6] != kProtoUdp)
             return false;
+        *v6 = true;
     } else {
         return false;
     }
-    if (len < ipHdr + 8)
+    if (len < *ipHdr + 8)
+        return false;
+    const uint8_t *udp = data + *ipHdr;
+    const unsigned udpLen = (unsigned(udp[4]) << 8) | udp[5];   // header + data
+    return udpLen >= 8 && *ipHdr + udpLen <= len;
+}
+} // namespace
+
+bool udpPayload(const uint8_t *data, unsigned len, const uint8_t **payload, unsigned *payloadLen)
+{
+    unsigned ipHdr;
+    bool v6;
+    if (!parseUdp(data, len, &ipHdr, &v6))
         return false;
     const uint8_t *udp = data + ipHdr;
-    const unsigned udpLen = (unsigned(udp[4]) << 8) | udp[5];   // header + data
-    if (udpLen < 8 || ipHdr + udpLen > len)
-        return false;
+    const unsigned udpLen = (unsigned(udp[4]) << 8) | udp[5];
     *payload = udp + 8;
     *payloadLen = udpLen - 8;
     return true;
+}
+
+bool readUdp(const uint8_t *data, unsigned len, Endpoints *out, const uint8_t **payload, unsigned *payloadLen)
+{
+    unsigned ipHdr;
+    bool v6;
+    if (!parseUdp(data, len, &ipHdr, &v6))
+        return false;
+    out->v6 = v6;
+    out->syn = false;
+    std::memset(out->src, 0, sizeof(out->src));
+    std::memset(out->dst, 0, sizeof(out->dst));
+    if (v6) {
+        std::memcpy(out->src, data + 8, 16);
+        std::memcpy(out->dst, data + 24, 16);
+    } else {
+        std::memcpy(out->src, data + 12, 4);
+        std::memcpy(out->dst, data + 16, 4);
+    }
+    const uint8_t *udp = data + ipHdr;
+    out->srcPort = (uint16_t(udp[0]) << 8) | udp[1];
+    out->dstPort = (uint16_t(udp[2]) << 8) | udp[3];
+    const unsigned udpLen = (unsigned(udp[4]) << 8) | udp[5];
+    *payload = udp + 8;
+    *payloadLen = udpLen - 8;
+    return true;
+}
+
+unsigned buildUdp(bool v6, const uint8_t *src, uint16_t srcPort, const uint8_t *dst, uint16_t dstPort,
+                  const uint8_t *payload, unsigned payloadLen, uint8_t *out, unsigned outCap)
+{
+    const unsigned ipHdr = v6 ? 40u : 20u;
+    const unsigned total = ipHdr + 8 + payloadLen;
+    if (total > outCap || total > 0xffff)
+        return 0;
+    std::memset(out, 0, ipHdr + 8);
+    uint8_t *udp = out + ipHdr;
+    const unsigned udpLen = 8 + payloadLen;
+    if (!v6) {
+        out[0] = 0x45;
+        store16(out + 2, uint16_t(total));
+        out[8] = 64;             // TTL
+        out[9] = kProtoUdp;
+        std::memcpy(out + 12, src, 4);
+        std::memcpy(out + 16, dst, 4);
+    } else {
+        out[0] = 0x60;
+        store16(out + 4, uint16_t(udpLen));   // payload length
+        out[6] = kProtoUdp;
+        out[7] = 64;             // hop limit
+        std::memcpy(out + 8, src, 16);
+        std::memcpy(out + 24, dst, 16);
+    }
+    store16(udp + 0, srcPort);
+    store16(udp + 2, dstPort);
+    store16(udp + 4, uint16_t(udpLen));
+    std::memcpy(udp + 8, payload, payloadLen);
+
+    // Checksums: IPv4 header, then the UDP checksum (pseudo-header + segment).
+    if (!v6)
+        store16(out + 10, fold(addBytes(out, 20, 0)));
+    uint32_t acc = 0;
+    if (!v6) {
+        acc = addBytes(out + 12, 8, acc);
+        acc += kProtoUdp;
+        acc += udpLen;
+    } else {
+        acc = addBytes(out + 8, 32, acc);
+        acc += (udpLen >> 16) & 0xffff;
+        acc += udpLen & 0xffff;
+        acc += kProtoUdp;
+    }
+    udp[6] = udp[7] = 0;
+    uint16_t ck = fold(addBytes(udp, int(udpLen), acc));
+    if (ck == 0)
+        ck = 0xffff;             // 0 means "no checksum"; use all-ones instead
+    store16(udp + 6, ck);
+    return total;
 }
 
 } // namespace wdpkt

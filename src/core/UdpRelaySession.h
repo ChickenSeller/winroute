@@ -44,12 +44,13 @@ public:
     // "host:port" (or "ip:port") for a datagram's target, for the connection list.
     static QString targetText(const QByteArray &remote, const QString &hostname);
 
-    // For tests: deliver replies and bypassed datagrams to callbacks instead of
-    // the driver, so no netfilter driver is needed. Must be set before the event
-    // loop runs the deferred start().
+    // Deliver replies and bypassed datagrams to callbacks instead of the NetFilter
+    // driver API. Used by the WinDivert backend (which injects the packets itself)
+    // and by tests (no driver needed). Must be set before the event loop runs the
+    // deferred start().
     using DeliverSink = std::function<void(const QByteArray &appRemote, const QByteArray &payload)>;
     using BypassSink = std::function<void(const UdpDatagram &dg)>;
-    void setTestSinks(DeliverSink deliver, BypassSink bypass)
+    void setSinks(DeliverSink deliver, BypassSink bypass)
     {
         m_deliverSink = std::move(deliver);
         m_bypassSink = std::move(bypass);

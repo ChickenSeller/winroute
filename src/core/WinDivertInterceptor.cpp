@@ -1,3 +1,6 @@
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
 #include "WinDivertInterceptor.h"
 
 #include "DnsMessage.h"
@@ -5,6 +8,7 @@
 #include "FlowTable.h"
 #include "Logger.h"
 #include "ProcessInfo.h"
+#include "Relay.h"
 #include "Utils.h"
 #include "WinDivertApi.h"
 #include "WinDivertPacket.h"
@@ -29,6 +33,47 @@ QHostAddress hostFromBytes(const quint8 *b, bool v6)
         return util::normalize(QHostAddress(b));
     const quint32 h = (quint32(b[0]) << 24) | (quint32(b[1]) << 16) | (quint32(b[2]) << 8) | b[3];
     return QHostAddress(h);
+}
+
+// Packs network-order address bytes + port into sockaddr_in/in6 bytes (the form
+// UdpDatagram.remote/localEndpoint and UdpRelaySession::targetText expect).
+QByteArray makeSockaddr(const quint8 *addr, bool v6, quint16 port)
+{
+    if (v6) {
+        sockaddr_in6 sa{};
+        sa.sin6_family = AF_INET6;
+        sa.sin6_port = htons(port);
+        std::memcpy(&sa.sin6_addr, addr, 16);
+        return QByteArray(reinterpret_cast<const char *>(&sa), sizeof(sa));
+    }
+    sockaddr_in sa{};
+    sa.sin_family = AF_INET;
+    sa.sin_port = htons(port);
+    std::memcpy(&sa.sin_addr, addr, 4);
+    return QByteArray(reinterpret_cast<const char *>(&sa), sizeof(sa));
+}
+
+bool parseSockaddr(const QByteArray &b, quint8 out[16], bool *v6, quint16 *port)
+{
+    std::memset(out, 0, 16);
+    if (b.size() < int(sizeof(sockaddr)))
+        return false;
+    const auto *sa = reinterpret_cast<const sockaddr *>(b.constData());
+    if (sa->sa_family == AF_INET6 && b.size() >= int(sizeof(sockaddr_in6))) {
+        const auto *s6 = reinterpret_cast<const sockaddr_in6 *>(b.constData());
+        std::memcpy(out, &s6->sin6_addr, 16);
+        *port = ntohs(s6->sin6_port);
+        *v6 = true;
+        return true;
+    }
+    if (sa->sa_family == AF_INET && b.size() >= int(sizeof(sockaddr_in))) {
+        const auto *s4 = reinterpret_cast<const sockaddr_in *>(b.constData());
+        std::memcpy(out, &s4->sin_addr, 4);
+        *port = ntohs(s4->sin_port);
+        *v6 = false;
+        return true;
+    }
+    return false;
 }
 
 // State of the "WinDivert" kernel service, or 0 if it does not exist.
@@ -149,14 +194,35 @@ bool WinDivertInterceptor::start(const InterceptorContext &ctx, QString *error)
     m_dnsHandle = api->open("inbound and udp and udp.SrcPort == 53", WINDIVERT_LAYER_NETWORK, -101,
                             WINDIVERT_FLAG_SNIFF | WINDIVERT_FLAG_RECV_ONLY);
 
+    // UDP over SOCKS5, when the profile asks for it: capture outbound UDP (except
+    // DNS, which the sniff above needs to see) and tunnel the proxied flows. The
+    // relay injects replies and bypassed datagrams back through us.
+    bool udpProxy;
+    { QMutexLocker lock(&m_rulesMutex); udpProxy = m_udpProxyMode; }
+    if (udpProxy) {
+        m_udpHandle = api->open("outbound and udp and not loopback and not impostor and udp.DstPort != 53",
+                                WINDIVERT_LAYER_NETWORK, -102, 0);
+        if (m_udpHandle != INVALID_HANDLE_VALUE && m_ctx.relay) {
+            UdpInjector inj;
+            inj.deliver = [this](const QByteArray &local, const QByteArray &appRemote, const QByteArray &payload) {
+                injectUdpReply(local, appRemote, payload);
+            };
+            inj.bypass = [this](const UdpDatagram &dg) { injectUdpBypass(dg); };
+            m_ctx.relay->setUdpInjector(inj);
+        }
+    }
+
     {
         QMutexLocker lock(&m_connMutex);
         m_conns.clear();
     }
+    { QMutexLocker lock(&m_udpMutex); m_udpConns.clear(); }
     m_running = true;
     m_networkThread = std::thread([this] { networkLoop(); });
     if (m_dnsHandle != INVALID_HANDLE_VALUE)
         m_dnsThread = std::thread([this] { dnsLoop(); });
+    if (m_udpHandle != INVALID_HANDLE_VALUE)
+        m_udpThread = std::thread([this] { udpLoop(); });
     return true;
 }
 
@@ -169,22 +235,27 @@ void WinDivertInterceptor::stop()
     // the loop drains and reinjects whatever is already queued, so no in-flight
     // packet is dropped (closing with packets queued would hiccup even direct
     // connections). The DNS handle only sniffs, so a full shutdown is fine.
+    if (m_ctx.relay)
+        m_ctx.relay->setUdpInjector(UdpInjector{});
     if (m_networkHandle != INVALID_HANDLE_VALUE)
         api->shutdown(m_networkHandle, WINDIVERT_SHUTDOWN_RECV);
+    if (m_udpHandle != INVALID_HANDLE_VALUE)
+        api->shutdown(m_udpHandle, WINDIVERT_SHUTDOWN_RECV);
     if (m_dnsHandle != INVALID_HANDLE_VALUE)
         api->shutdown(m_dnsHandle, WINDIVERT_SHUTDOWN_BOTH);
     if (m_networkThread.joinable())
         m_networkThread.join();
+    if (m_udpThread.joinable())
+        m_udpThread.join();
     if (m_dnsThread.joinable())
         m_dnsThread.join();
-    if (m_networkHandle != INVALID_HANDLE_VALUE) {
-        api->close(m_networkHandle);
-        m_networkHandle = INVALID_HANDLE_VALUE;
+    for (HANDLE *h : {&m_networkHandle, &m_udpHandle, &m_dnsHandle}) {
+        if (*h != INVALID_HANDLE_VALUE) {
+            api->close(*h);
+            *h = INVALID_HANDLE_VALUE;
+        }
     }
-    if (m_dnsHandle != INVALID_HANDLE_VALUE) {
-        api->close(m_dnsHandle);
-        m_dnsHandle = INVALID_HANDLE_VALUE;
-    }
+    { QMutexLocker lock(&m_udpMutex); m_udpConns.clear(); }
     QMutexLocker lock(&m_connMutex);
     m_conns.clear();
 }
@@ -192,7 +263,9 @@ void WinDivertInterceptor::stop()
 void WinDivertInterceptor::setRules(RuleEnginePtr rules)
 {
     QSet<QString> endpoints;
+    bool udpProxy = false;
     if (rules) {
+        udpProxy = rules->profile().options.udpMode == QLatin1String("mode_proxy");
         for (const ProxyServer &p : rules->profile().proxies) {
             const QHostAddress literal(p.address);
             if (!literal.isNull())
@@ -202,6 +275,7 @@ void WinDivertInterceptor::setRules(RuleEnginePtr rules)
     QMutexLocker lock(&m_rulesMutex);
     m_rules = std::move(rules);
     m_proxyEndpoints = endpoints;
+    m_udpProxyMode = udpProxy;   // whether to tunnel UDP; read by start()
 }
 
 RuleEnginePtr WinDivertInterceptor::rules() const
@@ -447,4 +521,229 @@ void WinDivertInterceptor::dnsLoop()
                 m_ctx.dnsCache->insert(a.address, q.name);
         }
     }
+}
+
+int WinDivertInterceptor::decideUdp(const RuleMatch &match, bool skip, const Profile &profile,
+                                    const ProfileOptions &opt, const QHostAddress &dst, quint16 dport,
+                                    const QString &appName, const QString &target, int *proxyId) const
+{
+    *proxyId = 0;
+    if (skip)
+        return UdpBypass;
+    switch (match.action.type) {
+    case ActionType::Block:
+        logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : blocked (UDP)").arg(appName, target, match.ruleName));
+        return UdpDrop;
+    case ActionType::Direct:
+        return UdpBypass;
+    case ActionType::Proxy: {
+        if (opt.loopDetection) {
+            QMutexLocker lock(&m_rulesMutex);
+            if (m_proxyEndpoints.contains(util::formatEndpoint(dst, dport)))
+                return UdpBypass;
+        }
+        const ProxyServer *p = profile.proxyById(match.action.id);
+        if (!p)
+            return UdpBypass;
+        if (p->type == ProxyType::Socks5) {
+            *proxyId = p->id;
+            return UdpProxy;
+        }
+        logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : %4 does not support UDP, sending directly")
+                      .arg(appName, target, match.ruleName, proxyTypeToString(p->type)));
+        return UdpBypass;
+    }
+    case ActionType::Chain:
+        logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : proxy chains do not support UDP, sending directly").arg(appName, target, match.ruleName));
+        return UdpBypass;
+    }
+    return UdpBypass;
+}
+
+void WinDivertInterceptor::udpLoop()
+{
+    const WinDivertApi *api = WinDivertApi::instance();
+    std::vector<unsigned char> buf(WINDIVERT_MTU_MAX);
+    WINDIVERT_ADDRESS addr;
+    UINT len = 0;
+
+    while (true) {
+        if (!api->recv(m_udpHandle, buf.data(), UINT(buf.size()), &len, &addr)) {
+            if (!m_running)
+                break;
+            continue;
+        }
+        wdpkt::Endpoints ep;
+        const unsigned char *payload = nullptr;
+        unsigned plen = 0;
+        if (!wdpkt::readUdp(buf.data(), len, &ep, &payload, &plen)) {
+            api->send(m_udpHandle, buf.data(), len, nullptr, &addr);
+            continue;
+        }
+        const QHostAddress src = hostFromBytes(ep.src, ep.v6);
+        const QHostAddress dst = hostFromBytes(ep.dst, ep.v6);
+        const QString targetKey = util::formatEndpoint(dst, ep.dstPort);
+
+        quint64 sessId = 0;
+        bool known = false, skip = false;
+        quint32 pid = 0;
+        QString appName, appPath;
+        int decision = -1, proxyId = 0;
+        {
+            QMutexLocker lock(&m_udpMutex);
+            UdpConn &c = m_udpConns[ep.srcPort];
+            c.lastMs = QDateTime::currentMSecsSinceEpoch();
+            known = c.id != 0;
+            if (!known) {
+                c.id = m_nextUdpId++;
+                c.v6 = ep.v6;
+                c.ifIdx = addr.Network.IfIdx;
+                c.subIfIdx = addr.Network.SubIfIdx;
+            } else if (!c.skip) {
+                auto it = c.decisions.constFind(targetKey);
+                if (it != c.decisions.constEnd()) {
+                    decision = it->first;
+                    proxyId = it->second;
+                }
+            }
+            sessId = c.id;
+            skip = c.skip;
+            pid = c.pid;
+            appName = c.appName;
+            appPath = c.appPath;
+        }
+
+        if (!known) {
+            // Classify the new socket by its owning process (TCP table analogue).
+            const quint32 owner = procinfo::udpOwnerPid(src, ep.srcPort);
+            bool s = owner == 0 || owner == m_selfPid;
+            QString aName, aPath;
+            if (!s) {
+                procinfo::Info pinfo = procinfo::lookup(owner);
+                aPath = pinfo.path;
+                aName = pinfo.path.isEmpty() ? pinfo.name : QFileInfo(pinfo.path).fileName();
+                const RuleEnginePtr engine = rules();
+                const ProfileOptions opt = engine ? engine->profile().options : ProfileOptions{};
+                const bool isService = owner == 4 || pinfo.sessionId == 0;
+                const bool otherUser = !isService && pinfo.sessionId != m_selfSession;
+                s = (isService && !opt.processServices) || (otherUser && !opt.processOtherUsers);
+            }
+            QMutexLocker lock(&m_udpMutex);
+            UdpConn &c = m_udpConns[ep.srcPort];
+            c.pid = owner;
+            c.appName = aName;
+            c.appPath = aPath;
+            c.skip = s;
+            skip = s;
+            pid = owner;
+            appName = aName;
+            appPath = aPath;
+        }
+
+        if (!skip && decision < 0) {
+            const RuleEnginePtr engine = rules();
+            if (!engine) {
+                decision = UdpBypass;
+            } else {
+                const QString host = m_ctx.dnsCache ? m_ctx.dnsCache->lookup(dst) : QString();
+                ConnectionRequest req;
+                req.appPath = appPath;
+                req.appName = appName;
+                req.pid = pid;
+                req.ip = dst;
+                req.hostname = host;
+                req.port = ep.dstPort;
+                const RuleMatch match = engine->match(req);
+                const QString target = host.isEmpty() ? targetKey : QString("%1:%2").arg(host).arg(ep.dstPort);
+                decision = decideUdp(match, false, engine->profile(), engine->profile().options, dst, ep.dstPort, appName, target, &proxyId);
+                QMutexLocker lock(&m_udpMutex);
+                auto it = m_udpConns.find(ep.srcPort);
+                if (it != m_udpConns.end())
+                    it->decisions.insert(targetKey, {decision, proxyId});
+            }
+        }
+        if (skip)
+            decision = UdpBypass;
+
+        if (decision == UdpDrop)
+            continue;   // blocked
+        if (decision == UdpProxy && m_ctx.relay) {
+            UdpDatagram dg;
+            dg.id = sessId;
+            dg.proxyId = proxyId;
+            dg.pid = pid;
+            dg.appName = appName;
+            dg.appPath = appPath;
+            dg.remote = makeSockaddr(ep.dst, ep.v6, ep.dstPort);
+            dg.localEndpoint = makeSockaddr(ep.src, ep.v6, ep.srcPort);
+            dg.v6 = ep.v6;
+            dg.hostname = m_ctx.dnsCache ? m_ctx.dnsCache->lookup(dst) : QString();
+            dg.data = QByteArray(reinterpret_cast<const char *>(payload), int(plen));
+            Relay *relay = m_ctx.relay;
+            QMetaObject::invokeMethod(relay, [relay, dg] { relay->udpOut(dg); }, Qt::QueuedConnection);
+            continue;   // consumed: the relay sends it through the proxy
+        }
+        // Bypass: let the datagram go out unchanged.
+        api->send(m_udpHandle, buf.data(), len, nullptr, &addr);
+    }
+}
+
+void WinDivertInterceptor::injectUdpReply(const QByteArray &localEndpoint, const QByteArray &appRemote,
+                                          const QByteArray &payload)
+{
+    if (m_udpHandle == INVALID_HANDLE_VALUE)
+        return;
+    quint8 la[16], ra[16];
+    bool lv6, rv6;
+    quint16 lport, rport;
+    if (!parseSockaddr(localEndpoint, la, &lv6, &lport) || !parseSockaddr(appRemote, ra, &rv6, &rport) || lv6 != rv6)
+        return;
+    std::vector<unsigned char> pkt(size_t(lv6 ? 40 : 20) + 8 + payload.size());
+    // Reply appears to come from the address the app sent to (ra), to the app (la).
+    const unsigned n = wdpkt::buildUdp(lv6, ra, rport, la, lport,
+                                       reinterpret_cast<const uint8_t *>(payload.constData()), unsigned(payload.size()),
+                                       pkt.data(), unsigned(pkt.size()));
+    if (!n)
+        return;
+    WINDIVERT_ADDRESS addr{};
+    addr.Outbound = 0;   // inbound: delivered to the application
+    addr.IPv6 = lv6 ? 1 : 0;
+    {
+        QMutexLocker lock(&m_udpMutex);
+        auto it = m_udpConns.find(lport);
+        if (it != m_udpConns.end()) {
+            addr.Network.IfIdx = it->ifIdx;
+            addr.Network.SubIfIdx = it->subIfIdx;
+        }
+    }
+    WinDivertApi::instance()->send(m_udpHandle, pkt.data(), n, nullptr, &addr);
+}
+
+void WinDivertInterceptor::injectUdpBypass(const UdpDatagram &dg)
+{
+    if (m_udpHandle == INVALID_HANDLE_VALUE)
+        return;
+    quint8 la[16], ra[16];
+    bool lv6, rv6;
+    quint16 lport, rport;
+    if (!parseSockaddr(dg.localEndpoint, la, &lv6, &lport) || !parseSockaddr(dg.remote, ra, &rv6, &rport) || lv6 != rv6)
+        return;
+    std::vector<unsigned char> pkt(size_t(lv6 ? 40 : 20) + 8 + dg.data.size());
+    const unsigned n = wdpkt::buildUdp(lv6, la, lport, ra, rport,
+                                       reinterpret_cast<const uint8_t *>(dg.data.constData()), unsigned(dg.data.size()),
+                                       pkt.data(), unsigned(pkt.size()));
+    if (!n)
+        return;
+    WINDIVERT_ADDRESS addr{};
+    addr.Outbound = 1;   // outbound: sent directly to the target
+    addr.IPv6 = lv6 ? 1 : 0;
+    {
+        QMutexLocker lock(&m_udpMutex);
+        auto it = m_udpConns.find(lport);
+        if (it != m_udpConns.end()) {
+            addr.Network.IfIdx = it->ifIdx;
+            addr.Network.SubIfIdx = it->subIfIdx;
+        }
+    }
+    WinDivertApi::instance()->send(m_udpHandle, pkt.data(), n, nullptr, &addr);
 }

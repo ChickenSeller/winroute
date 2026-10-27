@@ -64,7 +64,8 @@ QVariant ConnectionsModel::data(const QModelIndex &index, int role) const
             if (role == Qt::ToolTipRole)
                 return tr("%1 (pid %2)").arg(r.ev.appPath.isEmpty() ? r.ev.appName : r.ev.appPath).arg(r.ev.pid);
             return r.ev.appName;
-        case ColTarget: return r.ev.udp ? tr("%1 (UDP)").arg(r.ev.target) : r.ev.target;
+        case ColTarget: return r.ev.target;
+        case ColProto: return QString("%1 · %2").arg(r.ev.udp ? "UDP" : "TCP", r.ev.v6 ? "IPv6" : "IPv4");
         case ColTimeStatus: return timeStatus(r.status, r.ev.startMs, r.closedMs);
         case ColRuleProxy: return QString("%1 : %2").arg(r.ev.ruleName, r.ev.actionText);
         case ColSent: return util::formatBytes(r.sent);
@@ -104,6 +105,7 @@ QVariant ConnectionsModel::headerData(int section, Qt::Orientation o, int role) 
     switch (section) {
     case ColApplication: return tr("Application");
     case ColTarget: return tr("Target");
+    case ColProto: return tr("Protocol");
     case ColTimeStatus: return tr("Time/Status");
     case ColRuleProxy: return tr("Rule : Proxy");
     case ColSent: return tr("Sent");
@@ -124,6 +126,7 @@ void ConnectionsModel::sort(int column, Qt::SortOrder order)
             switch (column) {
             case ColApplication: return r.ev.appName.toLower();
             case ColTarget: return r.ev.target.toLower();
+            case ColProto: return QString("%1%2").arg(r.ev.udp ? "1" : "0", r.ev.v6 ? "1" : "0");
             case ColTimeStatus: return r.ev.startMs;
             case ColRuleProxy: return r.ev.ruleName.toLower();
             case ColSent: return r.sent;

@@ -58,16 +58,16 @@
       <translation>%1（PID %2）</translation>
     </message>
     <message>
-      <source>%1 (UDP)</source>
-      <translation>%1 (UDP)</translation>
-    </message>
-    <message>
       <source>Application</source>
       <translation>アプリケーション</translation>
     </message>
     <message>
       <source>Target</source>
       <translation>接続先</translation>
+    </message>
+    <message>
+      <source>Protocol</source>
+      <translation>プロトコル</translation>
     </message>
     <message>
       <source>Time/Status</source>

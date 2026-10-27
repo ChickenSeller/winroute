@@ -51,7 +51,18 @@ public:
 private:
     void networkLoop();
     void dnsLoop();          // sniffs DNS responses to learn IP -> host names
+    void udpLoop();          // captures outbound UDP and tunnels proxied flows
     RuleEnginePtr rules() const;
+
+    // UDP classification result for one (socket, target).
+    enum UdpDecision { UdpBypass, UdpProxy, UdpDrop };
+    int decideUdp(const RuleMatch &match, bool skip, const Profile &profile, const ProfileOptions &opt,
+                  const QHostAddress &dst, quint16 dport, const QString &appName, const QString &target,
+                  int *proxyId) const;
+
+    // Injection callbacks given to the relay (run on the relay thread).
+    void injectUdpReply(const QByteArray &localEndpoint, const QByteArray &appRemote, const QByteArray &payload);
+    void injectUdpBypass(const struct UdpDatagram &dg);
 
     // One tracked outgoing TCP connection, keyed by the application's local port.
     // Classified once, on its SYN; later packets are matched to the record.
@@ -83,8 +94,10 @@ private:
 
     HANDLE m_networkHandle = INVALID_HANDLE_VALUE;
     HANDLE m_dnsHandle = INVALID_HANDLE_VALUE;
+    HANDLE m_udpHandle = INVALID_HANDLE_VALUE;
     std::thread m_networkThread;
     std::thread m_dnsThread;
+    std::thread m_udpThread;
 
     mutable QMutex m_rulesMutex;
     RuleEnginePtr m_rules;
@@ -92,4 +105,23 @@ private:
 
     mutable QMutex m_connMutex;
     QHash<quint16, Conn> m_conns;     // keyed by the application's local TCP port
+
+    // One tracked UDP socket, keyed by the application's local UDP port. The
+    // per-target decision is cached; ifIdx/v6 are kept to inject replies.
+    struct UdpConn {
+        quint64 id = 0;
+        quint32 pid = 0;
+        QString appName;
+        QString appPath;
+        bool skip = false;             // services / other users, when not handled
+        bool v6 = false;
+        quint32 ifIdx = 0;
+        quint32 subIfIdx = 0;
+        QHash<QString, QPair<int, int>> decisions;   // "ip:port" -> (UdpDecision, proxyId)
+        qint64 lastMs = 0;
+    };
+    bool m_udpProxyMode = false;       // udpMode == mode_proxy at start (guarded by m_rulesMutex)
+    mutable QMutex m_udpMutex;
+    QHash<quint16, UdpConn> m_udpConns;
+    quint64 m_nextUdpId = 1;
 };

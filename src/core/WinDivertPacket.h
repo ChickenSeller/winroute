@@ -36,4 +36,14 @@ bool recalcTcpChecksums(uint8_t *data, unsigned len);
 // Returns false if the buffer is not a parseable UDP datagram. Read-only.
 bool udpPayload(const uint8_t *data, unsigned len, const uint8_t **payload, unsigned *payloadLen);
 
+// Reads the endpoints of a UDP-over-IPv4/IPv6 packet and points payload at its
+// data. Returns false if the buffer is not a parseable UDP datagram.
+bool readUdp(const uint8_t *data, unsigned len, Endpoints *out, const uint8_t **payload, unsigned *payloadLen);
+
+// Builds a complete IPv4/IPv6 UDP packet (for injection) into out[outCap] and
+// returns its length, or 0 if it would not fit. addr buffers are 4 bytes for
+// IPv4, 16 for IPv6; ports are host order. Checksums are computed.
+unsigned buildUdp(bool v6, const uint8_t *src, uint16_t srcPort, const uint8_t *dst, uint16_t dstPort,
+                  const uint8_t *payload, unsigned payloadLen, uint8_t *out, unsigned outCap);
+
 } // namespace wdpkt

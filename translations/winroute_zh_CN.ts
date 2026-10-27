@@ -58,16 +58,16 @@
       <translation>%1（PID %2）</translation>
     </message>
     <message>
-      <source>%1 (UDP)</source>
-      <translation>%1 (UDP)</translation>
-    </message>
-    <message>
       <source>Application</source>
       <translation>应用程序</translation>
     </message>
     <message>
       <source>Target</source>
       <translation>目标</translation>
+    </message>
+    <message>
+      <source>Protocol</source>
+      <translation>协议</translation>
     </message>
     <message>
       <source>Time/Status</source>

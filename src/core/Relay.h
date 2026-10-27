@@ -10,6 +10,8 @@
 #include <QObject>
 #include <QTimer>
 
+#include <functional>
+
 class QTcpServer;
 class DnsClient;
 class RelaySession;
@@ -24,7 +26,8 @@ struct ConnectionEvent {
     QString ruleName;
     QString actionText;   // translated: "Direct", "1.2.3.4:1080 SOCKS5", "Chain Office"
     ActionType actionType = ActionType::Direct;
-    bool udp = false;     // a UDP flow (shown with a "UDP" marker), not a TCP connection
+    bool udp = false;     // a UDP flow, not a TCP connection
+    bool v6 = false;      // IPv6 (else IPv4)
     qint64 startMs = 0;
 };
 
@@ -42,6 +45,18 @@ struct UdpDatagram {
     bool fakeIp = false;
     QByteArray data;       // the datagram payload
     QByteArray opts;       // NF_UDP_OPTIONS bytes (flags + options), reused for the reply
+    QByteArray localEndpoint;  // app's local sockaddr (WinDivert backend injects replies to it)
+    bool v6 = false;       // IPv6 target (else IPv4)
+};
+
+// Lets a backend inject UDP itself instead of going through the NetFilter driver
+// API (the WinDivert backend crafts and reinjects packets). When set on the
+// relay, UDP sessions deliver replies and bypassed datagrams through these.
+struct UdpInjector {
+    // Deliver a reply to the application: source = the address it sent to.
+    std::function<void(const QByteArray &localEndpoint, const QByteArray &appRemote, const QByteArray &payload)> deliver;
+    // Send a datagram out directly (proxy could not associate).
+    std::function<void(const UdpDatagram &dg)> bypass;
 };
 
 struct TrafficSample {
@@ -82,6 +97,9 @@ public:
     void closeUdp(quint64 id);
     void udpSessionFinished(quint64 id, qint64 sent, qint64 received);
 
+    // Set by a backend that injects UDP itself (WinDivert); empty for NetFilter.
+    void setUdpInjector(UdpInjector injector) { m_udpInjector = std::move(injector); }
+
     DnsClient *dns() const { return m_dns; }
 
     // Redundancy chains remember failed proxies until the recheck time.
@@ -112,6 +130,7 @@ private:
     quint64 m_nextId = 1;
     QHash<quint64, RelaySession *> m_sessions;
     QHash<quint64, UdpRelaySession *> m_udpSessions;   // keyed by the driver endpoint id
+    UdpInjector m_udpInjector;                         // set by the WinDivert backend
     QTimer m_trafficTimer;
     QTimer m_expireTimer;
 

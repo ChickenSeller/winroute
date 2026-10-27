@@ -19,6 +19,9 @@ Info lookup(quint32 pid);
 // Owner pid of a local TCP endpoint, via GetExtendedTcpTable. 0 if not found.
 quint32 tcpOwnerPid(const QHostAddress &localAddr, quint16 localPort);
 
+// Owner pid of a local UDP endpoint, via GetExtendedUdpTable. 0 if not found.
+quint32 udpOwnerPid(const QHostAddress &localAddr, quint16 localPort);
+
 quint32 currentSessionId();
 bool isElevated();
 bool terminate(quint32 pid, QString *error = nullptr);

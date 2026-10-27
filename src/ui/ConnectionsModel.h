@@ -12,7 +12,7 @@
 class ConnectionsModel : public QAbstractTableModel {
     Q_OBJECT
 public:
-    enum Column { ColApplication, ColTarget, ColTimeStatus, ColRuleProxy, ColSent, ColReceived, ColCount };
+    enum Column { ColApplication, ColTarget, ColProto, ColTimeStatus, ColRuleProxy, ColSent, ColReceived, ColCount };
 
     explicit ConnectionsModel(QObject *parent = nullptr);
 
