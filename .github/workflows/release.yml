@@ -20,8 +20,7 @@ permissions:
 
 env:
   BUILD_DEPS_VERSION: '6'
-  # TODO: fill in after running tools/upload-build-deps.ps1 -Version 6 (adds WinDivert).
-  BUILD_DEPS_SHA256: 0000000000000000000000000000000000000000000000000000000000000000
+  BUILD_DEPS_SHA256: 7af360347d4124b785aa18a9fb3bce711cb87d271adba26776f5947c73a841ac
   BUILD_DEPS_REPO: ChickenSeller/winroute-build-deps
 
 jobs:
