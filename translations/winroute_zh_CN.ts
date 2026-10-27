@@ -364,6 +364,10 @@
       <translation>无法删除 %1（错误 %2）</translation>
     </message>
     <message>
+      <source>Cannot restart the driver service (error %1)</source>
+      <translation>无法重启驱动服务（错误 %1）</translation>
+    </message>
+    <message>
       <source>Cannot delete %1: the driver is still loaded (close WinRoute, or restart Windows)</source>
       <translation>无法删除 %1：驱动仍在内核中（请关闭 WinRoute，或重启 Windows）</translation>
     </message>
@@ -386,6 +390,10 @@
     <message>
       <source>Administrator rights are required to control the network driver</source>
       <translation>控制网络驱动需要管理员权限</translation>
+    </message>
+    <message>
+      <source>Restarting the network driver to recover from an unclean shutdown</source>
+      <translation>正在重启网络驱动以从非正常关闭中恢复</translation>
     </message>
     <message>
       <source>Cannot connect to the network driver %1: %2</source>

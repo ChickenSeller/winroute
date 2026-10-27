@@ -116,6 +116,8 @@ T = {
     "Cannot open the driver service (error %1)": ("无法打开驱动服务（错误 %1）", "ドライバーのサービスを開けません（エラー %1）"),
     "Cannot delete the driver service (error %1)": ("无法删除驱动服务（错误 %1）", "ドライバーのサービスを削除できません（エラー %1）"),
     "The driver could not be stopped; it will be removed after a reboot": ("无法停止驱动，将在重启后删除", "ドライバーを停止できませんでした。再起動後に削除されます"),
+    "Cannot restart the driver service (error %1)": ("无法重启驱动服务（错误 %1）", "ドライバーのサービスを再起動できません（エラー %1）"),
+    "Restarting the network driver to recover from an unclean shutdown": ("正在重启网络驱动以从非正常关闭中恢复", "異常終了から復旧するためにネットワークドライバーを再起動しています"),
     "Cannot delete %1 (error %2)": ("无法删除 %1（错误 %2）", "%1 を削除できません（エラー %2）"),
 
     # ---- language ----
