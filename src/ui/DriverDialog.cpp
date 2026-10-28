@@ -1,4 +1,5 @@
 #include "DriverDialog.h"
+#include "UsageStats.h"
 #include "core/Engine.h"
 #include "core/WinDivertInterceptor.h"
 
@@ -161,9 +162,11 @@ void DriverDialog::apply()
     setEnabled(false);
     const bool wasRunning = m_engine->isRunning();
     const QString backend = selectedBackend();
+    const bool backendChanged = backend != m_engine->backendKey();
     QString error;
     bool ok = true;
     QString done;
+    QStringList driverEvent;   // {action, name} for a NetFilter driver operation, reported on success
 
     if (backend == QLatin1String("netfilter")) {
         const int i = m_combo->currentIndex();
@@ -172,10 +175,12 @@ void DriverDialog::apply()
             return;
         }
         const auto d = m_drivers[i];
+        const bool hadDriver = NetFilterInterceptor::driverInstalled();
         m_engine->stop();   // release any handle before swapping
         ok = m_engine->setBackend("netfilter", &error);
         if (ok)
             ok = NetFilterInterceptor::installDriver(&error, true, d.path);
+        driverEvent = {hadDriver ? QStringLiteral("Switch") : QStringLiteral("Install"), d.key};
         done = tr("Network driver switched to %1").arg(d.name);
     } else {
         m_engine->stop();
@@ -188,6 +193,12 @@ void DriverDialog::apply()
 
     setEnabled(true);
     if (ok) {
+        const QString backendName = backend == QLatin1String("windivert") ? QStringLiteral("WinDivert")
+                                                                          : QStringLiteral("NetFilter");
+        if (backendChanged)
+            UsageStats::report(QStringLiteral("Backend"), QStringLiteral("Switch"), backendName);
+        if (!driverEvent.isEmpty())
+            UsageStats::report(QStringLiteral("Driver"), driverEvent.value(0), driverEvent.value(1));
         emit log(done);
     } else {
         emit log(tr("Could not switch the capture backend: %1").arg(error));
@@ -213,9 +224,11 @@ void DriverDialog::uninstall()
     const bool ok = netfilter ? NetFilterInterceptor::uninstallDriver(&error)
                               : WinDivertInterceptor::uninstall(&error);
     setEnabled(true);
-    if (ok)
+    if (ok) {
+        UsageStats::report(QStringLiteral("Driver"), QStringLiteral("Uninstall"),
+                           netfilter ? QStringLiteral("NetFilter") : QStringLiteral("WinDivert"));
         emit log(netfilter ? tr("Network driver uninstalled") : tr("WinDivert service uninstalled"));
-    else
+    } else
         QMessageBox::warning(this, tr("Network Driver"), tr("Could not uninstall:\n%1").arg(error));
     refresh();
 }

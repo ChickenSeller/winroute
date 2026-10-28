@@ -822,6 +822,14 @@
       <translation>確認しない</translation>
     </message>
     <message>
+      <source>Send Anonymous Usage &amp;Statistics</source>
+      <translation>匿名の使用統計を送信(&amp;S)</translation>
+    </message>
+    <message>
+      <source>Send anonymous usage statistics to help improve WinRoute (no personal data).</source>
+      <translation>WinRoute の改善に役立てるため、匿名の使用統計を送信します（個人情報は含みません）。</translation>
+    </message>
+    <message>
       <source>Toolbar</source>
       <translation>ツールバー</translation>
     </message>

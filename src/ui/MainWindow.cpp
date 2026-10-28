@@ -11,6 +11,7 @@
 #include "DriverDialog.h"
 #include "TrafficWidget.h"
 #include "Updater.h"
+#include "UsageStats.h"
 #include "core/DnsClient.h"
 #include "core/Logger.h"
 #include "core/NetFilterInterceptor.h"
@@ -340,6 +341,13 @@ void MainWindow::createMenus()
         updateGroup->addAction(a);
         connect(a, &QAction::triggered, this, [mode] { Updater::setMode(mode); });
     }
+    if (UsageStats::isAvailable()) {
+        QAction *stats = help->addAction(tr("Send Anonymous Usage &Statistics"));
+        stats->setStatusTip(tr("Send anonymous usage statistics to help improve WinRoute (no personal data)."));
+        stats->setCheckable(true);
+        stats->setChecked(UsageStats::isEnabled());
+        connect(stats, &QAction::toggled, this, [](bool on) { UsageStats::setEnabled(on); });
+    }
     help->addSeparator();
     help->addAction(m_actAbout);
 }
@@ -592,15 +600,28 @@ void MainWindow::createTray()
 
 void MainWindow::startEngine()
 {
+    const QString backend = m_engine->backendKey() == QLatin1String("windivert")
+                                ? QStringLiteral("WinDivert")
+                                : QStringLiteral("NetFilter");
+    // One report per launch: version, update preference and the active backend.
+    switch (Updater::mode()) {
+    case Updater::Mode::Automatic: UsageStats::reportStart(QStringLiteral("Automatic"), backend); break;
+    case Updater::Mode::RequiredOnly: UsageStats::reportStart(QStringLiteral("Required only"), backend); break;
+    case Updater::Mode::Ask: UsageStats::reportStart(QStringLiteral("Ask"), backend); break;
+    case Updater::Mode::Never: UsageStats::reportStart(QStringLiteral("Never"), backend); break;
+    }
+
     QString error;
     if (m_engine->start(&error)) {
         logNormal(tr("Network interception started (%1)").arg(m_engine->backendName()));
         m_statusState->setText(tr("Ready"));
         updateTrayIcon();
         probeLocalDns();
+        UsageStats::report(QStringLiteral("Engine"), QStringLiteral("Started"), backend);
     } else {
         logError(tr("Cannot start network interception: ") + error);
         m_statusState->setText(tr("Not running: ") + error);
+        UsageStats::report(QStringLiteral("Engine"), QStringLiteral("Failed"), backend);
     }
     updateDriverStatus();
     if (!m_startMinimized || !m_tray->isVisible())

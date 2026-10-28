@@ -822,6 +822,14 @@
       <translation>从不检查</translation>
     </message>
     <message>
+      <source>Send Anonymous Usage &amp;Statistics</source>
+      <translation>发送匿名使用统计(&amp;S)</translation>
+    </message>
+    <message>
+      <source>Send anonymous usage statistics to help improve WinRoute (no personal data).</source>
+      <translation>发送匿名使用统计以帮助改进 WinRoute（不含个人信息）。</translation>
+    </message>
+    <message>
       <source>Toolbar</source>
       <translation>工具栏</translation>
     </message>

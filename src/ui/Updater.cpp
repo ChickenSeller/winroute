@@ -1,4 +1,5 @@
 #include "Updater.h"
+#include "UsageStats.h"
 
 #include <QApplication>
 #include <QCryptographicHash>
@@ -102,6 +103,9 @@ void Updater::onManifest(QNetworkReply *reply, bool interactive)
     const bool haveRequired = parse(manifest.value("required").toObject(), reply->url(), &required)
                               && required.version > current;
 
+    if (haveLatest)
+        UsageStats::report(QStringLiteral("Update"), QStringLiteral("Available"), latest.version.toString());
+
     if (interactive) {
         if (haveLatest)
             ask(latest);
@@ -144,6 +148,8 @@ void Updater::ask(const Release &release)
     box.exec();
     if (box.clickedButton() == update)
         download(release, true);
+    else
+        UsageStats::report(QStringLiteral("Update"), QStringLiteral("Declined"), release.version.toString());
 }
 
 void Updater::download(const Release &release, bool interactive)
@@ -215,6 +221,7 @@ void Updater::onDownloaded(const Release &release, QNetworkReply *reply, bool in
 
     if (!error.isEmpty()) {
         QFile::remove(setupPath);
+        UsageStats::report(QStringLiteral("Update"), QStringLiteral("Failed"), release.version.toString());
         const QString message = tr("Could not download WinRoute %1:\n%2").arg(release.version.toString(), error);
         if (interactive)
             QMessageBox::warning(nullptr, tr("WinRoute Update"), message);
@@ -226,6 +233,7 @@ void Updater::onDownloaded(const Release &release, QNetworkReply *reply, bool in
         return;
 
     if (!install(setupPath, &error)) {
+        UsageStats::report(QStringLiteral("Update"), QStringLiteral("Failed"), release.version.toString());
         if (interactive)
             QMessageBox::warning(nullptr, tr("WinRoute Update"), error);
         else

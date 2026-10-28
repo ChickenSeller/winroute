@@ -644,6 +644,10 @@ T = {
     "Install Required Updates Automatically": ("自动安装必须的更新", "必須の更新を自動でインストール"),
     "Ask Before Updating": ("更新前询问", "更新前に確認"),
     "Never Check": ("从不检查", "確認しない"),
+    "Send Anonymous Usage &Statistics": ("发送匿名使用统计(&S)", "匿名の使用統計を送信(&S)"),
+    "Send anonymous usage statistics to help improve WinRoute (no personal data).":
+        ("发送匿名使用统计以帮助改进 WinRoute（不含个人信息）。",
+         "WinRoute の改善に役立てるため、匿名の使用統計を送信します（個人情報は含みません）。"),
     "WinRoute Update": ("WinRoute 更新", "WinRoute の更新"),
     "Could not check for updates:\n%1": ("无法检查更新：\n%1", "更新を確認できませんでした：\n%1"),
     "WinRoute %1 is the latest version.": ("WinRoute %1 已是最新版本。", "WinRoute %1 は最新バージョンです。"),
