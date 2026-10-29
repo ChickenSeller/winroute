@@ -1,4 +1,5 @@
 #include "UsageStats.h"
+#include "core/Utils.h"
 
 #include <QCoreApplication>
 #include <QGuiApplication>
@@ -27,7 +28,7 @@ const QString kLastVersionKey = QStringLiteral("usage/lastVersion");
 
 QString installId()
 {
-    QSettings settings;
+    QSettings settings = util::appSettings();
     QString id = settings.value(kIdKey).toString();
     if (id.size() != 32) {
         id = QUuid::createUuid().toString(QUuid::Id128);
@@ -100,12 +101,12 @@ bool isAvailable()
 
 bool isEnabled()
 {
-    return QSettings().value(kEnabledKey, true).toBool();
+    return util::appSettings().value(kEnabledKey, true).toBool();
 }
 
 void setEnabled(bool enabled)
 {
-    QSettings settings;
+    QSettings settings = util::appSettings();
     settings.setValue(kEnabledKey, enabled);
     // Turned off, the install is forgotten; turned on again, it is a new one.
     if (!enabled)
@@ -115,7 +116,7 @@ void setEnabled(bool enabled)
 void reportStart(const QString &updateMode, const QString &backend)
 {
     const QString version = QStringLiteral(WINROUTE_VERSION);
-    QSettings settings;
+    QSettings settings = util::appSettings();
     QString last = settings.value(kLastVersionKey).toString();
     // An install with no settings at all has never run before.
     const bool firstRun = last.isEmpty() && settings.allKeys().isEmpty();

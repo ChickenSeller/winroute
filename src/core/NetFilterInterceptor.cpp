@@ -262,7 +262,7 @@ static QString defaultDriverSource()
     const auto drivers = NetFilterInterceptor::availableDrivers();
     if (drivers.isEmpty())
         return {};
-    const QString saved = QSettings().value("driver/active").toString();
+    const QString saved = util::appSettings().value("driver/active").toString();
     for (const auto &d : drivers)
         if (d.key == saved)
             return d.path;
@@ -319,7 +319,7 @@ bool NetFilterInterceptor::installDriver(QString *error, bool replaceDifferent, 
     // source (e.g. on startup) picks the same one.
     for (const DriverChoice &d : availableDrivers())
         if (sameFile(bundled, d.path)) {
-            QSettings().setValue("driver/active", d.key);
+            util::appSettings().setValue("driver/active", d.key);
             break;
         }
     logNormal(QCoreApplication::translate("Interceptor", "Network driver %1 installed").arg(kDriverName));

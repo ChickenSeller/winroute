@@ -1,5 +1,6 @@
 #include "Updater.h"
 #include "UsageStats.h"
+#include "core/Utils.h"
 
 #include <QApplication>
 #include <QCryptographicHash>
@@ -43,13 +44,13 @@ Updater::~Updater() = default;
 
 Updater::Mode Updater::mode()
 {
-    const int value = QSettings().value(kModeKey, int(Mode::Ask)).toInt();
+    const int value = util::appSettings().value(kModeKey, int(Mode::Ask)).toInt();
     return value >= 0 && value <= int(Mode::Never) ? Mode(value) : Mode::Ask;
 }
 
 void Updater::setMode(Mode mode)
 {
-    QSettings().setValue(kModeKey, int(mode));
+    util::appSettings().setValue(kModeKey, int(mode));
 }
 
 void Updater::checkAtStartup()

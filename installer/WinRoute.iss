@@ -329,6 +329,7 @@ begin
     if MsgBox(CustomMessage('RemoveSettings'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
     begin
       DelTree(ExpandConstant('{userappdata}\WinRoute'), True, True, True);
-      RegDeleteKeyIncludingSubkeys(HKEY_CURRENT_USER, 'Software\WinRoute');
+      DeleteFile(ExpandConstant('{app}\WinRoute.ini'));   // portable settings file
+      RegDeleteKeyIncludingSubkeys(HKEY_CURRENT_USER, 'Software\WinRoute');   // settings of versions before the INI
     end;
 end;

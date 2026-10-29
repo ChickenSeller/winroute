@@ -1,6 +1,7 @@
 #include "Engine.h"
 #include "Logger.h"
 #include "NetFilterInterceptor.h"
+#include "Utils.h"
 #include "WinDivertInterceptor.h"
 
 #include <QCoreApplication>
@@ -28,7 +29,7 @@ Engine::Engine(QObject *parent)
     m_relay->moveToThread(&m_relayThread);
     connect(&m_relayThread, &QThread::finished, m_relay, &QObject::deleteLater);
     m_relayThread.start();
-    m_backendKey = QSettings().value("backend/active", "netfilter").toString();
+    m_backendKey = util::appSettings().value("backend/active", "netfilter").toString();
     m_interceptor = makeInterceptor(&m_backendKey);
 }
 
@@ -48,7 +49,7 @@ bool Engine::setBackend(const QString &key, QString *error)
     m_interceptor = makeInterceptor(&wanted);
     m_backendKey = wanted;
     m_interceptor->setRules(m_rules);
-    QSettings().setValue("backend/active", m_backendKey);
+    util::appSettings().setValue("backend/active", m_backendKey);
     return true;
 }
 

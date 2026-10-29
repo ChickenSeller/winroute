@@ -3,6 +3,7 @@
 #include "core/NetFilterInterceptor.h"
 #include "core/WinDivertInterceptor.h"
 #include "core/ProcessInfo.h"
+#include "core/Utils.h"
 #include "ui/Language.h"
 #include "ui/MainWindow.h"
 
@@ -25,9 +26,13 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     QApplication::setApplicationName("WinRoute");
     QApplication::setApplicationVersion(WINROUTE_VERSION);
-    // QSettings needs an organization name (stored under HKCU\Software\WinRoute\WinRoute).
+    // Settings live in WinRoute.ini next to the executable (util::appSettings),
+    // not the registry; the organization name is kept only for Qt's own use.
     QApplication::setOrganizationName("WinRoute");
     QApplication::setQuitOnLastWindowClosed(false);
+    // Bring settings over from the registry on the first run after upgrading
+    // from a version that still used it; harmless on a fresh install.
+    util::migrateLegacySettings();
     i18n::install(app);
 
     // --install-driver / --uninstall-driver are run by the installer; with --quiet
@@ -48,7 +53,7 @@ int main(int argc, char *argv[])
     // The installer selects the capture backend here. WinDivert installs its own
     // driver on first use, so it only needs the backend preference recorded.
     if (installDriver && installKey == QLatin1String("windivert")) {
-        QSettings().setValue("backend/active", "windivert");
+        util::appSettings().setValue("backend/active", "windivert");
         return 0;
     }
     if (installDriver || args.contains("--uninstall-driver")) {
@@ -59,7 +64,7 @@ int main(int argc, char *argv[])
                 source = d.path;
         bool ok;
         if (installDriver) {
-            QSettings().setValue("backend/active", "netfilter");
+            util::appSettings().setValue("backend/active", "netfilter");
             ok = NetFilterInterceptor::installDriver(&error, true, source);
         } else {
             // Remove both backends' drivers; WinDivert installs itself on first

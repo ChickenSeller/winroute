@@ -81,7 +81,7 @@ MainWindow::MainWindow(Engine *engine, QWidget *parent)
     connect(&m_secondTimer, &QTimer::timeout, this, &MainWindow::onSecondTick);
     m_secondTimer.start(1000);
 
-    QSettings s;
+    QSettings s = util::appSettings();
     restoreGeometry(s.value("window/geometry").toByteArray());
     restoreState(s.value("window/state").toByteArray());
     setLogLevel(s.value("log/level", 1).toInt());
@@ -196,7 +196,7 @@ void MainWindow::createActions()
     m_actTrayIcon->setStatusTip(tr("Show WinRoute icon in the System Tray and hide the main window when closed"));
     connect(m_actTrayIcon, &QAction::toggled, this, [this](bool on) {
         m_tray->setVisible(on);
-        QSettings().setValue("view/trayIcon", on);
+        util::appSettings().setValue("view/trayIcon", on);
     });
     m_actToolbar = new QAction(tr("&Toolbar"), this);
     m_actToolbar->setCheckable(true);
@@ -286,7 +286,7 @@ void MainWindow::createMenus()
         m_logFileGroup->addAction(a);
         connect(a, &QAction::triggered, this, [v] {
             Logger::instance().setFileLevel(v);
-            QSettings().setValue("log/fileLevel", v);
+            util::appSettings().setValue("log/fileLevel", v);
             if (v >= 0)
                 logNormal(tr("Writing log to ") + QDir::toNativeSeparators(Logger::instance().filePath()));
         });
@@ -655,7 +655,7 @@ void MainWindow::showAndActivate()
 
 void MainWindow::closeEvent(QCloseEvent *e)
 {
-    QSettings s;
+    QSettings s = util::appSettings();
     s.setValue("window/geometry", saveGeometry());
     s.setValue("window/state", saveState());
     if (!m_quitting && m_tray->isVisible()) {
@@ -715,7 +715,7 @@ QStringList MainWindow::profileNames() const
 
 void MainWindow::initialProfile()
 {
-    QString name = QSettings().value("profile/current", "Default").toString();
+    QString name = util::appSettings().value("profile/current", "Default").toString();
     if (profileNames().isEmpty()) {
         // First start: take over the user's Proxifier profile if there is one.
         const QString appData = qEnvironmentVariable("APPDATA");
@@ -754,7 +754,7 @@ bool MainWindow::loadProfile(const QString &name)
     if (!error.isEmpty())
         logError(error);
     m_profileName = name;
-    QSettings().setValue("profile/current", name);
+    util::appSettings().setValue("profile/current", name);
     applyProfile(p);
     logNormal(tr("Profile %1 loaded").arg(name));
     return true;
@@ -816,7 +816,7 @@ void MainWindow::newProfile()
         && QMessageBox::question(this, tr("New Profile"), tr("Profile %1 already exists. Overwrite it?").arg(name)) != QMessageBox::Yes)
         return;
     m_profileName = name;
-    QSettings().setValue("profile/current", name);
+    util::appSettings().setValue("profile/current", name);
     applyProfile(Profile::createDefault());
     logNormal(tr("New profile %1 created").arg(name));
 }
@@ -830,7 +830,7 @@ void MainWindow::saveProfileAs()
         && QMessageBox::question(this, tr("Save Profile As"), tr("Profile %1 already exists. Overwrite it?").arg(name)) != QMessageBox::Yes)
         return;
     m_profileName = name;
-    QSettings().setValue("profile/current", name);
+    util::appSettings().setValue("profile/current", name);
     applyProfile(m_profile);
     logNormal(tr("Profile saved as %1").arg(name));
 }
@@ -852,7 +852,7 @@ void MainWindow::importProfile()
     if (!askProfileName(this, tr("Import Profile"), &name))
         return;
     m_profileName = name;
-    QSettings().setValue("profile/current", name);
+    util::appSettings().setValue("profile/current", name);
     applyProfile(p);
     logNormal(tr("Profile %1 imported from %2").arg(name, QDir::toNativeSeparators(file)));
 }
@@ -1051,7 +1051,7 @@ void MainWindow::setLogLevel(int level)
     m_logLevel = level;
     for (QAction *a : m_logLevelGroup->actions())
         a->setChecked(a->data().toInt() == level);
-    QSettings().setValue("log/level", level);
+    util::appSettings().setValue("log/level", level);
 }
 
 void MainWindow::setLogFont(int size)
@@ -1062,7 +1062,7 @@ void MainWindow::setLogFont(int size)
     m_log->setFont(f);
     for (QAction *a : m_fontGroup->actions())
         a->setChecked(a->data().toInt() == size);
-    QSettings().setValue("log/font", size);
+    util::appSettings().setValue("log/font", size);
 }
 
 // ---- traffic ---------------------------------------------------------------------
@@ -1115,7 +1115,7 @@ void MainWindow::setRefreshRate(int ms)
     m_tickTimer.start(ms);
     for (QAction *a : m_refreshGroup->actions())
         a->setChecked(a->data().toInt() == ms);
-    QSettings().setValue("view/refresh", ms);
+    util::appSettings().setValue("view/refresh", ms);
 }
 
 void MainWindow::probeLocalDns()

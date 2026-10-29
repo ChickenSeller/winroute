@@ -1,4 +1,5 @@
 #include "Language.h"
+#include "core/Utils.h"
 
 #include <QApplication>
 #include <QLocale>
@@ -19,12 +20,12 @@ QList<Language> available()
 
 QString configured()
 {
-    return QSettings().value("ui/language").toString();
+    return util::appSettings().value("ui/language").toString();
 }
 
 void setConfigured(const QString &code)
 {
-    QSettings().setValue("ui/language", code);
+    util::appSettings().setValue("ui/language", code);
 }
 
 QString effective()

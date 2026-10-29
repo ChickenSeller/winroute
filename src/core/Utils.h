@@ -1,10 +1,23 @@
 #pragma once
 
 #include <QHostAddress>
+#include <QSettings>
 #include <QString>
 #include <QStringList>
 
 namespace util {
+
+// Application settings, kept in WinRoute.ini next to the executable (a portable
+// INI, not the registry). WinRoute runs elevated, so it can write there even
+// under Program Files. Returned by value (C++17 elision); use like QSettings().
+QSettings appSettings();
+
+// One-time move of settings from the old registry location
+// (HKCU\Software\WinRoute\WinRoute) into WinRoute.ini, so an upgrade from a
+// version that used the registry keeps the user's preferences. Does nothing if
+// the INI already exists or the registry holds no settings. Call once at start,
+// before any appSettings() access.
+void migrateLegacySettings();
 
 // Case-insensitive glob match supporting '*' and '?'.
 bool wildcardMatch(QStringView pattern, QStringView text);

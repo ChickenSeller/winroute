@@ -2,11 +2,40 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QFileInfo>
 #include <QRegularExpression>
 
 #include <windows.h>
 
 namespace util {
+
+static QString iniPath()
+{
+    return QCoreApplication::applicationDirPath() + QStringLiteral("/WinRoute.ini");
+}
+
+QSettings appSettings()
+{
+    return QSettings(iniPath(), QSettings::IniFormat);
+}
+
+void migrateLegacySettings()
+{
+    // Already on the INI (either migrated before or a fresh portable install).
+    if (QFileInfo::exists(iniPath()))
+        return;
+    // The old location of a default QSettings() with organization "WinRoute"
+    // and application "WinRoute": HKCU\Software\WinRoute\WinRoute.
+    QSettings legacy(QSettings::NativeFormat, QSettings::UserScope,
+                     QStringLiteral("WinRoute"), QStringLiteral("WinRoute"));
+    const QStringList keys = legacy.allKeys();
+    if (keys.isEmpty())
+        return; // nothing to bring over
+    QSettings ini = appSettings();
+    for (const QString &key : keys)
+        ini.setValue(key, legacy.value(key));
+    ini.sync();
+}
 
 bool wildcardMatch(QStringView pattern, QStringView text)
 {
