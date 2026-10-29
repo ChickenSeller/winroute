@@ -958,7 +958,8 @@ void MainWindow::showAbout()
                                "<p>Routes the network connections of Windows applications through SOCKS and HTTPS "
                                "proxy servers according to proxification rules.</p>"
                                "<p>Interception: %2<br>Qt %3</p>")
-                                 .arg(QApplication::applicationVersion(), m_engine->backendName(), qVersion()));
+                                 .arg(QApplication::applicationVersion(), m_engine->backendName(),
+                                      QString::fromLatin1(qVersion()).section(QLatin1Char('.'), 0, 1)));
 }
 
 // ---- connections ------------------------------------------------------------------
