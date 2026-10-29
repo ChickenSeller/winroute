@@ -93,9 +93,9 @@ ja.DriverBNote=製品版ドライバーです。接続数の制限はありま�
 en.DriverWinDivert=WinDivert (TCP + UDP)
 zh_CN.DriverWinDivert=WinDivert（TCP + UDP）
 ja.DriverWinDivert=WinDivert（TCP + UDP）
-en.DriverWinDivertNote=An alternative backend based on WinDivert. Captures TCP and UDP at the packet level and installs its own driver on first use. Does not support fake-DNS name resolution.
-zh_CN.DriverWinDivertNote=基于 WinDivert 的备选后端。在数据包层面拦截 TCP 和 UDP，首次使用时自行安装其驱动。不支持假 DNS 解析。
-ja.DriverWinDivertNote=WinDivert ベースの代替バックエンド。パケットレベルで TCP と UDP を捕捉し、初回使用時に自身のドライバーをインストールします。偽 DNS 解決には対応しません。
+en.DriverWinDivertNote=An alternative backend based on WinDivert. Captures TCP and UDP at the packet level and installs its own driver on first use.
+zh_CN.DriverWinDivertNote=基于 WinDivert 的备选后端。在数据包层面拦截 TCP 和 UDP，首次使用时自行安装其驱动。
+ja.DriverWinDivertNote=WinDivert ベースの代替バックエンド。パケットレベルで TCP と UDP を捕捉し、初回使用時に自身のドライバーをインストールします。
 en.DriverReady=Network driver:
 zh_CN.DriverReady=网络驱动：
 ja.DriverReady=ネットワークドライバー：
@@ -300,6 +300,21 @@ begin
     WizardForm.TasksList.Checked[1] := AutostartCheck.Checked;
   end;
   Result := True;
+end;
+
+// {app}\WinDivert64.sys is held open by the "WinDivert" kernel service while it
+// runs; WinRoute starts it for the WinDivert backend and leaves it installed, so
+// an in-place upgrade cannot replace the file (DeleteFile fails with access
+// denied). Stop and remove the service before the files are copied - WinRoute
+// reinstalls it automatically the next time it uses that backend. "net stop"
+// waits for the driver to unload, which releases the file.
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+begin
+  Result := '';
+  Exec(ExpandConstant('{sys}\net.exe'), 'stop WinDivert', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec(ExpandConstant('{sys}\sc.exe'), 'delete WinDivert', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);

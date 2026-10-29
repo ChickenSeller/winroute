@@ -63,10 +63,13 @@ int main(int argc, char *argv[])
             ok = NetFilterInterceptor::installDriver(&error, true, source);
         } else {
             // Remove both backends' drivers; WinDivert installs itself on first
-            // use, so a missing service is not an error.
+            // use, so a missing service is not an error. Report either failure.
             ok = NetFilterInterceptor::uninstallDriver(&error);
             QString wdError;
-            WinDivertInterceptor::uninstall(&wdError);
+            if (!WinDivertInterceptor::uninstall(&wdError) && ok) {
+                ok = false;
+                error = wdError;
+            }
         }
         if (!ok && !args.contains("--quiet"))
             QMessageBox::critical(nullptr, "WinRoute",
