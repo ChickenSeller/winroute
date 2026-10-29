@@ -121,6 +121,11 @@ int main(int argc, char *argv[])
     window.startEngine();
     const int rc = app.exec();
     engine.stop();
+    // Leave no driver service running after WinRoute exits (both backends);
+    // each is registered again on the next start. This also releases
+    // WinDivert64.sys so an installer/updater can replace it.
+    NetFilterInterceptor::stopService(nullptr);
+    WinDivertInterceptor::stopService(nullptr);
     WSACleanup();
     if (appMutex)
         CloseHandle(appMutex);

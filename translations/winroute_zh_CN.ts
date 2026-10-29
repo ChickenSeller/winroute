@@ -428,6 +428,10 @@
       <translation>无法删除 %1：驱动仍在内核中（请关闭 WinRoute，或重启 Windows）</translation>
     </message>
     <message>
+      <source>The driver service could not be stopped</source>
+      <translation>无法停止驱动服务</translation>
+    </message>
+    <message>
       <source>NetFilter SDK demo driver</source>
       <translation>NetFilter SDK 演示驱动</translation>
     </message>
@@ -526,6 +530,10 @@
     <message>
       <source>Cannot delete the WinDivert service (error %1)</source>
       <translation>无法删除 WinDivert 服务（错误 %1）</translation>
+    </message>
+    <message>
+      <source>The WinDivert service could not be stopped</source>
+      <translation>无法停止 WinDivert 服务</translation>
     </message>
     <message>
       <source>WinDivert.dll could not be loaded; is it next to WinRoute.exe?</source>

@@ -346,6 +346,38 @@ bool NetFilterInterceptor::uninstallDriver(QString *error)
     return true;
 }
 
+bool NetFilterInterceptor::stopService(QString *error)
+{
+    SC_HANDLE scm = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
+    if (!scm) {
+        if (error)
+            *error = QCoreApplication::translate("Interceptor", "Cannot open the service manager (error %1)").arg(GetLastError());
+        return false;
+    }
+    SC_HANDLE svc = OpenServiceW(scm, L"netfilter2", SERVICE_STOP | SERVICE_QUERY_STATUS);
+    if (!svc) {
+        const DWORD err = GetLastError();
+        CloseServiceHandle(scm);
+        if (err == ERROR_SERVICE_DOES_NOT_EXIST)
+            return true;   // nothing to stop
+        if (error)
+            *error = QCoreApplication::translate("Interceptor", "Cannot open the driver service (error %1)").arg(err);
+        return false;
+    }
+    SERVICE_STATUS st{};
+    if (QueryServiceStatus(svc, &st) && st.dwCurrentState != SERVICE_STOPPED) {
+        ControlService(svc, SERVICE_CONTROL_STOP, &st);
+        for (int i = 0; i < 100 && QueryServiceStatus(svc, &st) && st.dwCurrentState != SERVICE_STOPPED; ++i)
+            Sleep(100);
+    }
+    const bool stopped = st.dwCurrentState == SERVICE_STOPPED;
+    CloseServiceHandle(svc);
+    CloseServiceHandle(scm);
+    if (!stopped && error)
+        *error = QCoreApplication::translate("Interceptor", "The driver service could not be stopped");
+    return stopped;
+}
+
 QString NetFilterInterceptor::driverDisplayName(const QString &key)
 {
     if (key == "demo")

@@ -36,6 +36,9 @@ public:
     // source overrides which .sys to install (default: <app>/netfilter2.sys).
     static bool installDriver(QString *error, bool replaceDifferent = false, const QString &source = {});
     static bool uninstallDriver(QString *error);
+    // Stops the driver service (does not delete it), so nothing is left running
+    // after WinRoute exits; the next start registers/starts it again.
+    static bool stopService(QString *error);
 
     // Driver management (Tools > Network Driver). The installer ships every
     // driver under <app>/drivers/<key>/netfilter2.sys so the user can switch.

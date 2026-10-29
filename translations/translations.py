@@ -548,6 +548,8 @@ T = {
         ("DNS：%2 应答 %1：%3 = %4", "DNS：%2 が %1 に応答：%3 = %4"),
     "(no records)": ("无记录", "レコードなし"),
     "unknown": ("未知", "不明"),
+    "The driver service could not be stopped": ("无法停止驱动服务", "ドライバーサービスを停止できませんでした"),
+    "The WinDivert service could not be stopped": ("无法停止 WinDivert 服务", "WinDivert サービスを停止できませんでした"),
     "Cannot update UDP filtering: %1": ("无法更新 UDP 过滤：%1", "UDP フィルタリングを更新できません：%1"),
     "%1 - %2 matching %3 rule : blocked (UDP)": ("%1 - %2 匹配规则 %3：已阻止（UDP）", "%1 - %2 がルール %3 に一致：ブロック（UDP）"),
     "%1 - %2 matching %3 rule : %4 does not support UDP, sending directly":

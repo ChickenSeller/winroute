@@ -49,6 +49,7 @@ public:
     static Info info();
     static bool serviceRunning();          // the "WinDivert" service is running
     static bool uninstall(QString *error); // stop and delete the WinDivert service
+    static bool stopService(QString *error); // stop (but keep) the WinDivert service, on exit
 
 private:
     void networkLoop();

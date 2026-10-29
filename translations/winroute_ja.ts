@@ -428,6 +428,10 @@
       <translation>%1 を削除できません：ドライバーがまだ読み込まれています（WinRoute を終了するか、Windows を再起動してください）</translation>
     </message>
     <message>
+      <source>The driver service could not be stopped</source>
+      <translation>ドライバーサービスを停止できませんでした</translation>
+    </message>
+    <message>
       <source>NetFilter SDK demo driver</source>
       <translation>NetFilter SDK デモドライバー</translation>
     </message>
@@ -526,6 +530,10 @@
     <message>
       <source>Cannot delete the WinDivert service (error %1)</source>
       <translation>WinDivert サービスを削除できません（エラー %1）</translation>
+    </message>
+    <message>
+      <source>The WinDivert service could not be stopped</source>
+      <translation>WinDivert サービスを停止できませんでした</translation>
     </message>
     <message>
       <source>WinDivert.dll could not be loaded; is it next to WinRoute.exe?</source>
