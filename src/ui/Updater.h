@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QNetworkProxy>
 #include <QObject>
 #include <QPointer>
 #include <QUrl>
@@ -44,8 +45,10 @@ public:
     // Checks once, as the settings say.
     void checkAtStartup();
     // Checks now on the user's request, whatever the settings: offers a newer
-    // version, or says that there is none or that the check failed.
-    void checkNow();
+    // version, or says that there is none or that the check failed. The manual
+    // check and any download it leads to use the given connection (direct by
+    // default, or a proxy the user picked); automatic checks always go direct.
+    void checkNow(const QNetworkProxy &proxy = QNetworkProxy(QNetworkProxy::NoProxy));
 
 signals:
     // For the tray: an automatic update started or failed.
@@ -73,4 +76,6 @@ private:
     QNetworkAccessManager *m_network;
     QSaveFile *m_file = nullptr;
     QPointer<QProgressDialog> m_progress;
+    // Connection for the current manual check and its download (direct by default).
+    QNetworkProxy m_manualProxy{QNetworkProxy::NoProxy};
 };

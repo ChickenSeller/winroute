@@ -99,6 +99,10 @@ private:
     void updateTrayIcon();
     void updateDriverStatus();
     void showCertificateDetails();
+    // Manual update check through a proxy: lets the user pick one of the profile's
+    // proxies, then checks (and, if they accept, downloads) over it. The plain
+    // Check for Updates action stays a direct check.
+    void checkForUpdatesViaProxy();
 
     Engine *m_engine;
     Profile m_profile;
@@ -131,7 +135,7 @@ private:
     QAction *m_actDisconnect, *m_actEndProcess, *m_actCreateRule, *m_actCopyConn;
     QAction *m_actLogCopy, *m_actLogSelectAll, *m_actLogClear;
     QAction *m_actTrayIcon, *m_actToolbar, *m_actStatusBar;
-    QAction *m_actChecker, *m_actDriver, *m_actAbout, *m_actCheckUpdates;
+    QAction *m_actChecker, *m_actDriver, *m_actAbout, *m_actCheckUpdates, *m_actCheckUpdatesProxy;
     Updater *m_updater = nullptr;
     QActionGroup *m_logLevelGroup = nullptr;
     QActionGroup *m_logFileGroup = nullptr;

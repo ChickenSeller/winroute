@@ -742,6 +742,14 @@
       <translation>更新の確認(&amp;U)...</translation>
     </message>
     <message>
+      <source>Check for Updates via &amp;Proxy...</source>
+      <translation>プロキシ経由で更新を確認(&amp;P)...</translation>
+    </message>
+    <message>
+      <source>Check for and download updates through one of this profile's proxies</source>
+      <translation>この設定のいずれかのプロキシ経由で更新を確認・ダウンロードします</translation>
+    </message>
+    <message>
       <source>&amp;File</source>
       <translation>ファイル(&amp;F)</translation>
     </message>
@@ -1126,6 +1134,14 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.&lt;/p&gt;&lt;p&gt;Interception: %2&lt;br&gt;Qt %3&lt;/p&gt;</source>
       <translation>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;プロキシ化ルールに従って、Windows アプリケーションのネットワーク接続を SOCKS / HTTPS プロキシサーバー経由にします。&lt;/p&gt;&lt;p&gt;捕捉方式：%2&lt;br&gt;Qt %3&lt;/p&gt;</translation>
+    </message>
+    <message>
+      <source>Check for Updates</source>
+      <translation>更新の確認</translation>
+    </message>
+    <message>
+      <source>Check for and download updates through:</source>
+      <translation>更新の確認とダウンロードに使用する接続：</translation>
     </message>
     <message>
       <source>%1 (pid %2)</source>

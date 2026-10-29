@@ -218,6 +218,8 @@ void MainWindow::createActions()
 
     m_updater = new Updater(this);
     m_actCheckUpdates = act(tr("Check for &Updates..."), [this] { m_updater->checkNow(); });
+    m_actCheckUpdatesProxy = act(tr("Check for Updates via &Proxy..."), [this] { checkForUpdatesViaProxy(); });
+    m_actCheckUpdatesProxy->setStatusTip(tr("Check for and download updates through one of this profile's proxies"));
     connect(m_updater, &Updater::notify, this, [this](const QString &title, const QString &message) {
         if (m_tray->isVisible())
             m_tray->showMessage(title, message);
@@ -335,6 +337,7 @@ void MainWindow::createMenus()
 
     QMenu *help = menuBar()->addMenu(tr("&Help"));
     help->addAction(m_actCheckUpdates);
+    help->addAction(m_actCheckUpdatesProxy);
     QMenu *updates = help->addMenu(tr("Automatic U&pdates"));
     auto *updateGroup = new QActionGroup(this);
     const QList<QPair<QString, Updater::Mode>> updateModes = {
@@ -684,6 +687,8 @@ void MainWindow::updateTitle()
     m_actLoopDetection->setChecked(m_profile.options.loopDetection);
     m_actUdpProxy->setChecked(m_profile.options.udpMode == "mode_proxy");
     m_actLogDns->setChecked(m_profile.options.logDns);
+    // Checking through a proxy needs at least one proxy in the profile.
+    m_actCheckUpdatesProxy->setEnabled(!m_profile.proxies.isEmpty());
 }
 
 void MainWindow::updateTrayIcon()
@@ -970,6 +975,32 @@ void MainWindow::showAbout()
                                "<p>Interception: %2<br>Qt %3</p>")
                                  .arg(QApplication::applicationVersion(), m_engine->backendName(),
                                       QString::fromLatin1(qVersion()).section(QLatin1Char('.'), 0, 1)));
+}
+
+void MainWindow::checkForUpdatesViaProxy()
+{
+    if (m_profile.proxies.isEmpty())
+        return; // the menu item is disabled in this case
+
+    QStringList items;
+    for (const ProxyServer &p : m_profile.proxies)
+        items << p.displayName();
+
+    bool ok = false;
+    const QString chosen = QInputDialog::getItem(this, tr("Check for Updates"),
+                                                 tr("Check for and download updates through:"), items, 0, false, &ok);
+    const int index = items.indexOf(chosen);
+    if (!ok || index < 0)
+        return;
+
+    const ProxyServer &p = m_profile.proxies.at(index);
+    // Qt has no SOCKS4 proxy; SOCKS4/SOCKS5 both use Socks5Proxy (a SOCKS4-only
+    // server would fail, which the user sees as a failed download).
+    const QNetworkProxy::ProxyType type =
+        (p.type == ProxyType::Http || p.type == ProxyType::Https) ? QNetworkProxy::HttpProxy
+                                                                  : QNetworkProxy::Socks5Proxy;
+    m_updater->checkNow(QNetworkProxy(type, p.address, p.port, p.authEnabled ? p.username : QString(),
+                                      p.authEnabled ? p.password : QString()));
 }
 
 // ---- connections ------------------------------------------------------------------

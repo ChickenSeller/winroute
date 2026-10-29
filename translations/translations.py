@@ -655,6 +655,13 @@ T = {
 
     # ---- updates ----
     "Check for &Updates...": ("检查更新(&U)...", "更新の確認(&U)..."),
+    "Check for Updates via &Proxy...": ("通过代理检查更新(&P)...", "プロキシ経由で更新を確認(&P)..."),
+    "Check for and download updates through one of this profile's proxies":
+        ("通过本配置中的某条代理检查并下载更新",
+         "この設定のいずれかのプロキシ経由で更新を確認・ダウンロードします"),
+    "Check for Updates": ("检查更新", "更新の確認"),
+    "Check for and download updates through:":
+        ("检查并下载更新时使用：", "更新の確認とダウンロードに使用する接続："),
     "Automatic U&pdates": ("自动更新(&P)", "自動更新(&P)"),
     "Install All Updates Automatically": ("自动安装所有更新", "すべての更新を自動でインストール"),
     "Install Required Updates Automatically": ("自动安装必须的更新", "必須の更新を自動でインストール"),

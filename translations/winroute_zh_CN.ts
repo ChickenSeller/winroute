@@ -742,6 +742,14 @@
       <translation>检查更新(&amp;U)...</translation>
     </message>
     <message>
+      <source>Check for Updates via &amp;Proxy...</source>
+      <translation>通过代理检查更新(&amp;P)...</translation>
+    </message>
+    <message>
+      <source>Check for and download updates through one of this profile's proxies</source>
+      <translation>通过本配置中的某条代理检查并下载更新</translation>
+    </message>
+    <message>
       <source>&amp;File</source>
       <translation>文件(&amp;F)</translation>
     </message>
@@ -1126,6 +1134,14 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.&lt;/p&gt;&lt;p&gt;Interception: %2&lt;br&gt;Qt %3&lt;/p&gt;</source>
       <translation>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;按照代理规则，让 Windows 应用程序的网络连接通过 SOCKS 和 HTTPS 代理服务器。&lt;/p&gt;&lt;p&gt;拦截方式：%2&lt;br&gt;Qt %3&lt;/p&gt;</translation>
+    </message>
+    <message>
+      <source>Check for Updates</source>
+      <translation>检查更新</translation>
+    </message>
+    <message>
+      <source>Check for and download updates through:</source>
+      <translation>检查并下载更新时使用：</translation>
     </message>
     <message>
       <source>%1 (pid %2)</source>

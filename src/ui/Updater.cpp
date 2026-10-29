@@ -59,13 +59,17 @@ void Updater::checkAtStartup()
         requestManifest(false);
 }
 
-void Updater::checkNow()
+void Updater::checkNow(const QNetworkProxy &proxy)
 {
+    m_manualProxy = proxy;
     requestManifest(true);
 }
 
 void Updater::requestManifest(bool interactive)
 {
+    // A manual check uses the connection the user picked; automatic checks,
+    // which run unattended in the background, always go directly.
+    m_network->setProxy(interactive ? m_manualProxy : QNetworkProxy(QNetworkProxy::NoProxy));
     QNetworkRequest request{QUrl(QStringLiteral(WINROUTE_UPDATE_URL))};
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::AlwaysNetwork);
@@ -166,6 +170,9 @@ void Updater::download(const Release &release, bool interactive)
         return;
     }
 
+    // Download over the same connection the check used: the chosen proxy for a
+    // manual update, direct for an automatic one.
+    m_network->setProxy(interactive ? m_manualProxy : QNetworkProxy(QNetworkProxy::NoProxy));
     QNetworkRequest request(release.url);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(60000);
