@@ -604,9 +604,9 @@ T = {
     "WinDivert.dll or its driver is missing next to WinRoute.exe, so this backend cannot be used.":
         ("WinRoute.exe 旁缺少 WinDivert.dll 或其驱动，无法使用此后端。",
          "WinRoute.exe の隣に WinDivert.dll またはそのドライバーがないため、このバックエンドは使用できません。"),
-    "WinDivert captures TCP connections at the packet level. It does not support UDP over the proxy or fake-DNS name resolution; host names come from observed DNS responses.":
-        ("WinDivert 在数据包层面拦截 TCP 连接。不支持经代理的 UDP 和假 DNS 解析；主机名来自嗅探到的 DNS 应答。",
-         "WinDivert はパケットレベルで TCP 接続を捕捉します。プロキシ経由の UDP や偽 DNS 解決には対応せず、ホスト名は観測した DNS 応答から取得します。"),
+    "WinDivert captures TCP and UDP at the packet level. Host names come from observed DNS responses, or from WinRoute's fake DNS when \"Resolve hostnames through proxy\" is on.":
+        ("WinDivert 在数据包层面拦截 TCP 和 UDP。主机名来自嗅探到的 DNS 应答；开启“通过代理解析主机名”后则来自 WinRoute 的假 DNS。",
+         "WinDivert はパケットレベルで TCP と UDP を捕捉します。ホスト名は観測した DNS 応答から取得し、「プロキシ経由でホスト名を解決」が有効な場合は WinRoute の偽 DNS から取得します。"),
     "running": ("运行中", "実行中"),
     "not loaded": ("未加载", "未読み込み"),
     "WinDivert: %1": ("WinDivert：%1", "WinDivert：%1"),

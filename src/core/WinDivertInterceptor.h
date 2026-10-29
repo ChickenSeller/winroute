@@ -15,12 +15,14 @@
 #include <windows.h>
 
 // Interceptor backed by WinDivert (the alternative to the NetFilter driver).
-// TCP only: a SOCKET-layer handle learns each outgoing connection's process (so
-// per-process rules work), while a NETWORK-layer handle redirects the packets of
+// A NETWORK-layer handle classifies each outbound TCP connection on its SYN
+// (taking the owning process from the TCP table) and redirects the packets of
 // the connections that need a proxy to the local relay, preserving the
 // application's source port so the relay can recover the original destination
-// (see FlowTable). UDP is passed through directly; fake DNS is not supported
-// (host names come from sniffed real DNS responses).
+// (see FlowTable). A separate handle observes DNS: it learns IP -> host name
+// from responses and, when "Resolve hostnames through proxy" is on, fake-
+// resolves queries from the 198.18.0.0/15 pool just like the NetFilter backend.
+// UDP is tunnelled through SOCKS5 when the profile asks for it.
 class WinDivertInterceptor : public Interceptor {
 public:
     WinDivertInterceptor();
@@ -50,9 +52,13 @@ public:
 
 private:
     void networkLoop();
-    void dnsLoop();          // sniffs DNS responses to learn IP -> host names
+    void dnsLoop();          // learns IP -> host names, and fake-resolves queries
     void udpLoop();          // captures outbound UDP and tunnels proxied flows
     RuleEnginePtr rules() const;
+
+    // "Resolve hostnames through proxy" state, mirroring the NetFilter backend.
+    bool resolveViaProxy(const ProfileOptions &opt) const;
+    bool shouldFakeResolve(const RuleEngine &engine, const QString &name) const;
 
     // UDP classification result for one (socket, target).
     enum UdpDecision { UdpBypass, UdpProxy, UdpDrop };
@@ -78,6 +84,7 @@ private:
         quint16 realPort = 0;
         qint64 createdMs = 0;      // for bounding the table if CLOSE events are missed
         QString hostname;          // resolved target host name, for the flow record
+        bool fakeIp = false;       // destination was a fake-DNS address (host name only)
         RuleMatch match;           // the matched rule/action, for the flow record
     };
 
@@ -102,6 +109,7 @@ private:
     mutable QMutex m_rulesMutex;
     RuleEnginePtr m_rules;
     QSet<QString> m_proxyEndpoints;   // "ip:port" of proxies, for loop detection
+    QSet<QString> m_proxyHosts;       // proxy host names, never fake-resolved
 
     mutable QMutex m_connMutex;
     QHash<quint16, Conn> m_conns;     // keyed by the application's local TCP port

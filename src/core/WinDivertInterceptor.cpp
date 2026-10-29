@@ -188,11 +188,14 @@ bool WinDivertInterceptor::start(const InterceptorContext &ctx, QString *error)
         return false;
     }
 
-    // Read-only sniff of DNS responses, to learn IP -> host name mappings (the
-    // relay then offers the proxy the host name, which matters for proxies that
-    // reject raw addresses). Non-fatal if it cannot be opened.
-    m_dnsHandle = api->open("inbound and udp and udp.SrcPort == 53", WINDIVERT_LAYER_NETWORK, -101,
-                            WINDIVERT_FLAG_SNIFF | WINDIVERT_FLAG_RECV_ONLY);
+    // DNS, both directions. Responses are observed to learn IP -> host name
+    // mappings (the relay then offers the proxy the host name, which matters for
+    // proxies that reject raw addresses); outbound queries are fake-resolved from
+    // the 198.18.0.0/15 pool when "Resolve hostnames through proxy" is on, and
+    // otherwise reinjected unchanged. Our own injected replies carry the impostor
+    // flag so they are not captured again. Non-fatal if it cannot be opened.
+    m_dnsHandle = api->open("udp and not impostor and (udp.DstPort == 53 or udp.SrcPort == 53)",
+                            WINDIVERT_LAYER_NETWORK, -101, 0);
 
     // UDP over SOCKS5, when the profile asks for it: capture outbound UDP (except
     // DNS, which the sniff above needs to see) and tunnel the proxied flows. The
@@ -232,9 +235,10 @@ void WinDivertInterceptor::stop()
         return;
     const WinDivertApi *api = WinDivertApi::instance();
     // Shut down the recv side only: new packets then pass through natively while
-    // the loop drains and reinjects whatever is already queued, so no in-flight
+    // each loop drains and reinjects whatever is already queued, so no in-flight
     // packet is dropped (closing with packets queued would hiccup even direct
-    // connections). The DNS handle only sniffs, so a full shutdown is fine.
+    // connections). The DNS handle now reinjects traffic too, so it drains the
+    // same way rather than being torn down outright.
     if (m_ctx.relay)
         m_ctx.relay->setUdpInjector(UdpInjector{});
     if (m_networkHandle != INVALID_HANDLE_VALUE)
@@ -242,7 +246,7 @@ void WinDivertInterceptor::stop()
     if (m_udpHandle != INVALID_HANDLE_VALUE)
         api->shutdown(m_udpHandle, WINDIVERT_SHUTDOWN_RECV);
     if (m_dnsHandle != INVALID_HANDLE_VALUE)
-        api->shutdown(m_dnsHandle, WINDIVERT_SHUTDOWN_BOTH);
+        api->shutdown(m_dnsHandle, WINDIVERT_SHUTDOWN_RECV);
     if (m_networkThread.joinable())
         m_networkThread.join();
     if (m_udpThread.joinable())
@@ -262,19 +266,22 @@ void WinDivertInterceptor::stop()
 
 void WinDivertInterceptor::setRules(RuleEnginePtr rules)
 {
-    QSet<QString> endpoints;
+    QSet<QString> endpoints, hosts;
     bool udpProxy = false;
     if (rules) {
         udpProxy = rules->profile().options.udpMode == QLatin1String("mode_proxy");
         for (const ProxyServer &p : rules->profile().proxies) {
             const QHostAddress literal(p.address);
-            if (!literal.isNull())
+            if (literal.isNull())
+                hosts.insert(p.address.toLower());   // a host name, never fake-resolved
+            else
                 endpoints.insert(util::formatEndpoint(util::normalize(literal), p.port));
         }
     }
     QMutexLocker lock(&m_rulesMutex);
     m_rules = std::move(rules);
     m_proxyEndpoints = endpoints;
+    m_proxyHosts = hosts;
     m_udpProxyMode = udpProxy;   // whether to tunnel UDP; read by start()
 }
 
@@ -282,6 +289,28 @@ RuleEnginePtr WinDivertInterceptor::rules() const
 {
     QMutexLocker lock(&m_rulesMutex);
     return m_rules;
+}
+
+bool WinDivertInterceptor::resolveViaProxy(const ProfileOptions &opt) const
+{
+    return opt.dnsAutoDetect ? !m_localDnsAvailable : opt.dnsViaProxy;
+}
+
+bool WinDivertInterceptor::shouldFakeResolve(const RuleEngine &engine, const QString &name) const
+{
+    const ProfileOptions &opt = engine.profile().options;
+    if (!resolveViaProxy(opt) || name.isEmpty())
+        return false;
+    const QString lower = name.toLower();
+    if (lower.endsWith(".arpa") || lower == "localhost" || lower.endsWith(".localhost"))
+        return false;
+    {
+        QMutexLocker lock(&m_rulesMutex);
+        if (m_proxyHosts.contains(lower))
+            return false;
+    }
+    const bool listed = RuleEngine::matchHostList(util::splitList(opt.dnsExclusionList), lower, QHostAddress());
+    return opt.dnsOnlyFromList ? listed : !listed;
 }
 
 void WinDivertInterceptor::decide(Conn &c, const QHostAddress &dst, quint16 dport)
@@ -299,12 +328,29 @@ void WinDivertInterceptor::decide(Conn &c, const QHostAddress &dst, quint16 dpor
         return;
     }
 
-    const QString host = m_ctx.dnsCache ? m_ctx.dnsCache->lookup(dst) : QString();
+    // A fake-DNS address stands for a host name we handed the application; the
+    // real target is only known by that name (there is no server at the fake
+    // address), so a fake connection always goes to the relay - even on a Direct
+    // rule, where the relay connects out to the name itself.
+    const bool fake = m_ctx.fakeDns && FakeDns::isFake(dst);
+    QString host;
+    if (fake) {
+        host = m_ctx.fakeDns->hostnameFor(dst);
+        if (host.isEmpty()) {
+            c.state = State::Blocked;
+            logError(QCoreApplication::translate("Interceptor", "%1 - %2 error : unknown fake DNS address, the name was resolved before WinRoute started")
+                         .arg(c.appName, util::formatEndpoint(dst, dport)));
+            return;
+        }
+    } else {
+        host = m_ctx.dnsCache ? m_ctx.dnsCache->lookup(dst) : QString();
+    }
+
     ConnectionRequest req;
     req.appPath = c.appPath;
     req.appName = c.appName;
     req.pid = c.pid;
-    req.ip = dst;
+    req.ip = fake ? QHostAddress() : dst;
     req.hostname = host;
     req.port = dport;
     const RuleMatch match = engine->match(req);
@@ -316,7 +362,7 @@ void WinDivertInterceptor::decide(Conn &c, const QHostAddress &dst, quint16 dpor
         logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : blocked").arg(c.appName, target, match.ruleName));
         return;
     case ActionType::Direct:
-        if (!opt.handleDirectConnections) {
+        if (!fake && !opt.handleDirectConnections) {
             c.state = State::Passthrough;
             logVerbose(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : direct connection").arg(c.appName, target, match.ruleName));
             return;
@@ -324,7 +370,7 @@ void WinDivertInterceptor::decide(Conn &c, const QHostAddress &dst, quint16 dpor
         break;
     case ActionType::Proxy:
     case ActionType::Chain:
-        if (opt.loopDetection) {
+        if (!fake && opt.loopDetection) {
             QMutexLocker lock(&m_rulesMutex);
             if (m_proxyEndpoints.contains(util::formatEndpoint(dst, dport))) {
                 lock.unlock();
@@ -339,6 +385,7 @@ void WinDivertInterceptor::decide(Conn &c, const QHostAddress &dst, quint16 dpor
     c.state = State::Active;
     c.realPort = dport;
     c.hostname = host;
+    c.fakeIp = fake;
     c.match = match;
 }
 
@@ -422,6 +469,7 @@ void WinDivertInterceptor::networkLoop()
                         info.dstAddr = dst;
                         info.dstPort = ep.dstPort;
                         info.hostname = c.hostname;
+                        info.fakeIp = c.fakeIp;
                         info.match = c.match;
                         info.createdMs = c.createdMs;
                         if (m_ctx.flows)
@@ -502,24 +550,75 @@ void WinDivertInterceptor::dnsLoop()
     std::vector<unsigned char> buf(WINDIVERT_MTU_MAX);
     WINDIVERT_ADDRESS addr;
     UINT len = 0;
-    while (m_running) {
+
+    // Drains on stop() the same way as networkLoop (SHUTDOWN_RECV): queued DNS
+    // is still reinjected and new DNS passes through natively.
+    while (true) {
         if (!api->recv(m_dnsHandle, buf.data(), UINT(buf.size()), &len, &addr)) {
             if (!m_running)
                 break;
             continue;
         }
+        wdpkt::Endpoints ep;
         const unsigned char *payload = nullptr;
         unsigned plen = 0;
-        if (!wdpkt::udpPayload(buf.data(), len, &payload, &plen) || !m_ctx.dnsCache)
-            continue;   // sniffing only; nothing is reinjected
-        dns::Question q;
-        QList<dns::Answer> answers;
-        if (!dns::parseAnswers(QByteArray::fromRawData(reinterpret_cast<const char *>(payload), int(plen)), &q, &answers))
+        if (!wdpkt::readUdp(buf.data(), len, &ep, &payload, &plen)) {
+            api->send(m_dnsHandle, buf.data(), len, nullptr, &addr);   // not UDP we can parse
             continue;
-        for (const auto &a : answers) {
-            if ((a.type == dns::TypeA || a.type == dns::TypeAAAA) && !a.address.isNull() && !FakeDns::isFake(a.address))
-                m_ctx.dnsCache->insert(a.address, q.name);
         }
+
+        // Inbound response: learn IP -> host name, then let it reach the app.
+        if (ep.srcPort == 53) {
+            if (m_ctx.dnsCache) {
+                dns::Question q;
+                QList<dns::Answer> answers;
+                if (dns::parseAnswers(QByteArray::fromRawData(reinterpret_cast<const char *>(payload), int(plen)), &q, &answers))
+                    for (const auto &a : answers)
+                        if ((a.type == dns::TypeA || a.type == dns::TypeAAAA) && !a.address.isNull() && !FakeDns::isFake(a.address))
+                            m_ctx.dnsCache->insert(a.address, q.name);
+            }
+            api->send(m_dnsHandle, buf.data(), len, nullptr, &addr);
+            continue;
+        }
+
+        // Outbound query (DstPort == 53). Fake-resolve it when the profile asks
+        // to resolve names through the proxy; otherwise send it on unchanged.
+        bool answered = false;
+        const RuleEnginePtr engine = rules();
+        if (engine && m_ctx.fakeDns && resolveViaProxy(engine->profile().options)) {
+            const QByteArray query(reinterpret_cast<const char *>(payload), int(plen));
+            dns::Question q;
+            // Never fake-resolve WinRoute's own look-ups: the relay resolves names
+            // for direct connections, and a fake answer there would misdirect it.
+            const quint32 owner = procinfo::udpOwnerPid(hostFromBytes(ep.src, ep.v6), ep.srcPort);
+            if (owner != m_selfPid && dns::parseQuestion(query, &q) && !(q.flags & 0x8000) && q.qclass == 1
+                && shouldFakeResolve(*engine, q.name)) {
+                const bool blockOthers = engine->profile().options.dnsBlockNonATypes;
+                QByteArray response;
+                if (q.qtype == dns::TypeA) {
+                    const QHostAddress fake = m_ctx.fakeDns->addressFor(q.name);
+                    response = dns::buildResponse(query, q, {fake}, 10);
+                    logDebug(QCoreApplication::translate("Interceptor", "DNS %1 resolved through proxy as %2").arg(q.name, fake.toString()));
+                } else if (q.qtype == dns::TypeAAAA || q.qtype == dns::TypeHTTPS || blockOthers) {
+                    response = dns::buildResponse(query, q, {}, 10);
+                }
+                if (!response.isEmpty()) {
+                    std::vector<unsigned char> pkt(size_t(ep.v6 ? 40 : 20) + 8 + response.size());
+                    const unsigned n = wdpkt::buildUdp(ep.v6, ep.dst, 53, ep.src, ep.srcPort,
+                                                       reinterpret_cast<const uint8_t *>(response.constData()),
+                                                       unsigned(response.size()), pkt.data(), unsigned(pkt.size()));
+                    if (n) {
+                        WINDIVERT_ADDRESS rep = addr;
+                        rep.Outbound = 0;   // inbound: delivered back to the application
+                        rep.Impostor = 1;   // so our own reply is not captured again
+                        api->send(m_dnsHandle, pkt.data(), n, nullptr, &rep);
+                        answered = true;
+                    }
+                }
+            }
+        }
+        if (!answered)
+            api->send(m_dnsHandle, buf.data(), len, nullptr, &addr);
     }
 }
 
@@ -640,17 +739,23 @@ void WinDivertInterceptor::udpLoop()
             appPath = aPath;
         }
 
+        // A fake-DNS address stands for a host name; recover it so the datagram is
+        // tunnelled to the name (there is no server at the fake address), exactly
+        // as the NetFilter backend does.
+        const bool fakeDst = m_ctx.fakeDns && FakeDns::isFake(dst);
+
         if (!skip && decision < 0) {
             const RuleEnginePtr engine = rules();
             if (!engine) {
                 decision = UdpBypass;
             } else {
-                const QString host = m_ctx.dnsCache ? m_ctx.dnsCache->lookup(dst) : QString();
+                const QString host = fakeDst ? m_ctx.fakeDns->hostnameFor(dst)
+                                             : (m_ctx.dnsCache ? m_ctx.dnsCache->lookup(dst) : QString());
                 ConnectionRequest req;
                 req.appPath = appPath;
                 req.appName = appName;
                 req.pid = pid;
-                req.ip = dst;
+                req.ip = fakeDst ? QHostAddress() : dst;
                 req.hostname = host;
                 req.port = ep.dstPort;
                 const RuleMatch match = engine->match(req);
@@ -677,7 +782,8 @@ void WinDivertInterceptor::udpLoop()
             dg.remote = makeSockaddr(ep.dst, ep.v6, ep.dstPort);
             dg.localEndpoint = makeSockaddr(ep.src, ep.v6, ep.srcPort);
             dg.v6 = ep.v6;
-            dg.hostname = m_ctx.dnsCache ? m_ctx.dnsCache->lookup(dst) : QString();
+            dg.hostname = fakeDst ? m_ctx.fakeDns->hostnameFor(dst)
+                                  : (m_ctx.dnsCache ? m_ctx.dnsCache->lookup(dst) : QString());
             dg.data = QByteArray(reinterpret_cast<const char *>(payload), int(plen));
             Relay *relay = m_ctx.relay;
             QMetaObject::invokeMethod(relay, [relay, dg] { relay->udpOut(dg); }, Qt::QueuedConnection);

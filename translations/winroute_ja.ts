@@ -168,10 +168,6 @@
       <translation>WinRoute.exe の隣に WinDivert.dll またはそのドライバーがないため、このバックエンドは使用できません。</translation>
     </message>
     <message>
-      <source>WinDivert captures TCP connections at the packet level. It does not support UDP over the proxy or fake-DNS name resolution; host names come from observed DNS responses.</source>
-      <translation>WinDivert はパケットレベルで TCP 接続を捕捉します。プロキシ経由の UDP や偽 DNS 解決には対応せず、ホスト名は観測した DNS 応答から取得します。</translation>
-    </message>
-    <message>
       <source>running</source>
       <translation>実行中</translation>
     </message>
@@ -222,6 +218,10 @@
     <message>
       <source>The evaluation driver from the NetFilter SDK. It stops capturing connections after a limited number of them, until Windows restarts.</source>
       <translation>NetFilter SDK に付属する評価版ドライバーです。捕捉した接続数が上限に達すると、Windows を再起動するまで動作しません。</translation>
+    </message>
+    <message>
+      <source>WinDivert captures TCP and UDP at the packet level. Host names come from observed DNS responses, or from WinRoute's fake DNS when "Resolve hostnames through proxy" is on.</source>
+      <translation>WinDivert はパケットレベルで TCP と UDP を捕捉します。ホスト名は観測した DNS 応答から取得し、「プロキシ経由でホスト名を解決」が有効な場合は WinRoute の偽 DNS から取得します。</translation>
     </message>
     <message>
       <source>A release build of the driver, without a connection limit.</source>

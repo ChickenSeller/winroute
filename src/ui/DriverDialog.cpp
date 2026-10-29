@@ -111,9 +111,9 @@ void DriverDialog::refresh()
             m_uninstall->setEnabled(false);
             return;
         }
-        m_note->setText(tr("WinDivert captures TCP connections at the packet level. It does not support "
-                           "UDP over the proxy or fake-DNS name resolution; host names come from observed "
-                           "DNS responses."));
+        m_note->setText(tr("WinDivert captures TCP and UDP at the packet level. Host names come from observed "
+                           "DNS responses, or from WinRoute's fake DNS when \"Resolve hostnames through proxy\" "
+                           "is on."));
         const auto info = WinDivertInterceptor::info();
         QStringList parts;
         if (!info.version.isEmpty())

@@ -168,10 +168,6 @@
       <translation>WinRoute.exe 旁缺少 WinDivert.dll 或其驱动，无法使用此后端。</translation>
     </message>
     <message>
-      <source>WinDivert captures TCP connections at the packet level. It does not support UDP over the proxy or fake-DNS name resolution; host names come from observed DNS responses.</source>
-      <translation>WinDivert 在数据包层面拦截 TCP 连接。不支持经代理的 UDP 和假 DNS 解析；主机名来自嗅探到的 DNS 应答。</translation>
-    </message>
-    <message>
       <source>running</source>
       <translation>运行中</translation>
     </message>
@@ -222,6 +218,10 @@
     <message>
       <source>The evaluation driver from the NetFilter SDK. It stops capturing connections after a limited number of them, until Windows restarts.</source>
       <translation>NetFilter SDK 自带的评估版驱动。拦截的连接数达到上限后会停止工作，重启 Windows 后恢复。</translation>
+    </message>
+    <message>
+      <source>WinDivert captures TCP and UDP at the packet level. Host names come from observed DNS responses, or from WinRoute's fake DNS when "Resolve hostnames through proxy" is on.</source>
+      <translation>WinDivert 在数据包层面拦截 TCP 和 UDP。主机名来自嗅探到的 DNS 应答；开启“通过代理解析主机名”后则来自 WinRoute 的假 DNS。</translation>
     </message>
     <message>
       <source>A release build of the driver, without a connection limit.</source>

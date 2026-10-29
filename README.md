@@ -28,7 +28,7 @@ Relay (独立线程, 0.0.0.0/:: 随机端口)
 有两种拦截后端，在“工具 > 网络驱动”里选择（`QSettings` 的 `backend/active`）：
 
 - **NetFilter（默认）**：上图所示，`netfilter2.sys` 在 connect 回调里改写目标，支持 UDP 代理与假 DNS。
-- **WinDivert（`WinDivertInterceptor`）**：NETWORK 层全量抓出站流量。TCP 在每条连接的 SYN 上分类（进程归属取自 TCP 表，无竞态），把要代理的连接的数据包做 NAT 重定向到本地中继（目标改成源 IP 的中继端口，**保留应用源端口**，中继据此从 `FlowTable` 还原原始目标）；自身与中继上行流量归属本进程，天然放过。开启"通过 SOCKS5 转发 UDP"后，UDP 也支持（命中单个 SOCKS5 的流量由中继做 UDP ASSOCIATE 隧道，回包由后端自行构造并重注入；进程归属取自 UDP 表；DNS 53 除外，仍走直连）。另开一个只读句柄嗅探 DNS 应答填 `DnsCache`，使中继能把**域名**交给代理（对拒绝裸 IP 的代理很关键）。**不支持假 DNS**。首次使用时 WinDivert 自行安装其内核服务（需管理员）。
+- **WinDivert（`WinDivertInterceptor`）**：NETWORK 层全量抓出站流量。TCP 在每条连接的 SYN 上分类（进程归属取自 TCP 表，无竞态），把要代理的连接的数据包做 NAT 重定向到本地中继（目标改成源 IP 的中继端口，**保留应用源端口**，中继据此从 `FlowTable` 还原原始目标）；自身与中继上行流量归属本进程，天然放过。开启"通过 SOCKS5 转发 UDP"后，UDP 也支持（命中单个 SOCKS5 的流量由中继做 UDP ASSOCIATE 隧道，回包由后端自行构造并重注入；进程归属取自 UDP 表）。另开一个 DNS 句柄（UDP 53 两个方向）：嗅探应答填 `DnsCache`，使中继能把**域名**交给代理（对拒绝裸 IP 的代理很关键）；开启"通过代理解析主机名"后，像 NetFilter 一样把出站查询假解析成 `198.18.0.0/15` 的假 IP（连接命中假 IP 时在 SYN 分类处还原成域名，本进程自身的查询不假解析）。首次使用时 WinDivert 自行安装其内核服务（需管理员）。
 
 ## 目录
 
