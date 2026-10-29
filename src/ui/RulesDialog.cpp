@@ -2,6 +2,7 @@
 #include "Icons.h"
 #include "RuleDialog.h"
 
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -25,7 +26,6 @@ RulesDialog::RulesDialog(const Profile &profile, QWidget *parent)
     m_list = new QTreeWidget;
     m_list->setHeaderLabels({tr("Name"), tr("Applications"), tr("Target Hosts"), tr("Target Ports"), tr("Action")});
     m_list->setRootIsDecorated(false);
-    m_list->setUniformRowHeights(true);
     m_list->setAllColumnsShowFocus(true);
     m_list->header()->resizeSection(ColName, 150);
     m_list->header()->resizeSection(ColApps, 200);
@@ -86,19 +86,50 @@ void RulesDialog::rebuild(int select)
     m_list->blockSignals(true);
     m_list->clear();
     const int last = int(m_profile.rules.size()) - 1;
+
+    // Action options for the inline drop-down, shared by every row: Direct, Block,
+    // then each proxy and each chain (the order Proxifier uses).
+    struct ActionOption { RuleAction action; QString text; QIcon icon; };
+    QList<ActionOption> options;
+    options.append({{ActionType::Direct, 0}, m_profile.actionDisplayName({ActionType::Direct, 0}), icons::direct()});
+    options.append({{ActionType::Block, 0}, m_profile.actionDisplayName({ActionType::Block, 0}), icons::block()});
+    for (const ProxyServer &p : m_profile.proxies)
+        options.append({{ActionType::Proxy, p.id}, m_profile.actionDisplayName({ActionType::Proxy, p.id}), icons::proxy()});
+    for (const ProxyChain &ch : m_profile.chains)
+        options.append({{ActionType::Chain, ch.id}, m_profile.actionDisplayName({ActionType::Chain, ch.id}), icons::chain()});
+
     for (int i = 0; i <= last; ++i) {
         const Rule &r = m_profile.rules[i];
         auto *item = new QTreeWidgetItem(m_list, {r.name, r.applications.isEmpty() ? tr("Any") : r.applications,
                                                   r.targets.isEmpty() ? tr("Any") : r.targets, r.ports.isEmpty() ? tr("Any") : r.ports,
-                                                  m_profile.actionDisplayName(r.action)});
-        switch (r.action.type) {
-        case ActionType::Direct: item->setIcon(ColAction, icons::direct()); break;
-        case ActionType::Block: item->setIcon(ColAction, icons::block()); break;
-        case ActionType::Proxy: item->setIcon(ColAction, icons::proxy()); break;
-        case ActionType::Chain: item->setIcon(ColAction, icons::chain()); break;
-        }
-        for (int c = 0; c <= ColAction; ++c)
+                                                  QString()});
+        for (int c = 0; c < ColAction; ++c)
             item->setToolTip(c, item->text(c));
+
+        // A drop-down in the Action column so the action can be changed in place,
+        // like Proxifier. activated() fires only on a user choice, not on the
+        // setCurrentIndex below.
+        auto *combo = new QComboBox;
+        for (const ActionOption &o : options)
+            combo->addItem(o.icon, o.text);
+        int sel = 0;
+        for (int k = 0; k < options.size(); ++k) {
+            const RuleAction &a = options[k].action;
+            if (a.type == r.action.type
+                && (a.type == ActionType::Direct || a.type == ActionType::Block || a.id == r.action.id)) {
+                sel = k;
+                break;
+            }
+        }
+        combo->setCurrentIndex(sel);
+        combo->setToolTip(options.value(sel).text);
+        m_list->setItemWidget(item, ColAction, combo);
+        connect(combo, &QComboBox::activated, this, [this, i, options, combo](int idx) {
+            if (idx >= 0 && idx < options.size() && i >= 0 && i < m_profile.rules.size()) {
+                m_profile.rules[i].action = options[idx].action;
+                combo->setToolTip(options[idx].text);
+            }
+        });
         if (i < last) {
             item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
             item->setCheckState(ColName, r.enabled ? Qt::Checked : Qt::Unchecked);
