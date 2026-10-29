@@ -14,6 +14,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QSettings>
+#include <QStringList>
 
 #include <cstring>
 
@@ -578,6 +579,41 @@ QString NetFilterInterceptor::processPath(quint32 pid, const QString &fallback) 
     return {};
 }
 
+// Display name of the process that owns a UDP socket, for the DNS log.
+QString NetFilterInterceptor::dnsClient(ENDPOINT_ID id) const
+{
+    quint32 pid = 0;
+    {
+        QMutexLocker lock(&m_udpMutex);
+        auto it = m_udpSocks.constFind(id);
+        if (it != m_udpSocks.constEnd())
+            pid = it->pid;
+    }
+    if (pid == 0 && m_api && m_api->getUDPConnInfo) {
+        NF_UDP_CONN_INFO ci{};
+        if (m_api->getUDPConnInfo(id, &ci) == NF_STATUS_SUCCESS)
+            pid = ci.processId;
+    }
+    if (pid == 0)
+        return QCoreApplication::translate("Interceptor", "unknown");
+    procinfo::Info pinfo = procinfo::lookup(pid);
+    const QString path = processPath(pid, pinfo.path);
+    const QString nm = path.isEmpty() ? pinfo.name : QFileInfo(path).fileName();
+    return nm.isEmpty() ? QStringLiteral("pid %1").arg(pid) : nm;
+}
+
+// Short label for a DNS record type, for the DNS log.
+static QString dnsTypeName(quint16 t)
+{
+    switch (t) {
+    case dns::TypeA: return QStringLiteral("A");
+    case dns::TypeAAAA: return QStringLiteral("AAAA");
+    case dns::TypeHTTPS: return QStringLiteral("HTTPS");
+    case dns::TypeCNAME: return QStringLiteral("CNAME");
+    default: return QStringLiteral("type %1").arg(t);
+    }
+}
+
 void NetFilterInterceptor::onTcpConnectRequest(ENDPOINT_ID id, PNF_TCP_CONN_INFO ci)
 {
     if (!m_running)
@@ -754,25 +790,38 @@ void NetFilterInterceptor::onUdpSend(ENDPOINT_ID id, const unsigned char *remote
 
     // DNS (port 53): fake-resolve queries and let everything else pass, as before.
     if (dport == 53) {
-        if (engine && resolveViaProxy(engine->profile().options)) {
-            const QByteArray query(buf, len);
-            dns::Question q;
-            if (dns::parseQuestion(query, &q) && !(q.flags & 0x8000) && q.qclass == 1 && shouldFakeResolve(*engine, q.name)) {
-                const bool blockOthers = engine->profile().options.dnsBlockNonATypes;
-                QByteArray response;
-                if (q.qtype == dns::TypeA) {
-                    const QHostAddress fake = m_ctx.fakeDns->addressFor(q.name);
-                    response = dns::buildResponse(query, q, {fake}, 10);
-                    logDebug(QCoreApplication::translate("Interceptor", "DNS %1 resolved through proxy as %2").arg(q.name, fake.toString()));
-                } else if (q.qtype == dns::TypeAAAA || q.qtype == dns::TypeHTTPS || blockOthers) {
-                    response = dns::buildResponse(query, q, {}, 10);
+        const bool logDns = engine && engine->profile().options.logDns;
+        const QByteArray query = QByteArray::fromRawData(buf, len);
+        dns::Question q;
+        const bool haveQuery = engine && dns::parseQuestion(query, &q) && !(q.flags & 0x8000) && q.qclass == 1;
+        if (engine && resolveViaProxy(engine->profile().options) && haveQuery && shouldFakeResolve(*engine, q.name)) {
+            const bool blockOthers = engine->profile().options.dnsBlockNonATypes;
+            QByteArray response;
+            QString result;
+            if (q.qtype == dns::TypeA) {
+                const QHostAddress fake = m_ctx.fakeDns->addressFor(q.name);
+                response = dns::buildResponse(query, q, {fake}, 10);
+                result = fake.toString();
+                logDebug(QCoreApplication::translate("Interceptor", "DNS %1 resolved through proxy as %2").arg(q.name, fake.toString()));
+            } else if (q.qtype == dns::TypeAAAA || q.qtype == dns::TypeHTTPS || blockOthers) {
+                response = dns::buildResponse(query, q, {}, 10);
+            }
+            if (!response.isEmpty()) {
+                if (logDns) {
+                    if (!result.isEmpty())
+                        logNormal(QCoreApplication::translate("Interceptor", "DNS: %1 asked %2 for %3 (A), via proxy as %4")
+                                      .arg(dnsClient(id), util::formatEndpoint(dst, dport), q.name, result));
+                    else
+                        logNormal(QCoreApplication::translate("Interceptor", "DNS: %1 asked %2 for %3 (%4), via proxy, no record")
+                                      .arg(dnsClient(id), util::formatEndpoint(dst, dport), q.name, dnsTypeName(q.qtype)));
                 }
-                if (!response.isEmpty()) {
-                    m_api->udpPostReceive(id, remote, response.constData(), int(response.size()), opt);
-                    return;
-                }
+                m_api->udpPostReceive(id, remote, response.constData(), int(response.size()), opt);
+                return;
             }
         }
+        if (logDns && haveQuery)
+            logNormal(QCoreApplication::translate("Interceptor", "DNS: %1 asked %2 for %3 (%4), direct")
+                          .arg(dnsClient(id), util::formatEndpoint(dst, dport), q.name, dnsTypeName(q.qtype)));
         m_api->udpPostSend(id, remote, buf, len, opt);
         return;
     }
@@ -947,9 +996,22 @@ void NetFilterInterceptor::onUdpReceive(ENDPOINT_ID id, const unsigned char *rem
     dns::Question q;
     QList<dns::Answer> answers;
     if (dns::parseAnswers(QByteArray::fromRawData(buf, len), &q, &answers)) {
+        QStringList ips;
         for (const auto &a : answers) {
-            if ((a.type == dns::TypeA || a.type == dns::TypeAAAA) && !a.address.isNull() && !FakeDns::isFake(a.address))
-                m_ctx.dnsCache->insert(a.address, q.name);
+            if ((a.type == dns::TypeA || a.type == dns::TypeAAAA) && !a.address.isNull()) {
+                if (!FakeDns::isFake(a.address))
+                    m_ctx.dnsCache->insert(a.address, q.name);
+                ips << a.address.toString();
+            }
+        }
+        const RuleEnginePtr engine = rules();
+        if (engine && engine->profile().options.logDns) {
+            quint16 sport = 0;
+            const QHostAddress server = fromSockaddr(remote, &sport);
+            if (sport == 53)
+                logNormal(QCoreApplication::translate("Interceptor", "DNS: %2 answered %1: %3 = %4")
+                              .arg(dnsClient(id), util::formatEndpoint(server, sport), q.name,
+                                   ips.isEmpty() ? QCoreApplication::translate("Interceptor", "(no records)") : ips.join(QStringLiteral(", "))));
         }
     }
     m_api->udpPostReceive(id, remote, buf, len, opt);

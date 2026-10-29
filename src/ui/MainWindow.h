@@ -127,7 +127,7 @@ private:
 
     QAction *m_actNewProfile, *m_actSaveAs, *m_actManage, *m_actImport, *m_actExport, *m_actAutostart, *m_actCloseWindow, *m_actExit;
     QAction *m_actProxyServers, *m_actRules, *m_actNameResolution, *m_actHttpProxies, *m_actServices, *m_actHandleDirect,
-        *m_actLoopDetection, *m_actUdpProxy, *m_actEncryption;
+        *m_actLoopDetection, *m_actUdpProxy, *m_actLogDns, *m_actEncryption;
     QAction *m_actDisconnect, *m_actEndProcess, *m_actCreateRule, *m_actCopyConn;
     QAction *m_actLogCopy, *m_actLogSelectAll, *m_actLogClear;
     QAction *m_actTrayIcon, *m_actToolbar, *m_actStatusBar;

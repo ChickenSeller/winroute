@@ -167,6 +167,14 @@ void MainWindow::createActions()
         p.options.udpMode = on ? "mode_proxy" : "mode_bypass";
         applyProfile(p);
     });
+    m_actLogDns = new QAction(tr("Log &DNS Activity"), this);
+    m_actLogDns->setCheckable(true);
+    m_actLogDns->setStatusTip(tr("Log DNS queries and replies: the server, the name asked, the answer, the program and whether it is resolved through the proxy"));
+    connect(m_actLogDns, &QAction::triggered, this, [this](bool on) {
+        Profile p = m_profile;
+        p.options.logDns = on;
+        applyProfile(p);
+    });
     m_actEncryption = act(tr("&Passwords Encryption..."), &MainWindow::showEncryption);
 
     m_actDisconnect = act(tr("&Disconnect"), &MainWindow::disconnectSelected, QKeySequence::Delete, icons::disconnect());
@@ -250,6 +258,7 @@ void MainWindow::createMenus()
     advanced->addAction(m_actHandleDirect);
     advanced->addAction(m_actLoopDetection);
     advanced->addAction(m_actUdpProxy);
+    advanced->addAction(m_actLogDns);
     advanced->addAction(m_actEncryption);
 
     QMenu *log = menuBar()->addMenu(tr("&Log"));
@@ -674,6 +683,7 @@ void MainWindow::updateTitle()
     m_actHandleDirect->setChecked(m_profile.options.handleDirectConnections);
     m_actLoopDetection->setChecked(m_profile.options.loopDetection);
     m_actUdpProxy->setChecked(m_profile.options.udpMode == "mode_proxy");
+    m_actLogDns->setChecked(m_profile.options.logDns);
 }
 
 void MainWindow::updateTrayIcon()

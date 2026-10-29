@@ -77,6 +77,7 @@ struct ProfileOptions {
     bool dnsOnlyFromList = false;    // false: "Do NOT resolve the following"
     QString dnsExclusionList = "%ComputerName%; localhost; *.local";
     int dnsUdpMode = 0;
+    bool logDns = false;             // WinRoute: log DNS queries and replies
 
     PasswordEncryption encryption = PasswordEncryption::Disabled;
     bool loopDetection = true;

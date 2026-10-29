@@ -460,6 +460,10 @@
       <translation>UDP フィルタリングを更新できません：%1</translation>
     </message>
     <message>
+      <source>unknown</source>
+      <translation>不明</translation>
+    </message>
+    <message>
       <source>%1 - %2 error : unknown fake DNS address, the name was resolved before WinRoute started</source>
       <translation>%1 - %2 エラー：不明な仮想 DNS アドレスです。この名前は WinRoute の起動前に解決されました</translation>
     </message>
@@ -484,6 +488,18 @@
       <translation>DNS %1 をプロキシ経由で %2 として解決しました</translation>
     </message>
     <message>
+      <source>DNS: %1 asked %2 for %3 (A), via proxy as %4</source>
+      <translation>DNS：%1 が %2 に %3（A）を問い合わせ、プロキシ経由で %4 に解決</translation>
+    </message>
+    <message>
+      <source>DNS: %1 asked %2 for %3 (%4), via proxy, no record</source>
+      <translation>DNS：%1 が %2 に %3（%4）を問い合わせ、プロキシ経由で解決、レコードなし</translation>
+    </message>
+    <message>
+      <source>DNS: %1 asked %2 for %3 (%4), direct</source>
+      <translation>DNS：%1 が %2 に %3（%4）を問い合わせ、直接</translation>
+    </message>
+    <message>
       <source>%1 - %2 matching %3 rule : blocked (UDP)</source>
       <translation>%1 - %2 がルール %3 に一致：ブロック（UDP）</translation>
     </message>
@@ -494,6 +510,14 @@
     <message>
       <source>%1 - %2 matching %3 rule : proxy chains do not support UDP, sending directly</source>
       <translation>%1 - %2 がルール %3 に一致：プロキシチェーンは UDP に対応していないため直接接続します</translation>
+    </message>
+    <message>
+      <source>DNS: %2 answered %1: %3 = %4</source>
+      <translation>DNS：%2 が %1 に応答：%3 = %4</translation>
+    </message>
+    <message>
+      <source>(no records)</source>
+      <translation>レコードなし</translation>
     </message>
     <message>
       <source>Cannot open the WinDivert service (error %1)</source>
@@ -620,6 +644,14 @@
     <message>
       <source>Tunnel UDP through the proxy when a rule selects a SOCKS5 proxy (otherwise UDP goes directly)</source>
       <translation>ルールが SOCKS5 プロキシを選択したとき、UDP をプロキシ経由で転送します（それ以外は UDP は直接接続）</translation>
+    </message>
+    <message>
+      <source>Log &amp;DNS Activity</source>
+      <translation>DNS をログに表示(&amp;D)</translation>
+    </message>
+    <message>
+      <source>Log DNS queries and replies: the server, the name asked, the answer, the program and whether it is resolved through the proxy</source>
+      <translation>DNS のクエリと応答をログに記録します：サーバー、問い合わせたドメイン名、応答、発信元プログラム、プロキシ経由で解決するかどうか</translation>
     </message>
     <message>
       <source>&amp;Passwords Encryption...</source>

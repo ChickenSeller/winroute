@@ -82,6 +82,7 @@ private:
     bool resolveViaProxy(const ProfileOptions &opt) const;
     bool shouldFakeResolve(const RuleEngine &rules, const QString &name) const;
     QString processPath(quint32 pid, const QString &fallback) const;
+    QString dnsClient(ENDPOINT_ID id) const;   // display name of a UDP socket's process, for the DNS log
     void handleUdpProxy(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len, PNF_UDP_OPTIONS opt,
                         const RuleEnginePtr &engine, const QHostAddress &dst, quint16 dport);
     int decideUdp(const RuleMatch &match, bool skip, const Profile &profile, const ProfileOptions &opt,

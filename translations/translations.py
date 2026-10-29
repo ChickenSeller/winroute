@@ -534,6 +534,20 @@ T = {
     "Tunnel UDP through the proxy when a rule selects a SOCKS5 proxy (otherwise UDP goes directly)":
         ("当规则命中 SOCKS5 代理时，通过代理转发 UDP（否则 UDP 直接连接）",
          "ルールが SOCKS5 プロキシを選択したとき、UDP をプロキシ経由で転送します（それ以外は UDP は直接接続）"),
+    "Log &DNS Activity": ("在日志中显示 DNS(&D)", "DNS をログに表示(&D)"),
+    "Log DNS queries and replies: the server, the name asked, the answer, the program and whether it is resolved through the proxy":
+        ("在日志中记录 DNS 的查询和应答：服务器、查询的域名、应答、发起程序，以及是否经过代理解析",
+         "DNS のクエリと応答をログに記録します：サーバー、問い合わせたドメイン名、応答、発信元プログラム、プロキシ経由で解決するかどうか"),
+    "DNS: %1 asked %2 for %3 (A), via proxy as %4":
+        ("DNS：%1 向 %2 查询 %3（A），经代理解析为 %4", "DNS：%1 が %2 に %3（A）を問い合わせ、プロキシ経由で %4 に解決"),
+    "DNS: %1 asked %2 for %3 (%4), via proxy, no record":
+        ("DNS：%1 向 %2 查询 %3（%4），经代理解析，无记录", "DNS：%1 が %2 に %3（%4）を問い合わせ、プロキシ経由で解決、レコードなし"),
+    "DNS: %1 asked %2 for %3 (%4), direct":
+        ("DNS：%1 向 %2 查询 %3（%4），直连", "DNS：%1 が %2 に %3（%4）を問い合わせ、直接"),
+    "DNS: %2 answered %1: %3 = %4":
+        ("DNS：%2 应答 %1：%3 = %4", "DNS：%2 が %1 に応答：%3 = %4"),
+    "(no records)": ("无记录", "レコードなし"),
+    "unknown": ("未知", "不明"),
     "Cannot update UDP filtering: %1": ("无法更新 UDP 过滤：%1", "UDP フィルタリングを更新できません：%1"),
     "%1 - %2 matching %3 rule : blocked (UDP)": ("%1 - %2 匹配规则 %3：已阻止（UDP）", "%1 - %2 がルール %3 に一致：ブロック（UDP）"),
     "%1 - %2 matching %3 rule : %4 does not support UDP, sending directly":

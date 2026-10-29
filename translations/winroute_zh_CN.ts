@@ -460,6 +460,10 @@
       <translation>无法更新 UDP 过滤：%1</translation>
     </message>
     <message>
+      <source>unknown</source>
+      <translation>未知</translation>
+    </message>
+    <message>
       <source>%1 - %2 error : unknown fake DNS address, the name was resolved before WinRoute started</source>
       <translation>%1 - %2 错误：未知的虚拟 DNS 地址，该域名是在 WinRoute 启动前解析的</translation>
     </message>
@@ -484,6 +488,18 @@
       <translation>DNS %1 通过代理解析为 %2</translation>
     </message>
     <message>
+      <source>DNS: %1 asked %2 for %3 (A), via proxy as %4</source>
+      <translation>DNS：%1 向 %2 查询 %3（A），经代理解析为 %4</translation>
+    </message>
+    <message>
+      <source>DNS: %1 asked %2 for %3 (%4), via proxy, no record</source>
+      <translation>DNS：%1 向 %2 查询 %3（%4），经代理解析，无记录</translation>
+    </message>
+    <message>
+      <source>DNS: %1 asked %2 for %3 (%4), direct</source>
+      <translation>DNS：%1 向 %2 查询 %3（%4），直连</translation>
+    </message>
+    <message>
       <source>%1 - %2 matching %3 rule : blocked (UDP)</source>
       <translation>%1 - %2 匹配规则 %3：已阻止（UDP）</translation>
     </message>
@@ -494,6 +510,14 @@
     <message>
       <source>%1 - %2 matching %3 rule : proxy chains do not support UDP, sending directly</source>
       <translation>%1 - %2 匹配规则 %3：代理链不支持 UDP，直接连接</translation>
+    </message>
+    <message>
+      <source>DNS: %2 answered %1: %3 = %4</source>
+      <translation>DNS：%2 应答 %1：%3 = %4</translation>
+    </message>
+    <message>
+      <source>(no records)</source>
+      <translation>无记录</translation>
     </message>
     <message>
       <source>Cannot open the WinDivert service (error %1)</source>
@@ -620,6 +644,14 @@
     <message>
       <source>Tunnel UDP through the proxy when a rule selects a SOCKS5 proxy (otherwise UDP goes directly)</source>
       <translation>当规则命中 SOCKS5 代理时，通过代理转发 UDP（否则 UDP 直接连接）</translation>
+    </message>
+    <message>
+      <source>Log &amp;DNS Activity</source>
+      <translation>在日志中显示 DNS(&amp;D)</translation>
+    </message>
+    <message>
+      <source>Log DNS queries and replies: the server, the name asked, the answer, the program and whether it is resolved through the proxy</source>
+      <translation>在日志中记录 DNS 的查询和应答：服务器、查询的域名、应答、发起程序，以及是否经过代理解析</translation>
     </message>
     <message>
       <source>&amp;Passwords Encryption...</source>

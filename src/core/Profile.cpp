@@ -299,6 +299,10 @@ bool Profile::fromXml(const QByteArray &xml, QString *error)
                 } else if (n == QLatin1String("HttpProxiesSupport")) {
                     p.options.httpProxiesSupport = attrBool(r, "enabled");
                     r.skipCurrentElement();
+                } else if (n == QLatin1String("WinRouteLogDns")) {
+                    // WinRoute extension; Proxifier ignores unknown elements.
+                    p.options.logDns = attrBool(r, "enabled");
+                    r.skipCurrentElement();
                 } else {
                     r.skipCurrentElement();
                 }
@@ -492,6 +496,7 @@ QByteArray Profile::toXml() const
     enabledElem("ProcessServices", options.processServices);
     enabledElem("HandleDirectConnections", options.handleDirectConnections);
     enabledElem("HttpProxiesSupport", options.httpProxiesSupport);
+    enabledElem("WinRouteLogDns", options.logDns);   // WinRoute extension
     w.writeEndElement(); // Options
 
     w.writeStartElement("ProxyList");

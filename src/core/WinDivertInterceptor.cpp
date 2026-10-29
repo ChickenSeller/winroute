@@ -16,6 +16,7 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QFileInfo>
+#include <QStringList>
 
 #include <cstring>
 #include <vector>
@@ -74,6 +75,28 @@ bool parseSockaddr(const QByteArray &b, quint8 out[16], bool *v6, quint16 *port)
         return true;
     }
     return false;
+}
+
+// Display name of a process, for the DNS log.
+QString procName(quint32 pid)
+{
+    if (pid == 0)
+        return QCoreApplication::translate("Interceptor", "unknown");
+    procinfo::Info p = procinfo::lookup(pid);
+    const QString nm = p.path.isEmpty() ? p.name : QFileInfo(p.path).fileName();
+    return nm.isEmpty() ? QStringLiteral("pid %1").arg(pid) : nm;
+}
+
+// Short label for a DNS record type, for the DNS log.
+QString dnsTypeName(quint16 t)
+{
+    switch (t) {
+    case dns::TypeA: return QStringLiteral("A");
+    case dns::TypeAAAA: return QStringLiteral("AAAA");
+    case dns::TypeHTTPS: return QStringLiteral("HTTPS");
+    case dns::TypeCNAME: return QStringLiteral("CNAME");
+    default: return QStringLiteral("type %1").arg(t);
+    }
 }
 
 // State of the "WinDivert" kernel service, or 0 if it does not exist.
@@ -567,15 +590,28 @@ void WinDivertInterceptor::dnsLoop()
             continue;
         }
 
+        const RuleEnginePtr engine = rules();
+        const bool logDns = engine && engine->profile().options.logDns;
+
         // Inbound response: learn IP -> host name, then let it reach the app.
         if (ep.srcPort == 53) {
-            if (m_ctx.dnsCache) {
-                dns::Question q;
-                QList<dns::Answer> answers;
-                if (dns::parseAnswers(QByteArray::fromRawData(reinterpret_cast<const char *>(payload), int(plen)), &q, &answers))
-                    for (const auto &a : answers)
-                        if ((a.type == dns::TypeA || a.type == dns::TypeAAAA) && !a.address.isNull() && !FakeDns::isFake(a.address))
+            dns::Question q;
+            QList<dns::Answer> answers;
+            if (dns::parseAnswers(QByteArray::fromRawData(reinterpret_cast<const char *>(payload), int(plen)), &q, &answers)) {
+                QStringList ips;
+                for (const auto &a : answers)
+                    if ((a.type == dns::TypeA || a.type == dns::TypeAAAA) && !a.address.isNull()) {
+                        if (m_ctx.dnsCache && !FakeDns::isFake(a.address))
                             m_ctx.dnsCache->insert(a.address, q.name);
+                        ips << a.address.toString();
+                    }
+                if (logDns) {
+                    const quint32 owner = procinfo::udpOwnerPid(hostFromBytes(ep.dst, ep.v6), ep.dstPort);
+                    if (owner != m_selfPid)
+                        logNormal(QCoreApplication::translate("Interceptor", "DNS: %2 answered %1: %3 = %4")
+                                      .arg(procName(owner), util::formatEndpoint(hostFromBytes(ep.src, ep.v6), 53), q.name,
+                                           ips.isEmpty() ? QCoreApplication::translate("Interceptor", "(no records)") : ips.join(QStringLiteral(", "))));
+                }
             }
             api->send(m_dnsHandle, buf.data(), len, nullptr, &addr);
             continue;
@@ -583,39 +619,53 @@ void WinDivertInterceptor::dnsLoop()
 
         // Outbound query (DstPort == 53). Fake-resolve it when the profile asks
         // to resolve names through the proxy; otherwise send it on unchanged.
+        const QByteArray query = QByteArray::fromRawData(reinterpret_cast<const char *>(payload), int(plen));
+        dns::Question q;
+        const bool haveQuery = dns::parseQuestion(query, &q) && !(q.flags & 0x8000) && q.qclass == 1;
+        const bool viaProxy = engine && m_ctx.fakeDns && resolveViaProxy(engine->profile().options);
+        // Never fake-resolve (nor clutter the log with) WinRoute's own look-ups:
+        // the relay resolves names for direct connections, and a fake answer there
+        // would misdirect it. The owner is only needed when we will act or log.
+        const quint32 owner = (viaProxy || logDns) ? procinfo::udpOwnerPid(hostFromBytes(ep.src, ep.v6), ep.srcPort) : 0;
         bool answered = false;
-        const RuleEnginePtr engine = rules();
-        if (engine && m_ctx.fakeDns && resolveViaProxy(engine->profile().options)) {
-            const QByteArray query(reinterpret_cast<const char *>(payload), int(plen));
-            dns::Question q;
-            // Never fake-resolve WinRoute's own look-ups: the relay resolves names
-            // for direct connections, and a fake answer there would misdirect it.
-            const quint32 owner = procinfo::udpOwnerPid(hostFromBytes(ep.src, ep.v6), ep.srcPort);
-            if (owner != m_selfPid && dns::parseQuestion(query, &q) && !(q.flags & 0x8000) && q.qclass == 1
-                && shouldFakeResolve(*engine, q.name)) {
-                const bool blockOthers = engine->profile().options.dnsBlockNonATypes;
-                QByteArray response;
-                if (q.qtype == dns::TypeA) {
-                    const QHostAddress fake = m_ctx.fakeDns->addressFor(q.name);
-                    response = dns::buildResponse(query, q, {fake}, 10);
-                    logDebug(QCoreApplication::translate("Interceptor", "DNS %1 resolved through proxy as %2").arg(q.name, fake.toString()));
-                } else if (q.qtype == dns::TypeAAAA || q.qtype == dns::TypeHTTPS || blockOthers) {
-                    response = dns::buildResponse(query, q, {}, 10);
-                }
-                if (!response.isEmpty()) {
-                    std::vector<unsigned char> pkt(size_t(ep.v6 ? 40 : 20) + 8 + response.size());
-                    const unsigned n = wdpkt::buildUdp(ep.v6, ep.dst, 53, ep.src, ep.srcPort,
-                                                       reinterpret_cast<const uint8_t *>(response.constData()),
-                                                       unsigned(response.size()), pkt.data(), unsigned(pkt.size()));
-                    if (n) {
-                        WINDIVERT_ADDRESS rep = addr;
-                        rep.Outbound = 0;   // inbound: delivered back to the application
-                        rep.Impostor = 1;   // so our own reply is not captured again
-                        api->send(m_dnsHandle, pkt.data(), n, nullptr, &rep);
-                        answered = true;
-                    }
+        QString result;   // the fake address, for the log
+        if (viaProxy && owner != m_selfPid && haveQuery && shouldFakeResolve(*engine, q.name)) {
+            const bool blockOthers = engine->profile().options.dnsBlockNonATypes;
+            QByteArray response;
+            if (q.qtype == dns::TypeA) {
+                const QHostAddress fake = m_ctx.fakeDns->addressFor(q.name);
+                response = dns::buildResponse(query, q, {fake}, 10);
+                result = fake.toString();
+                logDebug(QCoreApplication::translate("Interceptor", "DNS %1 resolved through proxy as %2").arg(q.name, fake.toString()));
+            } else if (q.qtype == dns::TypeAAAA || q.qtype == dns::TypeHTTPS || blockOthers) {
+                response = dns::buildResponse(query, q, {}, 10);
+            }
+            if (!response.isEmpty()) {
+                std::vector<unsigned char> pkt(size_t(ep.v6 ? 40 : 20) + 8 + response.size());
+                const unsigned n = wdpkt::buildUdp(ep.v6, ep.dst, 53, ep.src, ep.srcPort,
+                                                   reinterpret_cast<const uint8_t *>(response.constData()),
+                                                   unsigned(response.size()), pkt.data(), unsigned(pkt.size()));
+                if (n) {
+                    WINDIVERT_ADDRESS rep = addr;
+                    rep.Outbound = 0;   // inbound: delivered back to the application
+                    rep.Impostor = 1;   // so our own reply is not captured again
+                    api->send(m_dnsHandle, pkt.data(), n, nullptr, &rep);
+                    answered = true;
                 }
             }
+        }
+        if (logDns && haveQuery && owner != m_selfPid) {
+            const QString app = procName(owner);
+            const QString server = util::formatEndpoint(hostFromBytes(ep.dst, ep.v6), 53);
+            if (answered && !result.isEmpty())
+                logNormal(QCoreApplication::translate("Interceptor", "DNS: %1 asked %2 for %3 (A), via proxy as %4")
+                              .arg(app, server, q.name, result));
+            else if (answered)
+                logNormal(QCoreApplication::translate("Interceptor", "DNS: %1 asked %2 for %3 (%4), via proxy, no record")
+                              .arg(app, server, q.name, dnsTypeName(q.qtype)));
+            else
+                logNormal(QCoreApplication::translate("Interceptor", "DNS: %1 asked %2 for %3 (%4), direct")
+                              .arg(app, server, q.name, dnsTypeName(q.qtype)));
         }
         if (!answered)
             api->send(m_dnsHandle, buf.data(), len, nullptr, &addr);
