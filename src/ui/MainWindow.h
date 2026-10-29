@@ -69,6 +69,7 @@ private:
     void showServices();
     void showEncryption();
     void showProxyChecker();
+    void showProxyServerSettings();
     void showAbout();
 
     // connections

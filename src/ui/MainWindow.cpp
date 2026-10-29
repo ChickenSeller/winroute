@@ -5,7 +5,9 @@
 #include "Language.h"
 #include "NameResolutionDialog.h"
 #include "ProxyCheckerDialog.h"
+#include "ProxyGatewayDialog.h"
 #include "ProxyServersDialog.h"
+#include "core/ProxyGateway.h"
 #include "RulesDialog.h"
 #include "StatisticsWidget.h"
 #include "DriverDialog.h"
@@ -94,6 +96,11 @@ MainWindow::MainWindow(Engine *engine, QWidget *parent)
     m_tray->setVisible(m_actTrayIcon->isChecked());
 
     initialProfile();
+
+    // Start the inbound proxy service now if it is enabled in WinRoute.ini.
+    QString gwError;
+    if (!m_engine->applyGatewayConfig(ProxyGateway::loadConfig(), &gwError))
+        logError(tr("Proxy service: %1").arg(gwError));
 
     m_dnsProbe = new DnsClient(this);
     m_dnsProbe->bind(0);
@@ -375,13 +382,18 @@ void MainWindow::createToolBar()
     auto *rules = new QAction(icons::rules(), tr("Proxification Rules"), this);
     auto *dns = new QAction(icons::nameResolution(), tr("Name Resolution"), this);
     auto *checker = new QAction(icons::checker(), tr("Proxy Checker"), this);
+    auto *proxyServer = new QAction(icons::proxy(), tr("Proxy Service"), this);
+    proxyServer->setStatusTip(tr("Let other machines reach the network through this one"));
     connect(proxyServers, &QAction::triggered, this, &MainWindow::showProxyServers);
     connect(rules, &QAction::triggered, this, &MainWindow::showRules);
     connect(dns, &QAction::triggered, this, &MainWindow::showNameResolution);
     connect(checker, &QAction::triggered, this, &MainWindow::showProxyChecker);
+    connect(proxyServer, &QAction::triggered, this, &MainWindow::showProxyServerSettings);
     m_toolBar->addAction(proxyServers);
     m_toolBar->addAction(rules);
     m_toolBar->addAction(dns);
+    m_toolBar->addSeparator();
+    m_toolBar->addAction(proxyServer);
     m_toolBar->addSeparator();
     m_toolBar->addAction(m_actDisconnect);
     m_toolBar->addAction(m_actEndProcess);
@@ -960,6 +972,20 @@ void MainWindow::showProxyChecker()
     }
     ProxyCheckerDialog dlg(choices, this);
     dlg.exec();
+}
+
+void MainWindow::showProxyServerSettings()
+{
+    ProxyGatewayDialog dlg(ProxyGateway::loadConfig(), this);
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+    const ProxyGateway::Config cfg = dlg.config();
+    ProxyGateway::saveConfig(cfg);
+    QString error;
+    if (m_engine->applyGatewayConfig(cfg, &error))
+        logNormal(tr("Proxy server settings saved."));
+    else
+        logError(tr("Proxy service: %1").arg(error));
 }
 
 void MainWindow::showAbout()

@@ -686,6 +686,61 @@ T = {
     "Could not download WinRoute %1:\n%2": ("无法下载 WinRoute %1：\n%2", "WinRoute %1 をダウンロードできませんでした：\n%2"),
     "Could not prepare the update.": ("无法准备更新。", "更新を準備できませんでした。"),
     "Could not start the update.": ("无法开始更新。", "更新を開始できませんでした。"),
+
+    # ---- proxy service (gateway) ----  ("Address:", "Port:", "Password:", "Authentication" already defined above)
+    # Named "Proxy Service" / 代理功能 to avoid clashing with the "Proxy Servers" (upstream) feature.
+    "Proxy Service": ("代理功能", "プロキシ機能"),
+    "Let other machines reach the network through this one":
+        ("让其他机器通过本机访问网络", "他のマシンがこのマシン経由でネットワークにアクセスできるようにします"),
+    "Proxy server settings saved.": ("代理功能设置已保存。", "プロキシ機能の設定を保存しました。"),
+    "Proxy service: %1": ("代理功能：%1", "プロキシ機能：%1"),
+    "Run a proxy server so other machines can reach the network through this one":
+        ("开启代理功能,让其他机器通过本机访问网络", "プロキシ機能を有効にし、他のマシンがこのマシン経由でネットワークにアクセスできるようにします"),
+    "Listen": ("监听", "待ち受け"),
+    "0.0.0.0 (all network interfaces)": ("0.0.0.0(所有网络接口)", "0.0.0.0(すべてのネットワークインターフェース)"),
+    "Outgoing connections": ("出站连接", "送信接続"),
+    "Follow this machine's proxy rules": ("遵循本机的代理规则", "このマシンのプロキシルールに従う"),
+    "Always connect directly": ("始终直接连接", "常に直接接続する"),
+    "If a rule's proxy is missing:": ("当规则的代理缺失时:", "ルールのプロキシが存在しない場合:"),
+    "Connect directly": ("直接连接", "直接接続する"),
+    "User name:": ("用户名:", "ユーザー名:"),
+    "Leave the user name empty to allow clients without authentication.":
+        ("用户名留空则允许客户端无需认证即可使用。", "ユーザー名を空にすると、認証なしでクライアントを許可します。"),
+    "HTTP / HTTPS": ("HTTP / HTTPS", "HTTP / HTTPS"),
+    "SOCKS5": ("SOCKS5", "SOCKS5"),
+    "No proxy protocol is enabled": ("未启用任何代理协议", "有効なプロキシプロトコルがありません"),
+    "%1 - not a SOCKS5 client": ("%1 - 不是 SOCKS5 客户端", "%1 - SOCKS5 クライアントではありません"),
+    "Proxy service (%1) listening on %2:%3": ("代理功能(%1)正在监听 %2:%3", "プロキシ機能(%1)が %2:%3 で待ち受け中"),
+    # gateway log / status
+    "direct": ("直连", "直接"),
+    "using rules": ("使用规则", "ルール使用"),
+    "Direct (%1)": ("直连(%1)", "直接(%1)"),
+    "proxy #%1 is missing": ("代理 #%1 不存在", "プロキシ #%1 が存在しません"),
+    "chain %1 is empty": ("代理链 %1 为空", "チェーン %1 が空です"),
+    "chain #%1 is missing": ("代理链 #%1 不存在", "チェーン #%1 が存在しません"),
+    "client offered no acceptable authentication method":
+        ("客户端未提供可接受的认证方式", "クライアントが受け入れ可能な認証方式を提示しませんでした"),
+    "%1 - wrong user name or password": ("%1 - 用户名或密码错误", "%1 - ユーザー名またはパスワードが違います"),
+    "%1 - unsupported SOCKS5 address type": ("%1 - 不支持的 SOCKS5 地址类型", "%1 - サポートされない SOCKS5 アドレスタイプ"),
+    "%1 - unsupported SOCKS5 command %2": ("%1 - 不支持的 SOCKS5 命令 %2", "%1 - サポートされない SOCKS5 コマンド %2"),
+    "oversized request header": ("请求头过大", "リクエストヘッダーが大きすぎます"),
+    "malformed request line": ("请求行格式错误", "リクエスト行の形式が不正です"),
+    "CONNECT without a port": ("CONNECT 缺少端口", "ポートのない CONNECT"),
+    "a proxy request must use an absolute http:// URL":
+        ("代理请求必须使用绝对的 http:// URL", "プロキシリクエストは絶対 http:// URL を使用する必要があります"),
+    "%1 - missing or wrong proxy credentials": ("%1 - 缺少或错误的代理凭据", "%1 - プロキシ認証情報がないか誤っています"),
+    "%1 - %2 blocked (%3)": ("%1 - %2 已阻止(%3)", "%1 - %2 をブロック(%3)"),
+    "%1 - %2 via %3": ("%1 - %2 经由 %3", "%1 - %2 を %3 経由"),
+    "%1 - %2 failed : %3": ("%1 - %2 失败：%3", "%1 - %2 失敗：%3"),
+    "%1 - %2": ("%1 - %2", "%1 - %2"),
+    "%1 : %2": ("%1：%2", "%1：%2"),
+    "%1 - %2 closed, %3 sent, %4 received, lifetime %5":
+        ("%1 - %2 已关闭,发送 %3,接收 %4,存活 %5", "%1 - %2 切断、送信 %3、受信 %4、継続時間 %5"),
+    "Cannot bind the proxy server's DNS resolver socket":
+        ("无法绑定代理服务器的 DNS 解析套接字", "プロキシサーバーの DNS リゾルバーソケットをバインドできません"),
+    "Cannot start the proxy server on %1:%2 : %3":
+        ("无法在 %1:%2 上启动代理服务器：%3", "%1:%2 でプロキシサーバーを起動できません：%3"),
+    "Proxy server listening on %1:%2 (%3)": ("代理服务器正在监听 %1:%2(%3)", "プロキシサーバーが %1:%2 で待ち受け中(%3)"),
 }
 
 

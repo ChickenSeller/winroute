@@ -33,6 +33,7 @@ set(CORE_SOURCES
     src/core/FakeDns.h            src/core/FakeDns.cpp
     src/core/DnsClient.h          src/core/DnsClient.cpp
     src/core/ProxyConnector.h     src/core/ProxyConnector.cpp
+    src/core/ProxyGateway.h       src/core/ProxyGateway.cpp
     src/core/Relay.h              src/core/Relay.cpp
     src/core/UdpRelaySession.h    src/core/UdpRelaySession.cpp
     src/core/Interceptor.h
@@ -60,6 +61,7 @@ set(UI_SOURCES
     src/ui/NameResolutionDialog.h src/ui/NameResolutionDialog.cpp
     src/ui/AdvancedDialogs.h      src/ui/AdvancedDialogs.cpp
     src/ui/ProxyCheckerDialog.h   src/ui/ProxyCheckerDialog.cpp
+    src/ui/ProxyGatewayDialog.h   src/ui/ProxyGatewayDialog.cpp
     src/ui/Icons.h                src/ui/Icons.cpp
     src/ui/Language.h             src/ui/Language.cpp
     src/ui/Updater.h              src/ui/Updater.cpp

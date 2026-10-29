@@ -31,6 +31,14 @@ Engine::Engine(QObject *parent)
     m_relayThread.start();
     m_backendKey = util::appSettings().value("backend/active", "netfilter").toString();
     m_interceptor = makeInterceptor(&m_backendKey);
+
+    // The inbound proxy service runs in its own thread; its sockets must be
+    // created there, so start()/stop() are invoked on that thread.
+    m_gatewayThread.setObjectName("gateway");
+    m_gateway = new ProxyGateway;
+    m_gateway->moveToThread(&m_gatewayThread);
+    connect(&m_gatewayThread, &QThread::finished, m_gateway, &QObject::deleteLater);
+    m_gatewayThread.start();
 }
 
 bool Engine::setBackend(const QString &key, QString *error)
@@ -56,6 +64,10 @@ bool Engine::setBackend(const QString &key, QString *error)
 Engine::~Engine()
 {
     stop();
+    // Tear the proxy service down in its own thread before stopping that thread.
+    QMetaObject::invokeMethod(m_gateway, [this] { m_gateway->stop(); }, Qt::BlockingQueuedConnection);
+    m_gatewayThread.quit();
+    m_gatewayThread.wait();
     m_relayThread.quit();
     m_relayThread.wait();
 }
@@ -109,4 +121,23 @@ void Engine::setProfile(const Profile &profile)
     m_rules = std::make_shared<const RuleEngine>(profile);
     m_relay->setRules(m_rules);
     m_interceptor->setRules(m_rules);
+    m_gateway->setRules(m_rules);
+}
+
+bool Engine::applyGatewayConfig(const ProxyGateway::Config &config, QString *error)
+{
+    m_gateway->setRules(m_rules);   // the service forwards through the current rules
+    bool ok = true;
+    QString err;
+    QMetaObject::invokeMethod(
+        m_gateway,
+        [&] {
+            m_gateway->stop();
+            if (config.enabled)
+                ok = m_gateway->start(config, &err);
+        },
+        Qt::BlockingQueuedConnection);
+    if (!ok && error)
+        *error = err;
+    return ok;
 }

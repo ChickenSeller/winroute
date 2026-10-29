@@ -562,6 +562,10 @@
       <translation>%1 个活动连接</translation>
     </message>
     <message>
+      <source>Proxy service: %1</source>
+      <translation>代理功能：%1</translation>
+    </message>
+    <message>
       <source>&amp;New Profile</source>
       <translation>新建配置文件(&amp;N)</translation>
     </message>
@@ -898,6 +902,10 @@
       <translation>代理检测</translation>
     </message>
     <message>
+      <source>Let other machines reach the network through this one</source>
+      <translation>让其他机器通过本机访问网络</translation>
+    </message>
+    <message>
       <source>Connections</source>
       <translation>连接</translation>
     </message>
@@ -968,6 +976,10 @@
     <message>
       <source>Signed by %1 — click for details</source>
       <translation>签名者：%1 — 点击查看详情</translation>
+    </message>
+    <message>
+      <source>Proxy Service</source>
+      <translation>代理功能</translation>
     </message>
     <message>
       <source>%1 signatures — click for details</source>
@@ -1126,6 +1138,10 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>Please add a proxy server first (Profile &gt; Proxy Servers).</source>
       <translation>请先添加代理服务器（配置文件 &gt; 代理服务器）。</translation>
+    </message>
+    <message>
+      <source>Proxy server settings saved.</source>
+      <translation>代理功能设置已保存。</translation>
     </message>
     <message>
       <source>About WinRoute</source>
@@ -1659,6 +1675,192 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     <message>
       <source>proxy returned HTTP %1</source>
       <translation>代理返回 HTTP %1</translation>
+    </message>
+  </context>
+  <context>
+    <name>ProxyGateway</name>
+    <message>
+      <source>Direct</source>
+      <translation>直接连接</translation>
+    </message>
+    <message>
+      <source>Direct (%1)</source>
+      <translation>直连(%1)</translation>
+    </message>
+    <message>
+      <source>Block</source>
+      <translation>阻止</translation>
+    </message>
+    <message>
+      <source>proxy #%1 is missing</source>
+      <translation>代理 #%1 不存在</translation>
+    </message>
+    <message>
+      <source>chain %1 is empty</source>
+      <translation>代理链 %1 为空</translation>
+    </message>
+    <message>
+      <source>Chain %1</source>
+      <translation>代理链 %1</translation>
+    </message>
+    <message>
+      <source>chain #%1 is missing</source>
+      <translation>代理链 #%1 不存在</translation>
+    </message>
+    <message>
+      <source>%1 - not a SOCKS5 client</source>
+      <translation>%1 - 不是 SOCKS5 客户端</translation>
+    </message>
+    <message>
+      <source>client offered no acceptable authentication method</source>
+      <translation>客户端未提供可接受的认证方式</translation>
+    </message>
+    <message>
+      <source>%1 - wrong user name or password</source>
+      <translation>%1 - 用户名或密码错误</translation>
+    </message>
+    <message>
+      <source>%1 - unsupported SOCKS5 address type</source>
+      <translation>%1 - 不支持的 SOCKS5 地址类型</translation>
+    </message>
+    <message>
+      <source>%1 - unsupported SOCKS5 command %2</source>
+      <translation>%1 - 不支持的 SOCKS5 命令 %2</translation>
+    </message>
+    <message>
+      <source>oversized request header</source>
+      <translation>请求头过大</translation>
+    </message>
+    <message>
+      <source>malformed request line</source>
+      <translation>请求行格式错误</translation>
+    </message>
+    <message>
+      <source>CONNECT without a port</source>
+      <translation>CONNECT 缺少端口</translation>
+    </message>
+    <message>
+      <source>a proxy request must use an absolute http:// URL</source>
+      <translation>代理请求必须使用绝对的 http:// URL</translation>
+    </message>
+    <message>
+      <source>%1 - missing or wrong proxy credentials</source>
+      <translation>%1 - 缺少或错误的代理凭据</translation>
+    </message>
+    <message>
+      <source>%1 - %2 blocked (%3)</source>
+      <translation>%1 - %2 已阻止(%3)</translation>
+    </message>
+    <message>
+      <source>%1 - %2 via %3</source>
+      <translation>%1 - %2 经由 %3</translation>
+    </message>
+    <message>
+      <source>%1 - %2 failed : %3</source>
+      <translation>%1 - %2 失败：%3</translation>
+    </message>
+    <message>
+      <source>%1 - %2</source>
+      <translation>%1 - %2</translation>
+    </message>
+    <message>
+      <source>%1 : %2</source>
+      <translation>%1：%2</translation>
+    </message>
+    <message>
+      <source>%1 - %2 closed, %3 sent, %4 received, lifetime %5</source>
+      <translation>%1 - %2 已关闭,发送 %3,接收 %4,存活 %5</translation>
+    </message>
+    <message>
+      <source>Cannot bind the proxy server's DNS resolver socket</source>
+      <translation>无法绑定代理服务器的 DNS 解析套接字</translation>
+    </message>
+    <message>
+      <source>Cannot start the proxy server on %1:%2 : %3</source>
+      <translation>无法在 %1:%2 上启动代理服务器：%3</translation>
+    </message>
+    <message>
+      <source>Proxy service (%1) listening on %2:%3</source>
+      <translation>代理功能(%1)正在监听 %2:%3</translation>
+    </message>
+    <message>
+      <source>No proxy protocol is enabled</source>
+      <translation>未启用任何代理协议</translation>
+    </message>
+  </context>
+  <context>
+    <name>ProxyGatewayDialog</name>
+    <message>
+      <source>Proxy Service</source>
+      <translation>代理功能</translation>
+    </message>
+    <message>
+      <source>Run a proxy server so other machines can reach the network through this one</source>
+      <translation>开启代理功能,让其他机器通过本机访问网络</translation>
+    </message>
+    <message>
+      <source>Listen</source>
+      <translation>监听</translation>
+    </message>
+    <message>
+      <source>0.0.0.0 (all network interfaces)</source>
+      <translation>0.0.0.0(所有网络接口)</translation>
+    </message>
+    <message>
+      <source>Address:</source>
+      <translation>地址：</translation>
+    </message>
+    <message>
+      <source>HTTP / HTTPS</source>
+      <translation>HTTP / HTTPS</translation>
+    </message>
+    <message>
+      <source>Port:</source>
+      <translation>端口：</translation>
+    </message>
+    <message>
+      <source>SOCKS5</source>
+      <translation>SOCKS5</translation>
+    </message>
+    <message>
+      <source>Outgoing connections</source>
+      <translation>出站连接</translation>
+    </message>
+    <message>
+      <source>Follow this machine's proxy rules</source>
+      <translation>遵循本机的代理规则</translation>
+    </message>
+    <message>
+      <source>Always connect directly</source>
+      <translation>始终直接连接</translation>
+    </message>
+    <message>
+      <source>If a rule's proxy is missing:</source>
+      <translation>当规则的代理缺失时:</translation>
+    </message>
+    <message>
+      <source>Block</source>
+      <translation>阻止</translation>
+    </message>
+    <message>
+      <source>Connect directly</source>
+      <translation>直接连接</translation>
+    </message>
+    <message>
+      <source>Authentication</source>
+      <translation>身份验证</translation>
+    </message>
+    <message>
+      <source>User name:</source>
+      <translation>用户名:</translation>
+    </message>
+    <message>
+      <source>Password:</source>
+      <translation>密码：</translation>
+    </message>
+    <message>
+      <source>Leave the user name empty to allow clients without authentication.</source>
+      <translation>用户名留空则允许客户端无需认证即可使用。</translation>
     </message>
   </context>
   <context>

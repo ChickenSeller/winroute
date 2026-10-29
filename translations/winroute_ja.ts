@@ -562,6 +562,10 @@
       <translation>アクティブな接続 %1 件</translation>
     </message>
     <message>
+      <source>Proxy service: %1</source>
+      <translation>プロキシ機能：%1</translation>
+    </message>
+    <message>
       <source>&amp;New Profile</source>
       <translation>新しいプロファイル(&amp;N)</translation>
     </message>
@@ -898,6 +902,10 @@
       <translation>プロキシチェッカー</translation>
     </message>
     <message>
+      <source>Let other machines reach the network through this one</source>
+      <translation>他のマシンがこのマシン経由でネットワークにアクセスできるようにします</translation>
+    </message>
+    <message>
       <source>Connections</source>
       <translation>接続</translation>
     </message>
@@ -968,6 +976,10 @@
     <message>
       <source>Signed by %1 — click for details</source>
       <translation>署名者：%1 — クリックで詳細</translation>
+    </message>
+    <message>
+      <source>Proxy Service</source>
+      <translation>プロキシ機能</translation>
     </message>
     <message>
       <source>%1 signatures — click for details</source>
@@ -1126,6 +1138,10 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>Please add a proxy server first (Profile &gt; Proxy Servers).</source>
       <translation>先にプロキシサーバーを追加してください（プロファイル &gt; プロキシサーバー）。</translation>
+    </message>
+    <message>
+      <source>Proxy server settings saved.</source>
+      <translation>プロキシ機能の設定を保存しました。</translation>
     </message>
     <message>
       <source>About WinRoute</source>
@@ -1659,6 +1675,192 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     <message>
       <source>proxy returned HTTP %1</source>
       <translation>プロキシが HTTP %1 を返しました</translation>
+    </message>
+  </context>
+  <context>
+    <name>ProxyGateway</name>
+    <message>
+      <source>Direct</source>
+      <translation>直接接続</translation>
+    </message>
+    <message>
+      <source>Direct (%1)</source>
+      <translation>直接(%1)</translation>
+    </message>
+    <message>
+      <source>Block</source>
+      <translation>ブロック</translation>
+    </message>
+    <message>
+      <source>proxy #%1 is missing</source>
+      <translation>プロキシ #%1 が存在しません</translation>
+    </message>
+    <message>
+      <source>chain %1 is empty</source>
+      <translation>チェーン %1 が空です</translation>
+    </message>
+    <message>
+      <source>Chain %1</source>
+      <translation>チェーン %1</translation>
+    </message>
+    <message>
+      <source>chain #%1 is missing</source>
+      <translation>チェーン #%1 が存在しません</translation>
+    </message>
+    <message>
+      <source>%1 - not a SOCKS5 client</source>
+      <translation>%1 - SOCKS5 クライアントではありません</translation>
+    </message>
+    <message>
+      <source>client offered no acceptable authentication method</source>
+      <translation>クライアントが受け入れ可能な認証方式を提示しませんでした</translation>
+    </message>
+    <message>
+      <source>%1 - wrong user name or password</source>
+      <translation>%1 - ユーザー名またはパスワードが違います</translation>
+    </message>
+    <message>
+      <source>%1 - unsupported SOCKS5 address type</source>
+      <translation>%1 - サポートされない SOCKS5 アドレスタイプ</translation>
+    </message>
+    <message>
+      <source>%1 - unsupported SOCKS5 command %2</source>
+      <translation>%1 - サポートされない SOCKS5 コマンド %2</translation>
+    </message>
+    <message>
+      <source>oversized request header</source>
+      <translation>リクエストヘッダーが大きすぎます</translation>
+    </message>
+    <message>
+      <source>malformed request line</source>
+      <translation>リクエスト行の形式が不正です</translation>
+    </message>
+    <message>
+      <source>CONNECT without a port</source>
+      <translation>ポートのない CONNECT</translation>
+    </message>
+    <message>
+      <source>a proxy request must use an absolute http:// URL</source>
+      <translation>プロキシリクエストは絶対 http:// URL を使用する必要があります</translation>
+    </message>
+    <message>
+      <source>%1 - missing or wrong proxy credentials</source>
+      <translation>%1 - プロキシ認証情報がないか誤っています</translation>
+    </message>
+    <message>
+      <source>%1 - %2 blocked (%3)</source>
+      <translation>%1 - %2 をブロック(%3)</translation>
+    </message>
+    <message>
+      <source>%1 - %2 via %3</source>
+      <translation>%1 - %2 を %3 経由</translation>
+    </message>
+    <message>
+      <source>%1 - %2 failed : %3</source>
+      <translation>%1 - %2 失敗：%3</translation>
+    </message>
+    <message>
+      <source>%1 - %2</source>
+      <translation>%1 - %2</translation>
+    </message>
+    <message>
+      <source>%1 : %2</source>
+      <translation>%1：%2</translation>
+    </message>
+    <message>
+      <source>%1 - %2 closed, %3 sent, %4 received, lifetime %5</source>
+      <translation>%1 - %2 切断、送信 %3、受信 %4、継続時間 %5</translation>
+    </message>
+    <message>
+      <source>Cannot bind the proxy server's DNS resolver socket</source>
+      <translation>プロキシサーバーの DNS リゾルバーソケットをバインドできません</translation>
+    </message>
+    <message>
+      <source>Cannot start the proxy server on %1:%2 : %3</source>
+      <translation>%1:%2 でプロキシサーバーを起動できません：%3</translation>
+    </message>
+    <message>
+      <source>Proxy service (%1) listening on %2:%3</source>
+      <translation>プロキシ機能(%1)が %2:%3 で待ち受け中</translation>
+    </message>
+    <message>
+      <source>No proxy protocol is enabled</source>
+      <translation>有効なプロキシプロトコルがありません</translation>
+    </message>
+  </context>
+  <context>
+    <name>ProxyGatewayDialog</name>
+    <message>
+      <source>Proxy Service</source>
+      <translation>プロキシ機能</translation>
+    </message>
+    <message>
+      <source>Run a proxy server so other machines can reach the network through this one</source>
+      <translation>プロキシ機能を有効にし、他のマシンがこのマシン経由でネットワークにアクセスできるようにします</translation>
+    </message>
+    <message>
+      <source>Listen</source>
+      <translation>待ち受け</translation>
+    </message>
+    <message>
+      <source>0.0.0.0 (all network interfaces)</source>
+      <translation>0.0.0.0(すべてのネットワークインターフェース)</translation>
+    </message>
+    <message>
+      <source>Address:</source>
+      <translation>アドレス：</translation>
+    </message>
+    <message>
+      <source>HTTP / HTTPS</source>
+      <translation>HTTP / HTTPS</translation>
+    </message>
+    <message>
+      <source>Port:</source>
+      <translation>ポート：</translation>
+    </message>
+    <message>
+      <source>SOCKS5</source>
+      <translation>SOCKS5</translation>
+    </message>
+    <message>
+      <source>Outgoing connections</source>
+      <translation>送信接続</translation>
+    </message>
+    <message>
+      <source>Follow this machine's proxy rules</source>
+      <translation>このマシンのプロキシルールに従う</translation>
+    </message>
+    <message>
+      <source>Always connect directly</source>
+      <translation>常に直接接続する</translation>
+    </message>
+    <message>
+      <source>If a rule's proxy is missing:</source>
+      <translation>ルールのプロキシが存在しない場合:</translation>
+    </message>
+    <message>
+      <source>Block</source>
+      <translation>ブロック</translation>
+    </message>
+    <message>
+      <source>Connect directly</source>
+      <translation>直接接続する</translation>
+    </message>
+    <message>
+      <source>Authentication</source>
+      <translation>認証</translation>
+    </message>
+    <message>
+      <source>User name:</source>
+      <translation>ユーザー名:</translation>
+    </message>
+    <message>
+      <source>Password:</source>
+      <translation>パスワード：</translation>
+    </message>
+    <message>
+      <source>Leave the user name empty to allow clients without authentication.</source>
+      <translation>ユーザー名を空にすると、認証なしでクライアントを許可します。</translation>
     </message>
   </context>
   <context>
