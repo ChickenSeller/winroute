@@ -5,6 +5,7 @@
 #include <QDialog>
 
 class QCheckBox;
+class QComboBox;
 class QLineEdit;
 class QRadioButton;
 class QSpinBox;
@@ -15,7 +16,8 @@ class QSpinBox;
 class ProxyGatewayDialog : public QDialog {
     Q_OBJECT
 public:
-    explicit ProxyGatewayDialog(const ProxyGateway::Config &config, QWidget *parent = nullptr);
+    // The profile supplies the proxies and chains offered as a fixed exit.
+    ProxyGatewayDialog(const ProxyGateway::Config &config, const Profile &profile, QWidget *parent = nullptr);
 
     ProxyGateway::Config config() const;
 
@@ -30,6 +32,8 @@ private:
     QSpinBox *m_socksPort;
     QRadioButton *m_modeRules;
     QRadioButton *m_modeDirect;
+    QRadioButton *m_modeProxy;
+    QComboBox *m_exit;
     QRadioButton *m_missingBlock;
     QRadioButton *m_missingDirect;
     QLineEdit *m_user;

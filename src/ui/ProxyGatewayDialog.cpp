@@ -1,6 +1,7 @@
 #include "ProxyGatewayDialog.h"
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QGridLayout>
@@ -12,10 +13,11 @@
 #include <QSpinBox>
 #include <QVBoxLayout>
 
-ProxyGatewayDialog::ProxyGatewayDialog(const ProxyGateway::Config &c, QWidget *parent)
+ProxyGatewayDialog::ProxyGatewayDialog(const ProxyGateway::Config &c, const Profile &profile, QWidget *parent)
     : QDialog(parent)
 {
-    setWindowTitle(tr("Proxy Service"));
+    constexpr int kTypeRole = Qt::UserRole + 1;   // the exit combo stores id + type
+    setWindowTitle(tr("Proxy Gateway"));
     resize(560, 420);
     auto *layout = new QVBoxLayout(this);
 
@@ -54,12 +56,50 @@ ProxyGatewayDialog::ProxyGatewayDialog(const ProxyGateway::Config &c, QWidget *p
     auto *ml = new QVBoxLayout(modeBox);
     m_modeRules = new QRadioButton(tr("Follow this machine's proxy rules"));
     m_modeDirect = new QRadioButton(tr("Always connect directly"));
-    (c.mode == ProxyGateway::Mode::Direct ? m_modeDirect : m_modeRules)->setChecked(true);
+    m_modeProxy = new QRadioButton(tr("Send every connection through one proxy or chain"));
     ml->addWidget(m_modeRules);
+    // Inbound connections come from other machines, so there is no local process
+    // to attribute: rules keyed by application never match and are skipped.
+    auto *rulesHint = new QLabel(tr("Rules that match by application are skipped — a remote connection has no local process."));
+    rulesHint->setWordWrap(true);
+    rulesHint->setIndent(22);
+    rulesHint->setStyleSheet("color:#d33;");
+    ml->addWidget(rulesHint);
     ml->addWidget(m_modeDirect);
+
+    // The fixed exit: one proxy or chain of the current profile.
+    m_exit = new QComboBox;
+    for (const ProxyServer &p : profile.proxies) {
+        m_exit->addItem(profile.actionDisplayName({ActionType::Proxy, p.id}), p.id);
+        m_exit->setItemData(m_exit->count() - 1, int(ActionType::Proxy), kTypeRole);
+    }
+    for (const ProxyChain &ch : profile.chains) {
+        m_exit->addItem(profile.actionDisplayName({ActionType::Chain, ch.id}), ch.id);
+        m_exit->setItemData(m_exit->count() - 1, int(ActionType::Chain), kTypeRole);
+    }
+    for (int i = 0; i < m_exit->count(); ++i) {   // preselect the saved exit
+        if (m_exit->itemData(i).toInt() == c.exit.id
+            && m_exit->itemData(i, kTypeRole).toInt() == int(c.exit.type)) {
+            m_exit->setCurrentIndex(i);
+            break;
+        }
+    }
+    m_modeProxy->setEnabled(m_exit->count() > 0);   // no proxies/chains → nothing to send through
+    auto *exitRow = new QHBoxLayout;
+    exitRow->addWidget(m_modeProxy);
+    exitRow->addWidget(m_exit, 1);
+    ml->addLayout(exitRow);
+
+    QRadioButton *initial = m_modeRules;
+    if (c.mode == ProxyGateway::Mode::Direct)
+        initial = m_modeDirect;
+    else if (c.mode == ProxyGateway::Mode::Proxy && m_modeProxy->isEnabled())
+        initial = m_modeProxy;
+    initial->setChecked(true);
+
     auto *missing = new QHBoxLayout;
     missing->addSpacing(20);
-    missing->addWidget(new QLabel(tr("If a rule's proxy is missing:")));
+    missing->addWidget(new QLabel(tr("If the selected proxy cannot connect:")));
     m_missingBlock = new QRadioButton(tr("Block"));
     m_missingDirect = new QRadioButton(tr("Connect directly"));
     (c.onMissing == ProxyGateway::OnMissing::Direct ? m_missingDirect : m_missingBlock)->setChecked(true);
@@ -88,6 +128,7 @@ ProxyGatewayDialog::ProxyGatewayDialog(const ProxyGateway::Config &c, QWidget *p
     connect(bb, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(bb, &QDialogButtonBox::rejected, this, &QDialog::reject);
     connect(m_modeRules, &QRadioButton::toggled, this, &ProxyGatewayDialog::update);
+    connect(m_modeProxy, &QRadioButton::toggled, this, &ProxyGatewayDialog::update);
     connect(m_httpEnabled, &QCheckBox::toggled, this, &ProxyGatewayDialog::update);
     connect(m_socksEnabled, &QCheckBox::toggled, this, &ProxyGatewayDialog::update);
     update();
@@ -97,10 +138,11 @@ void ProxyGatewayDialog::update()
 {
     m_httpPort->setEnabled(m_httpEnabled->isChecked());
     m_socksPort->setEnabled(m_socksEnabled->isChecked());
-    // "If a rule's proxy is missing" only matters when following the rules.
-    const bool rules = m_modeRules->isChecked();
-    m_missingBlock->setEnabled(rules);
-    m_missingDirect->setEnabled(rules);
+    m_exit->setEnabled(m_modeProxy->isChecked());
+    // The missing-proxy fallback matters whenever a proxy might be used.
+    const bool usesProxy = m_modeRules->isChecked() || m_modeProxy->isChecked();
+    m_missingBlock->setEnabled(usesProxy);
+    m_missingDirect->setEnabled(usesProxy);
 }
 
 ProxyGateway::Config ProxyGatewayDialog::config() const
@@ -115,7 +157,13 @@ ProxyGateway::Config ProxyGatewayDialog::config() const
     c.httpPort = quint16(m_httpPort->value());
     c.socksEnabled = m_socksEnabled->isChecked();
     c.socksPort = quint16(m_socksPort->value());
-    c.mode = m_modeDirect->isChecked() ? ProxyGateway::Mode::Direct : ProxyGateway::Mode::Rules;
+    c.mode = m_modeDirect->isChecked()  ? ProxyGateway::Mode::Direct
+             : m_modeProxy->isChecked() ? ProxyGateway::Mode::Proxy
+                                        : ProxyGateway::Mode::Rules;
+    if (m_exit->currentIndex() >= 0) {
+        c.exit.id = m_exit->currentData().toInt();
+        c.exit.type = ActionType(m_exit->currentData(Qt::UserRole + 1).toInt());
+    }
     c.onMissing = m_missingDirect->isChecked() ? ProxyGateway::OnMissing::Direct : ProxyGateway::OnMissing::Block;
     c.username = m_user->text();
     c.password = m_pass->text();

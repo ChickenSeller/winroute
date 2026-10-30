@@ -34,7 +34,7 @@ HttpProxiesDialog::HttpProxiesDialog(bool enabled, QWidget *parent)
     m_enable = new QCheckBox(tr("Enable HTTP proxy servers support"));
     m_enable->setChecked(enabled);
     bl->addWidget(m_enable);
-    bl->addWidget(wrapped(tr("When this option is enabled you can add HTTP proxy servers at the Proxy Servers dialog.")));
+    bl->addWidget(wrapped(tr("When this option is enabled you can add HTTP proxy servers at the Upstream Proxies dialog.")));
     layout->addWidget(box);
     auto *warn = new QGroupBox(tr("WARNING"));
     auto *wl = new QVBoxLayout(warn);

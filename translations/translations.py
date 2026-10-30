@@ -65,8 +65,8 @@ T = {
     "HTTP Proxy Servers Support": ("HTTP 代理服务器支持", "HTTP プロキシサーバーのサポート"),
     "HTTP Proxy Servers": ("HTTP 代理服务器", "HTTP プロキシサーバー"),
     "Enable HTTP proxy servers support": ("启用 HTTP 代理服务器支持", "HTTP プロキシサーバーのサポートを有効にする"),
-    "When this option is enabled you can add HTTP proxy servers at the Proxy Servers dialog.":
-        ("启用此选项后，可以在“代理服务器”对话框中添加 HTTP 代理服务器。", "このオプションを有効にすると、「プロキシサーバー」ダイアログで HTTP プロキシサーバーを追加できます。"),
+    "When this option is enabled you can add HTTP proxy servers at the Upstream Proxies dialog.":
+        ("启用此选项后，可以在“上游代理”对话框中添加 HTTP 代理服务器。", "このオプションを有効にすると、「上流プロキシ」ダイアログで HTTP プロキシサーバーを追加できます。"),
     "WARNING": ("警告", "警告"),
     "HTTP proxy server can only be used for HTTP connections (web browsers and etc). WinRoute talks to HTTP proxies with CONNECT requests.":
         ("HTTP 代理服务器只能用于 HTTP 连接（网页浏览器等）。WinRoute 使用 CONNECT 请求与 HTTP 代理通信。", "HTTP プロキシサーバーは HTTP 接続（Web ブラウザーなど）にのみ使用できます。WinRoute は CONNECT 要求で HTTP プロキシと通信します。"),
@@ -142,8 +142,8 @@ T = {
         ("当前用户登录 Windows 时自动启动 WinRoute", "現在のユーザーが Windows にサインインしたときに WinRoute を自動的に起動します"),
     "&Close WinRoute Window": ("关闭 WinRoute 窗口(&C)", "WinRoute ウィンドウを閉じる(&C)"),
     "E&xit": ("退出(&X)", "終了(&X)"),
-    "&Proxy Servers...": ("代理服务器(&P)...", "プロキシサーバー(&P)..."),
-    "Configure proxy servers settings": ("配置代理服务器", "プロキシサーバーを設定します"),
+    "&Upstream Proxies...": ("上游代理(&U)...", "上流プロキシ(&U)..."),
+    "Configure upstream proxy servers": ("配置上游代理服务器", "上流プロキシサーバーを設定します"),
     "Proxification &Rules...": ("代理规则(&R)...", "プロキシ化ルール(&R)..."),
     "Edit proxification rules": ("编辑代理规则", "プロキシ化ルールを編集します"),
     "&Name Resolution...": ("域名解析(&N)...", "名前解決(&N)..."),
@@ -197,7 +197,23 @@ T = {
     "&Tools": ("工具(&T)", "ツール(&T)"),
     "&Help": ("帮助(&H)", "ヘルプ(&H)"),
     "Toolbar": ("工具栏", "ツールバー"),
-    "Proxy Servers": ("代理服务器", "プロキシサーバー"),
+    "Upstream Proxies": ("上游代理", "上流プロキシ"),
+    # toolbar button tooltips (feature descriptions shown on hover)
+    "Set up the upstream SOCKS/HTTPS proxies this machine routes traffic through, and chain them together.":
+        ("设置本机转发流量所经过的上游代理(SOCKS/HTTPS)，并可将它们组成代理链。",
+         "このマシンがトラフィックを転送する上流プロキシ（SOCKS/HTTPS）を設定し、チェーンにまとめられます。"),
+    "Decide how each connection is handled — direct, a proxy, a chain or blocked — by target, port and application.":
+        ("按目标、端口和程序，决定每条连接走直连、代理、代理链还是阻止。",
+         "宛先・ポート・アプリケーションごとに、各接続を直接／プロキシ／チェーン／ブロックのいずれにするか決めます。"),
+    "Choose how host names are resolved: locally or through the proxy.":
+        ("选择主机名的解析方式：本地解析或通过代理解析。",
+         "ホスト名の解決方法を選びます：ローカルまたはプロキシ経由。"),
+    "Test whether proxy servers are reachable and how fast they respond.":
+        ("测试代理服务器是否可连接、响应有多快。",
+         "プロキシサーバーに接続できるか、応答がどれくらい速いかをテストします。"),
+    "Let other machines use this computer as an HTTP/HTTPS or SOCKS5 proxy to reach the network.":
+        ("让其他机器把本机当作 HTTP/HTTPS 或 SOCKS5 代理，经本机访问网络。",
+         "他のマシンがこのコンピューターを HTTP/HTTPS または SOCKS5 プロキシとして使い、ネットワークにアクセスできるようにします。"),
     "Proxification Rules": ("代理规则", "プロキシ化ルール"),
     "Name Resolution": ("域名解析", "名前解決"),
     "Proxy Checker": ("代理检测", "プロキシチェッカー"),
@@ -253,11 +269,11 @@ T = {
     "Profile exported to %1": ("配置文件已导出到 %1", "プロファイルを %1 にエクスポートしました"),
     "Fail status of all proxies was reset": ("已重置所有代理的失败状态", "すべてのプロキシの失敗状態をリセットしました"),
     "Chain %1": ("代理链 %1", "チェーン %1"),
-    "Please add a proxy server first (Profile > Proxy Servers).": ("请先添加代理服务器（配置文件 > 代理服务器）。", "先にプロキシサーバーを追加してください（プロファイル > プロキシサーバー）。"),
+    "Please add a proxy server first (Profile > Upstream Proxies).": ("请先添加代理服务器（配置文件 > 上游代理）。", "先にプロキシサーバーを追加してください（プロファイル > 上流プロキシ）。"),
     "About WinRoute": ("关于 WinRoute", "WinRoute について"),
-    "<h3>WinRoute %1</h3><p>Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.</p><p>Interception: %2<br>Qt %3</p>":
-        ("<h3>WinRoute %1</h3><p>按照代理规则，让 Windows 应用程序的网络连接通过 SOCKS 和 HTTPS 代理服务器。</p><p>拦截方式：%2<br>Qt %3</p>",
-         "<h3>WinRoute %1</h3><p>プロキシ化ルールに従って、Windows アプリケーションのネットワーク接続を SOCKS / HTTPS プロキシサーバー経由にします。</p><p>捕捉方式：%2<br>Qt %3</p>"),
+    "<h3>WinRoute %1</h3><p>Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.</p><p>Interception: %2</p><p>Qt %3</p>":
+        ("<h3>WinRoute %1</h3><p>按照代理规则，让 Windows 应用程序的网络连接通过 SOCKS 和 HTTPS 代理服务器。</p><p>拦截方式：%2</p><p>Qt %3</p>",
+         "<h3>WinRoute %1</h3><p>プロキシ化ルールに従って、Windows アプリケーションのネットワーク接続を SOCKS / HTTPS プロキシサーバー経由にします。</p><p>捕捉方式：%2</p><p>Qt %3</p>"),
     "End Process": ("结束进程", "プロセスの終了"),
     "Terminate the following process(es)?\n\n": ("要结束以下进程吗？\n\n", "次のプロセスを終了しますか？\n\n"),
     "Cannot terminate process %1: %2": ("无法结束进程 %1：%2", "プロセス %1 を終了できません：%2"),
@@ -688,20 +704,26 @@ T = {
     "Could not start the update.": ("无法开始更新。", "更新を開始できませんでした。"),
 
     # ---- proxy service (gateway) ----  ("Address:", "Port:", "Password:", "Authentication" already defined above)
-    # Named "Proxy Service" / 代理功能 to avoid clashing with the "Proxy Servers" (upstream) feature.
-    "Proxy Service": ("代理功能", "プロキシ機能"),
+    # Named "Proxy Gateway" / 代理网关 (this machine serving as a proxy) to contrast
+    # with "Upstream Proxies" / 上游代理 (the proxies this machine routes out through).
+    "Proxy Gateway": ("代理网关", "プロキシゲートウェイ"),
     "Let other machines reach the network through this one":
         ("让其他机器通过本机访问网络", "他のマシンがこのマシン経由でネットワークにアクセスできるようにします"),
-    "Proxy server settings saved.": ("代理功能设置已保存。", "プロキシ機能の設定を保存しました。"),
-    "Proxy service: %1": ("代理功能：%1", "プロキシ機能：%1"),
+    "Proxy gateway settings saved.": ("代理网关设置已保存。", "プロキシゲートウェイの設定を保存しました。"),
+    "Proxy gateway: %1": ("代理网关：%1", "プロキシゲートウェイ：%1"),
     "Run a proxy server so other machines can reach the network through this one":
         ("开启代理功能,让其他机器通过本机访问网络", "プロキシ機能を有効にし、他のマシンがこのマシン経由でネットワークにアクセスできるようにします"),
     "Listen": ("监听", "待ち受け"),
     "0.0.0.0 (all network interfaces)": ("0.0.0.0(所有网络接口)", "0.0.0.0(すべてのネットワークインターフェース)"),
     "Outgoing connections": ("出站连接", "送信接続"),
     "Follow this machine's proxy rules": ("遵循本机的代理规则", "このマシンのプロキシルールに従う"),
+    "Rules that match by application are skipped — a remote connection has no local process.":
+        ("按进程(应用程序)区分的规则会被跳过——远程连接没有本地进程。",
+         "アプリケーションで振り分けるルールはスキップされます（リモート接続にローカルプロセスがないため）。"),
     "Always connect directly": ("始终直接连接", "常に直接接続する"),
-    "If a rule's proxy is missing:": ("当规则的代理缺失时:", "ルールのプロキシが存在しない場合:"),
+    "Send every connection through one proxy or chain":
+        ("全部走指定的代理或代理链", "すべての接続を指定したプロキシまたはチェーン経由にする"),
+    "If the selected proxy cannot connect:": ("当所选代理无法连接时:", "選択したプロキシに接続できない場合:"),
     "Connect directly": ("直接连接", "直接接続する"),
     "User name:": ("用户名:", "ユーザー名:"),
     "Leave the user name empty to allow clients without authentication.":
@@ -710,7 +732,7 @@ T = {
     "SOCKS5": ("SOCKS5", "SOCKS5"),
     "No proxy protocol is enabled": ("未启用任何代理协议", "有効なプロキシプロトコルがありません"),
     "%1 - not a SOCKS5 client": ("%1 - 不是 SOCKS5 客户端", "%1 - SOCKS5 クライアントではありません"),
-    "Proxy service (%1) listening on %2:%3": ("代理功能(%1)正在监听 %2:%3", "プロキシ機能(%1)が %2:%3 で待ち受け中"),
+    "Proxy gateway (%1) listening on %2:%3": ("代理网关(%1)正在监听 %2:%3", "プロキシゲートウェイ(%1)が %2:%3 で待ち受け中"),
     # gateway log / status
     "direct": ("直连", "直接"),
     "using rules": ("使用规则", "ルール使用"),
@@ -718,6 +740,9 @@ T = {
     "proxy #%1 is missing": ("代理 #%1 不存在", "プロキシ #%1 が存在しません"),
     "chain %1 is empty": ("代理链 %1 为空", "チェーン %1 が空です"),
     "chain #%1 is missing": ("代理链 #%1 不存在", "チェーン #%1 が存在しません"),
+    "no exit proxy is selected": ("未选择出口代理", "出口プロキシが選択されていません"),
+    "%1 - %2 proxy unreachable, connecting directly : %3":
+        ("%1 - %2 代理无法连接，改为直连：%3", "%1 - %2 プロキシに接続できないため直接接続します：%3"),
     "client offered no acceptable authentication method":
         ("客户端未提供可接受的认证方式", "クライアントが受け入れ可能な認証方式を提示しませんでした"),
     "%1 - wrong user name or password": ("%1 - 用户名或密码错误", "%1 - ユーザー名またはパスワードが違います"),

@@ -321,8 +321,8 @@
       <translation>启用 HTTP 代理服务器支持</translation>
     </message>
     <message>
-      <source>When this option is enabled you can add HTTP proxy servers at the Proxy Servers dialog.</source>
-      <translation>启用此选项后，可以在“代理服务器”对话框中添加 HTTP 代理服务器。</translation>
+      <source>When this option is enabled you can add HTTP proxy servers at the Upstream Proxies dialog.</source>
+      <translation>启用此选项后，可以在“上游代理”对话框中添加 HTTP 代理服务器。</translation>
     </message>
     <message>
       <source>WARNING</source>
@@ -562,10 +562,6 @@
       <translation>%1 个活动连接</translation>
     </message>
     <message>
-      <source>Proxy service: %1</source>
-      <translation>代理功能：%1</translation>
-    </message>
-    <message>
       <source>&amp;New Profile</source>
       <translation>新建配置文件(&amp;N)</translation>
     </message>
@@ -600,14 +596,6 @@
     <message>
       <source>E&amp;xit</source>
       <translation>退出(&amp;X)</translation>
-    </message>
-    <message>
-      <source>&amp;Proxy Servers...</source>
-      <translation>代理服务器(&amp;P)...</translation>
-    </message>
-    <message>
-      <source>Configure proxy servers settings</source>
-      <translation>配置代理服务器</translation>
     </message>
     <message>
       <source>Proxification &amp;Rules...</source>
@@ -886,20 +874,36 @@
       <translation>工具栏</translation>
     </message>
     <message>
-      <source>Proxy Servers</source>
-      <translation>代理服务器</translation>
-    </message>
-    <message>
       <source>Proxification Rules</source>
       <translation>代理规则</translation>
+    </message>
+    <message>
+      <source>Decide how each connection is handled — direct, a proxy, a chain or blocked — by target, port and application.</source>
+      <translation>按目标、端口和程序，决定每条连接走直连、代理、代理链还是阻止。</translation>
     </message>
     <message>
       <source>Name Resolution</source>
       <translation>域名解析</translation>
     </message>
     <message>
+      <source>Choose how host names are resolved: locally or through the proxy.</source>
+      <translation>选择主机名的解析方式：本地解析或通过代理解析。</translation>
+    </message>
+    <message>
       <source>Proxy Checker</source>
       <translation>代理检测</translation>
+    </message>
+    <message>
+      <source>Test whether proxy servers are reachable and how fast they respond.</source>
+      <translation>测试代理服务器是否可连接、响应有多快。</translation>
+    </message>
+    <message>
+      <source>Proxy Gateway</source>
+      <translation>代理网关</translation>
+    </message>
+    <message>
+      <source>Let other machines use this computer as an HTTP/HTTPS or SOCKS5 proxy to reach the network.</source>
+      <translation>让其他机器把本机当作 HTTP/HTTPS 或 SOCKS5 代理，经本机访问网络。</translation>
     </message>
     <message>
       <source>Let other machines reach the network through this one</source>
@@ -976,10 +980,6 @@
     <message>
       <source>Signed by %1 — click for details</source>
       <translation>签名者：%1 — 点击查看详情</translation>
-    </message>
-    <message>
-      <source>Proxy Service</source>
-      <translation>代理功能</translation>
     </message>
     <message>
       <source>%1 signatures — click for details</source>
@@ -1136,20 +1136,8 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
       <translation>代理链 %1</translation>
     </message>
     <message>
-      <source>Please add a proxy server first (Profile &gt; Proxy Servers).</source>
-      <translation>请先添加代理服务器（配置文件 &gt; 代理服务器）。</translation>
-    </message>
-    <message>
-      <source>Proxy server settings saved.</source>
-      <translation>代理功能设置已保存。</translation>
-    </message>
-    <message>
       <source>About WinRoute</source>
       <translation>关于 WinRoute</translation>
-    </message>
-    <message>
-      <source>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.&lt;/p&gt;&lt;p&gt;Interception: %2&lt;br&gt;Qt %3&lt;/p&gt;</source>
-      <translation>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;按照代理规则，让 Windows 应用程序的网络连接通过 SOCKS 和 HTTPS 代理服务器。&lt;/p&gt;&lt;p&gt;拦截方式：%2&lt;br&gt;Qt %3&lt;/p&gt;</translation>
     </message>
     <message>
       <source>Check for Updates</source>
@@ -1168,6 +1156,26 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
       <translation>结束进程</translation>
     </message>
     <message>
+      <source>Proxy gateway: %1</source>
+      <translation>代理网关：%1</translation>
+    </message>
+    <message>
+      <source>&amp;Upstream Proxies...</source>
+      <translation>上游代理(&amp;U)...</translation>
+    </message>
+    <message>
+      <source>Configure upstream proxy servers</source>
+      <translation>配置上游代理服务器</translation>
+    </message>
+    <message>
+      <source>Upstream Proxies</source>
+      <translation>上游代理</translation>
+    </message>
+    <message>
+      <source>Set up the upstream SOCKS/HTTPS proxies this machine routes traffic through, and chain them together.</source>
+      <translation>设置本机转发流量所经过的上游代理(SOCKS/HTTPS)，并可将它们组成代理链。</translation>
+    </message>
+    <message>
       <source>The driver is not signed, or its signature could not be read.</source>
       <translation>驱动未签名，或无法读取其签名。</translation>
     </message>
@@ -1178,6 +1186,18 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>Certificate %1</source>
       <translation>证书 %1</translation>
+    </message>
+    <message>
+      <source>Please add a proxy server first (Profile &gt; Upstream Proxies).</source>
+      <translation>请先添加代理服务器（配置文件 &gt; 上游代理）。</translation>
+    </message>
+    <message>
+      <source>Proxy gateway settings saved.</source>
+      <translation>代理网关设置已保存。</translation>
+    </message>
+    <message>
+      <source>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.&lt;/p&gt;&lt;p&gt;Interception: %2&lt;/p&gt;&lt;p&gt;Qt %3&lt;/p&gt;</source>
+      <translation>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;按照代理规则，让 Windows 应用程序的网络连接通过 SOCKS 和 HTTPS 代理服务器。&lt;/p&gt;&lt;p&gt;拦截方式：%2&lt;/p&gt;&lt;p&gt;Qt %3&lt;/p&gt;</translation>
     </message>
     <message>
       <source>Terminate the following process(es)?
@@ -1688,6 +1708,10 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>直连(%1)</translation>
     </message>
     <message>
+      <source>no exit proxy is selected</source>
+      <translation>未选择出口代理</translation>
+    </message>
+    <message>
       <source>Block</source>
       <translation>阻止</translation>
     </message>
@@ -1756,6 +1780,10 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>%1 - %2 经由 %3</translation>
     </message>
     <message>
+      <source>%1 - %2 proxy unreachable, connecting directly : %3</source>
+      <translation>%1 - %2 代理无法连接，改为直连：%3</translation>
+    </message>
+    <message>
       <source>%1 - %2 failed : %3</source>
       <translation>%1 - %2 失败：%3</translation>
     </message>
@@ -1780,8 +1808,8 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>无法在 %1:%2 上启动代理服务器：%3</translation>
     </message>
     <message>
-      <source>Proxy service (%1) listening on %2:%3</source>
-      <translation>代理功能(%1)正在监听 %2:%3</translation>
+      <source>Proxy gateway (%1) listening on %2:%3</source>
+      <translation>代理网关(%1)正在监听 %2:%3</translation>
     </message>
     <message>
       <source>No proxy protocol is enabled</source>
@@ -1791,8 +1819,8 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
   <context>
     <name>ProxyGatewayDialog</name>
     <message>
-      <source>Proxy Service</source>
-      <translation>代理功能</translation>
+      <source>Proxy Gateway</source>
+      <translation>代理网关</translation>
     </message>
     <message>
       <source>Run a proxy server so other machines can reach the network through this one</source>
@@ -1835,8 +1863,16 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>始终直接连接</translation>
     </message>
     <message>
-      <source>If a rule's proxy is missing:</source>
-      <translation>当规则的代理缺失时:</translation>
+      <source>Send every connection through one proxy or chain</source>
+      <translation>全部走指定的代理或代理链</translation>
+    </message>
+    <message>
+      <source>Rules that match by application are skipped — a remote connection has no local process.</source>
+      <translation>按进程(应用程序)区分的规则会被跳过——远程连接没有本地进程。</translation>
+    </message>
+    <message>
+      <source>If the selected proxy cannot connect:</source>
+      <translation>当所选代理无法连接时:</translation>
     </message>
     <message>
       <source>Block</source>
@@ -1977,8 +2013,8 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
   <context>
     <name>ProxyServersDialog</name>
     <message>
-      <source>Proxy Servers</source>
-      <translation>代理服务器</translation>
+      <source>Upstream Proxies</source>
+      <translation>上游代理</translation>
     </message>
     <message>
       <source>Address</source>

@@ -321,8 +321,8 @@
       <translation>HTTP プロキシサーバーのサポートを有効にする</translation>
     </message>
     <message>
-      <source>When this option is enabled you can add HTTP proxy servers at the Proxy Servers dialog.</source>
-      <translation>このオプションを有効にすると、「プロキシサーバー」ダイアログで HTTP プロキシサーバーを追加できます。</translation>
+      <source>When this option is enabled you can add HTTP proxy servers at the Upstream Proxies dialog.</source>
+      <translation>このオプションを有効にすると、「上流プロキシ」ダイアログで HTTP プロキシサーバーを追加できます。</translation>
     </message>
     <message>
       <source>WARNING</source>
@@ -562,10 +562,6 @@
       <translation>アクティブな接続 %1 件</translation>
     </message>
     <message>
-      <source>Proxy service: %1</source>
-      <translation>プロキシ機能：%1</translation>
-    </message>
-    <message>
       <source>&amp;New Profile</source>
       <translation>新しいプロファイル(&amp;N)</translation>
     </message>
@@ -600,14 +596,6 @@
     <message>
       <source>E&amp;xit</source>
       <translation>終了(&amp;X)</translation>
-    </message>
-    <message>
-      <source>&amp;Proxy Servers...</source>
-      <translation>プロキシサーバー(&amp;P)...</translation>
-    </message>
-    <message>
-      <source>Configure proxy servers settings</source>
-      <translation>プロキシサーバーを設定します</translation>
     </message>
     <message>
       <source>Proxification &amp;Rules...</source>
@@ -886,20 +874,36 @@
       <translation>ツールバー</translation>
     </message>
     <message>
-      <source>Proxy Servers</source>
-      <translation>プロキシサーバー</translation>
-    </message>
-    <message>
       <source>Proxification Rules</source>
       <translation>プロキシ化ルール</translation>
+    </message>
+    <message>
+      <source>Decide how each connection is handled — direct, a proxy, a chain or blocked — by target, port and application.</source>
+      <translation>宛先・ポート・アプリケーションごとに、各接続を直接／プロキシ／チェーン／ブロックのいずれにするか決めます。</translation>
     </message>
     <message>
       <source>Name Resolution</source>
       <translation>名前解決</translation>
     </message>
     <message>
+      <source>Choose how host names are resolved: locally or through the proxy.</source>
+      <translation>ホスト名の解決方法を選びます：ローカルまたはプロキシ経由。</translation>
+    </message>
+    <message>
       <source>Proxy Checker</source>
       <translation>プロキシチェッカー</translation>
+    </message>
+    <message>
+      <source>Test whether proxy servers are reachable and how fast they respond.</source>
+      <translation>プロキシサーバーに接続できるか、応答がどれくらい速いかをテストします。</translation>
+    </message>
+    <message>
+      <source>Proxy Gateway</source>
+      <translation>プロキシゲートウェイ</translation>
+    </message>
+    <message>
+      <source>Let other machines use this computer as an HTTP/HTTPS or SOCKS5 proxy to reach the network.</source>
+      <translation>他のマシンがこのコンピューターを HTTP/HTTPS または SOCKS5 プロキシとして使い、ネットワークにアクセスできるようにします。</translation>
     </message>
     <message>
       <source>Let other machines reach the network through this one</source>
@@ -976,10 +980,6 @@
     <message>
       <source>Signed by %1 — click for details</source>
       <translation>署名者：%1 — クリックで詳細</translation>
-    </message>
-    <message>
-      <source>Proxy Service</source>
-      <translation>プロキシ機能</translation>
     </message>
     <message>
       <source>%1 signatures — click for details</source>
@@ -1136,20 +1136,8 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
       <translation>チェーン %1</translation>
     </message>
     <message>
-      <source>Please add a proxy server first (Profile &gt; Proxy Servers).</source>
-      <translation>先にプロキシサーバーを追加してください（プロファイル &gt; プロキシサーバー）。</translation>
-    </message>
-    <message>
-      <source>Proxy server settings saved.</source>
-      <translation>プロキシ機能の設定を保存しました。</translation>
-    </message>
-    <message>
       <source>About WinRoute</source>
       <translation>WinRoute について</translation>
-    </message>
-    <message>
-      <source>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.&lt;/p&gt;&lt;p&gt;Interception: %2&lt;br&gt;Qt %3&lt;/p&gt;</source>
-      <translation>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;プロキシ化ルールに従って、Windows アプリケーションのネットワーク接続を SOCKS / HTTPS プロキシサーバー経由にします。&lt;/p&gt;&lt;p&gt;捕捉方式：%2&lt;br&gt;Qt %3&lt;/p&gt;</translation>
     </message>
     <message>
       <source>Check for Updates</source>
@@ -1168,6 +1156,26 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
       <translation>プロセスの終了</translation>
     </message>
     <message>
+      <source>Proxy gateway: %1</source>
+      <translation>プロキシゲートウェイ：%1</translation>
+    </message>
+    <message>
+      <source>&amp;Upstream Proxies...</source>
+      <translation>上流プロキシ(&amp;U)...</translation>
+    </message>
+    <message>
+      <source>Configure upstream proxy servers</source>
+      <translation>上流プロキシサーバーを設定します</translation>
+    </message>
+    <message>
+      <source>Upstream Proxies</source>
+      <translation>上流プロキシ</translation>
+    </message>
+    <message>
+      <source>Set up the upstream SOCKS/HTTPS proxies this machine routes traffic through, and chain them together.</source>
+      <translation>このマシンがトラフィックを転送する上流プロキシ（SOCKS/HTTPS）を設定し、チェーンにまとめられます。</translation>
+    </message>
+    <message>
       <source>The driver is not signed, or its signature could not be read.</source>
       <translation>ドライバーは署名されていないか、署名を読み取れませんでした。</translation>
     </message>
@@ -1178,6 +1186,18 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>Certificate %1</source>
       <translation>証明書 %1</translation>
+    </message>
+    <message>
+      <source>Please add a proxy server first (Profile &gt; Upstream Proxies).</source>
+      <translation>先にプロキシサーバーを追加してください（プロファイル &gt; 上流プロキシ）。</translation>
+    </message>
+    <message>
+      <source>Proxy gateway settings saved.</source>
+      <translation>プロキシゲートウェイの設定を保存しました。</translation>
+    </message>
+    <message>
+      <source>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.&lt;/p&gt;&lt;p&gt;Interception: %2&lt;/p&gt;&lt;p&gt;Qt %3&lt;/p&gt;</source>
+      <translation>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;プロキシ化ルールに従って、Windows アプリケーションのネットワーク接続を SOCKS / HTTPS プロキシサーバー経由にします。&lt;/p&gt;&lt;p&gt;捕捉方式：%2&lt;/p&gt;&lt;p&gt;Qt %3&lt;/p&gt;</translation>
     </message>
     <message>
       <source>Terminate the following process(es)?
@@ -1688,6 +1708,10 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>直接(%1)</translation>
     </message>
     <message>
+      <source>no exit proxy is selected</source>
+      <translation>出口プロキシが選択されていません</translation>
+    </message>
+    <message>
       <source>Block</source>
       <translation>ブロック</translation>
     </message>
@@ -1756,6 +1780,10 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>%1 - %2 を %3 経由</translation>
     </message>
     <message>
+      <source>%1 - %2 proxy unreachable, connecting directly : %3</source>
+      <translation>%1 - %2 プロキシに接続できないため直接接続します：%3</translation>
+    </message>
+    <message>
       <source>%1 - %2 failed : %3</source>
       <translation>%1 - %2 失敗：%3</translation>
     </message>
@@ -1780,8 +1808,8 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>%1:%2 でプロキシサーバーを起動できません：%3</translation>
     </message>
     <message>
-      <source>Proxy service (%1) listening on %2:%3</source>
-      <translation>プロキシ機能(%1)が %2:%3 で待ち受け中</translation>
+      <source>Proxy gateway (%1) listening on %2:%3</source>
+      <translation>プロキシゲートウェイ(%1)が %2:%3 で待ち受け中</translation>
     </message>
     <message>
       <source>No proxy protocol is enabled</source>
@@ -1791,8 +1819,8 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
   <context>
     <name>ProxyGatewayDialog</name>
     <message>
-      <source>Proxy Service</source>
-      <translation>プロキシ機能</translation>
+      <source>Proxy Gateway</source>
+      <translation>プロキシゲートウェイ</translation>
     </message>
     <message>
       <source>Run a proxy server so other machines can reach the network through this one</source>
@@ -1835,8 +1863,16 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>常に直接接続する</translation>
     </message>
     <message>
-      <source>If a rule's proxy is missing:</source>
-      <translation>ルールのプロキシが存在しない場合:</translation>
+      <source>Send every connection through one proxy or chain</source>
+      <translation>すべての接続を指定したプロキシまたはチェーン経由にする</translation>
+    </message>
+    <message>
+      <source>Rules that match by application are skipped — a remote connection has no local process.</source>
+      <translation>アプリケーションで振り分けるルールはスキップされます（リモート接続にローカルプロセスがないため）。</translation>
+    </message>
+    <message>
+      <source>If the selected proxy cannot connect:</source>
+      <translation>選択したプロキシに接続できない場合:</translation>
     </message>
     <message>
       <source>Block</source>
@@ -1977,8 +2013,8 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
   <context>
     <name>ProxyServersDialog</name>
     <message>
-      <source>Proxy Servers</source>
-      <translation>プロキシサーバー</translation>
+      <source>Upstream Proxies</source>
+      <translation>上流プロキシ</translation>
     </message>
     <message>
       <source>Address</source>

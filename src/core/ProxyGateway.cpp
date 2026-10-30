@@ -27,17 +27,17 @@ struct Route {
     QString text;              // for the log
 };
 
-Route routeFor(const RuleEnginePtr &rules, ProxyGateway::Mode mode, ProxyGateway::OnMissing onMissing,
+Route routeFor(const RuleEnginePtr &rules, const ProxyGateway::Config &cfg,
                const Endpoint &target, QString *ruleName)
 {
     Route r;
-    if (mode == ProxyGateway::Mode::Direct || !rules) {
+    if (cfg.mode == ProxyGateway::Mode::Direct || !rules) {
         r.text = QCoreApplication::translate("ProxyGateway", "Direct");
         return r;
     }
-    // A rule's proxy/chain is gone: either refuse, or fall back to direct.
+    // The chosen proxy/chain is gone: either refuse, or fall back to direct.
     const auto missing = [&](const QString &why) {
-        if (onMissing == ProxyGateway::OnMissing::Direct) {
+        if (cfg.onMissing == ProxyGateway::OnMissing::Direct) {
             r.hops.clear();
             r.text = QCoreApplication::translate("ProxyGateway", "Direct (%1)").arg(why);
         } else {
@@ -46,15 +46,24 @@ Route routeFor(const RuleEnginePtr &rules, ProxyGateway::Mode mode, ProxyGateway
         }
     };
 
-    ConnectionRequest req;
-    req.ip = target.ip;
-    req.hostname = target.host;
-    req.port = target.port;
-    const RuleMatch match = rules->match(req);
-    if (ruleName)
-        *ruleName = match.ruleName;
+    // Where the route comes from: the fixed exit, or whatever the rules match.
+    RuleAction action = cfg.exit;
+    if (cfg.mode == ProxyGateway::Mode::Rules) {
+        ConnectionRequest req;
+        req.ip = target.ip;
+        req.hostname = target.host;
+        req.port = target.port;
+        const RuleMatch match = rules->match(req);
+        if (ruleName)
+            *ruleName = match.ruleName;
+        action = match.action;
+    } else if (action.type != ActionType::Proxy && action.type != ActionType::Chain) {
+        // Fixed-exit mode but nothing valid is chosen.
+        missing(QCoreApplication::translate("ProxyGateway", "no exit proxy is selected"));
+        return r;
+    }
     const Profile &profile = rules->profile();
-    switch (match.action.type) {
+    switch (action.type) {
     case ActionType::Direct:
         r.text = QCoreApplication::translate("ProxyGateway", "Direct");
         break;
@@ -63,15 +72,15 @@ Route routeFor(const RuleEnginePtr &rules, ProxyGateway::Mode mode, ProxyGateway
         r.text = QCoreApplication::translate("ProxyGateway", "Block");
         break;
     case ActionType::Proxy:
-        if (const ProxyServer *p = profile.proxyById(match.action.id)) {
+        if (const ProxyServer *p = profile.proxyById(action.id)) {
             r.hops << *p;
             r.text = QString("%1:%2 %3").arg(p->address).arg(p->port).arg(proxyTypeToString(p->type));
         } else {
-            missing(QCoreApplication::translate("ProxyGateway", "proxy #%1 is missing").arg(match.action.id));
+            missing(QCoreApplication::translate("ProxyGateway", "proxy #%1 is missing").arg(action.id));
         }
         break;
     case ActionType::Chain:
-        if (const ProxyChain *c = profile.chainById(match.action.id)) {
+        if (const ProxyChain *c = profile.chainById(action.id)) {
             QList<ProxyServer> members;
             for (const ChainMember &m : c->members)
                 if (m.enabled)
@@ -90,7 +99,7 @@ Route routeFor(const RuleEnginePtr &rules, ProxyGateway::Mode mode, ProxyGateway
                 r.text = QCoreApplication::translate("ProxyGateway", "Chain %1").arg(c->name);
             }
         } else {
-            missing(QCoreApplication::translate("ProxyGateway", "chain #%1 is missing").arg(match.action.id));
+            missing(QCoreApplication::translate("ProxyGateway", "chain #%1 is missing").arg(action.id));
         }
         break;
     }
@@ -393,7 +402,7 @@ private:
     {
         m_stage = Stage::Connecting;
         QString ruleName;
-        const Route route = routeFor(m_gw->rules(), m_gw->config().mode, m_gw->config().onMissing, m_target, &ruleName);
+        const Route route = routeFor(m_gw->rules(), m_gw->config(), m_target, &ruleName);
         if (route.blocked) {
             rejectClient();   // refuse per the ruleset
             logNormal(QCoreApplication::translate("ProxyGateway", "%1 - %2 blocked (%3)").arg(m_peer, m_targetText, route.text));
@@ -404,15 +413,33 @@ private:
         m_actionText = route.text;
         logNormal(QCoreApplication::translate("ProxyGateway", "%1 - %2 via %3").arg(m_peer, m_targetText, route.text));
 
+        // When the chosen proxy/chain cannot be connected, fall back to a direct
+        // connection if the "when the selected proxy cannot connect" setting says
+        // so (a direct route, with no hops, has nothing to fall back from).
+        m_fallbackDirect = !route.hops.isEmpty()
+                           && m_gw->config().onMissing == ProxyGateway::OnMissing::Direct;
+        connectThrough(route.hops);
+    }
+
+    void connectThrough(const QList<ProxyServer> &hops)
+    {
         m_upstream = new QTcpSocket(this);
         m_upstream->setSocketOption(QAbstractSocket::LowDelayOption, 1);
-        auto *connector = new ProxyConnector(m_upstream, route.hops, m_target, m_gw->dns(), kConnectTimeoutMs, this);
+        auto *connector = new ProxyConnector(m_upstream, hops, m_target, m_gw->dns(), kConnectTimeoutMs, this);
         connect(connector, &ProxyConnector::connected, this, [this, connector](const QByteArray &leftover) {
             connector->deleteLater();
             onUpstreamReady(leftover);
         });
         connect(connector, &ProxyConnector::failed, this, [this, connector](const QString &err) {
             connector->deleteLater();
+            if (m_fallbackDirect) {   // proxy unreachable: try once more, directly
+                m_fallbackDirect = false;
+                logNormal(QCoreApplication::translate("ProxyGateway", "%1 - %2 proxy unreachable, connecting directly : %3").arg(m_peer, m_targetText, err));
+                if (m_upstream)
+                    m_upstream->deleteLater();
+                connectThrough({});
+                return;
+            }
             failClient();
             logError(QCoreApplication::translate("ProxyGateway", "%1 - %2 failed : %3").arg(m_peer, m_targetText, err));
             m_failed = true;
@@ -573,6 +600,7 @@ private:
     QByteArray m_pendingToUpstream;   // bytes to send upstream once connected
     Proto m_proto = Proto::Unknown;
     bool m_httpConnect = false;       // HTTP CONNECT tunnel (vs an absolute-URI request)
+    bool m_fallbackDirect = false;    // on proxy connect failure, retry directly (once)
     Stage m_stage = Stage::Greeting;
     qint64 m_start = 0;
     qint64 m_sent = 0, m_received = 0;
@@ -613,7 +641,7 @@ bool ProxyGateway::start(const Config &config, QString *error)
         *serverOut = server;
         *portOut = server->serverPort();
         connect(server, &QTcpServer::newConnection, this, [this, server, proto] { onNewConnection(server, proto); });
-        logNormal(QCoreApplication::translate("ProxyGateway", "Proxy service (%1) listening on %2:%3")
+        logNormal(QCoreApplication::translate("ProxyGateway", "Proxy gateway (%1) listening on %2:%3")
                       .arg(proto == Proto::Http ? QStringLiteral("HTTP/HTTPS") : QStringLiteral("SOCKS5"),
                            config.listenAddress.toString())
                       .arg(*portOut));
@@ -682,8 +710,13 @@ ProxyGateway::Config ProxyGateway::loadConfig()
     c.httpPort = quint16(s.value("proxyServer/httpPort", 8080).toUInt());
     c.socksEnabled = s.value("proxyServer/socksEnabled", true).toBool();
     c.socksPort = quint16(s.value("proxyServer/socksPort", 1080).toUInt());
-    c.mode = s.value("proxyServer/mode").toString() == QLatin1String("direct") ? Mode::Direct : Mode::Rules;
+    const QString mode = s.value("proxyServer/mode").toString();
+    c.mode = mode == QLatin1String("direct") ? Mode::Direct
+             : mode == QLatin1String("proxy") ? Mode::Proxy
+                                              : Mode::Rules;
     c.onMissing = s.value("proxyServer/onMissing").toString() == QLatin1String("direct") ? OnMissing::Direct : OnMissing::Block;
+    c.exit.type = s.value("proxyServer/exitType").toString() == QLatin1String("chain") ? ActionType::Chain : ActionType::Proxy;
+    c.exit.id = s.value("proxyServer/exitId", 0).toInt();
     c.username = s.value("proxyServer/username").toString();
     c.password = s.value("proxyServer/password").toString();
     return c;
@@ -698,8 +731,10 @@ void ProxyGateway::saveConfig(const Config &c)
     s.setValue("proxyServer/httpPort", c.httpPort);
     s.setValue("proxyServer/socksEnabled", c.socksEnabled);
     s.setValue("proxyServer/socksPort", c.socksPort);
-    s.setValue("proxyServer/mode", c.mode == Mode::Direct ? "direct" : "rules");
+    s.setValue("proxyServer/mode", c.mode == Mode::Direct ? "direct" : c.mode == Mode::Proxy ? "proxy" : "rules");
     s.setValue("proxyServer/onMissing", c.onMissing == OnMissing::Direct ? "direct" : "block");
+    s.setValue("proxyServer/exitType", c.exit.type == ActionType::Chain ? "chain" : "proxy");
+    s.setValue("proxyServer/exitId", c.exit.id);
     s.setValue("proxyServer/username", c.username);
     s.setValue("proxyServer/password", c.password);
 }

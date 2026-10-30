@@ -196,6 +196,35 @@ QIcon proxy()
     });
 }
 
+// A hub-and-spoke glyph: a central host with other machines linked to it,
+// for the proxy service that lets other machines reach the network through
+// this one. Deliberately unlike the server stack of proxyServers()/proxy().
+QIcon proxyService()
+{
+    return render([](QPainter &p, double s) {
+        const QPointF hub(s * 0.5, s * 0.5);
+        const double hr = s * 0.15;
+        const QPointF nodes[3] = {QPointF(s * 0.5, s * 0.15), QPointF(s * 0.17, s * 0.83), QPointF(s * 0.83, s * 0.83)};
+        const double nr = s * 0.095;
+        // links from each outer machine to the hub
+        p.setPen(QPen(QColor(110, 130, 160), qMax(1.0, s * 0.06)));
+        for (const QPointF &n : nodes)
+            p.drawLine(hub, n);
+        // outer machines
+        p.setPen(QPen(QColor(90, 100, 120), qMax(1.0, s / 28)));
+        p.setBrush(QColor(175, 190, 210));
+        for (const QPointF &n : nodes)
+            p.drawEllipse(n, nr, nr);
+        // the hub (this machine)
+        QRadialGradient g(hub - QPointF(hr * 0.3, hr * 0.3), hr * 1.5);
+        g.setColorAt(0, QColor(80, 160, 240));
+        g.setColorAt(1, QColor(20, 100, 190));
+        p.setPen(QPen(QColor(20, 80, 150), qMax(1.0, s / 26)));
+        p.setBrush(g);
+        p.drawEllipse(hub, hr, hr);
+    });
+}
+
 QIcon direct()
 {
     return render([](QPainter &p, double s) {

@@ -100,7 +100,7 @@ MainWindow::MainWindow(Engine *engine, QWidget *parent)
     // Start the inbound proxy service now if it is enabled in WinRoute.ini.
     QString gwError;
     if (!m_engine->applyGatewayConfig(ProxyGateway::loadConfig(), &gwError))
-        logError(tr("Proxy service: %1").arg(gwError));
+        logError(tr("Proxy gateway: %1").arg(gwError));
 
     m_dnsProbe = new DnsClient(this);
     m_dnsProbe->bind(0);
@@ -137,8 +137,8 @@ void MainWindow::createActions()
         close();
     });
 
-    m_actProxyServers = act(tr("&Proxy Servers..."), &MainWindow::showProxyServers, {}, icons::proxyServers());
-    m_actProxyServers->setStatusTip(tr("Configure proxy servers settings"));
+    m_actProxyServers = act(tr("&Upstream Proxies..."), &MainWindow::showProxyServers, {}, icons::proxyServers());
+    m_actProxyServers->setStatusTip(tr("Configure upstream proxy servers"));
     m_actRules = act(tr("Proxification &Rules..."), &MainWindow::showRules, {}, icons::rules());
     m_actRules->setStatusTip(tr("Edit proxification rules"));
     m_actNameResolution = act(tr("&Name Resolution..."), &MainWindow::showNameResolution, {}, icons::nameResolution());
@@ -378,11 +378,16 @@ void MainWindow::createToolBar()
     m_toolBar->setMovable(false);
     m_toolBar->setIconSize(QSize(32, 32));
     m_toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    auto *proxyServers = new QAction(icons::proxyServers(), tr("Proxy Servers"), this);
+    auto *proxyServers = new QAction(icons::proxyServers(), tr("Upstream Proxies"), this);
+    proxyServers->setToolTip(tr("Set up the upstream SOCKS/HTTPS proxies this machine routes traffic through, and chain them together."));
     auto *rules = new QAction(icons::rules(), tr("Proxification Rules"), this);
+    rules->setToolTip(tr("Decide how each connection is handled — direct, a proxy, a chain or blocked — by target, port and application."));
     auto *dns = new QAction(icons::nameResolution(), tr("Name Resolution"), this);
+    dns->setToolTip(tr("Choose how host names are resolved: locally or through the proxy."));
     auto *checker = new QAction(icons::checker(), tr("Proxy Checker"), this);
-    auto *proxyServer = new QAction(icons::proxy(), tr("Proxy Service"), this);
+    checker->setToolTip(tr("Test whether proxy servers are reachable and how fast they respond."));
+    auto *proxyServer = new QAction(icons::proxyService(), tr("Proxy Gateway"), this);
+    proxyServer->setToolTip(tr("Let other machines use this computer as an HTTP/HTTPS or SOCKS5 proxy to reach the network."));
     proxyServer->setStatusTip(tr("Let other machines reach the network through this one"));
     connect(proxyServers, &QAction::triggered, this, &MainWindow::showProxyServers);
     connect(rules, &QAction::triggered, this, &MainWindow::showRules);
@@ -967,7 +972,7 @@ void MainWindow::showProxyChecker()
             choices << qMakePair(tr("Chain %1").arg(c.name), c.type == ChainType::Simple ? hops : QList<ProxyServer>{hops.first()});
     }
     if (choices.isEmpty()) {
-        QMessageBox::information(this, tr("Proxy Checker"), tr("Please add a proxy server first (Profile > Proxy Servers)."));
+        QMessageBox::information(this, tr("Proxy Checker"), tr("Please add a proxy server first (Profile > Upstream Proxies)."));
         return;
     }
     ProxyCheckerDialog dlg(choices, this);
@@ -976,16 +981,16 @@ void MainWindow::showProxyChecker()
 
 void MainWindow::showProxyServerSettings()
 {
-    ProxyGatewayDialog dlg(ProxyGateway::loadConfig(), this);
+    ProxyGatewayDialog dlg(ProxyGateway::loadConfig(), m_profile, this);
     if (dlg.exec() != QDialog::Accepted)
         return;
     const ProxyGateway::Config cfg = dlg.config();
     ProxyGateway::saveConfig(cfg);
     QString error;
     if (m_engine->applyGatewayConfig(cfg, &error))
-        logNormal(tr("Proxy server settings saved."));
+        logNormal(tr("Proxy gateway settings saved."));
     else
-        logError(tr("Proxy service: %1").arg(error));
+        logError(tr("Proxy gateway: %1").arg(error));
 }
 
 void MainWindow::showAbout()
@@ -998,8 +1003,11 @@ void MainWindow::showAbout()
                            + tr("<h3>WinRoute %1</h3>"
                                "<p>Routes the network connections of Windows applications through SOCKS and HTTPS "
                                "proxy servers according to proxification rules.</p>"
-                               "<p>Interception: %2<br>Qt %3</p>")
-                                 .arg(QApplication::applicationVersion(), m_engine->backendName(),
+                               "<p>Interception: %2</p>"
+                               "<p>Qt %3</p>")
+                                 // Always list both backends, not just the active one.
+                                 .arg(QApplication::applicationVersion(),
+                                      QStringLiteral("NetFilter SDK WFP driver / WinDivert"),
                                       QString::fromLatin1(qVersion()).section(QLatin1Char('.'), 0, 1)));
 }
 

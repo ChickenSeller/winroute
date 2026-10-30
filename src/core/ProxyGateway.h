@@ -26,12 +26,13 @@ public:
     enum class Mode {
         Rules,   // match this machine's proxy rules (direct/proxy/chain/block)
         Direct,  // always connect straight out, ignoring the rules
+        Proxy,   // send everything through one chosen proxy or chain (the "exit")
     };
 
-    // What to do when a matched rule points at a proxy or chain that no longer
-    // exists (or has no usable member).
+    // What to do when the selected proxy or chain cannot be used: it no longer
+    // exists in the profile (or has no usable member), or it cannot be connected.
     enum class OnMissing {
-        Block,   // refuse the connection, so nothing silently bypasses the rules
+        Block,   // refuse the connection, so nothing silently bypasses the proxy
         Direct,  // fall back to a direct connection
     };
 
@@ -45,6 +46,10 @@ public:
         quint16 socksPort = 1080;
         Mode mode = Mode::Rules;
         OnMissing onMissing = OnMissing::Block;
+        // When mode == Proxy, the fixed exit every connection is sent through:
+        // a proxy or a chain of the active profile, named the same {type, id}
+        // way a rule's action is. onMissing applies if it is gone.
+        RuleAction exit;   // type is Proxy or Chain
         // An empty user name allows anonymous clients; otherwise clients must
         // authenticate (SOCKS5 username/password, HTTP Basic) with these.
         QString username;

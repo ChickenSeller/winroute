@@ -86,7 +86,7 @@ void ChainTree::dropEvent(QDropEvent *e)
 ProxyServersDialog::ProxyServersDialog(const Profile &profile, QWidget *parent)
     : QDialog(parent), m_profile(profile)
 {
-    setWindowTitle(tr("Proxy Servers"));
+    setWindowTitle(tr("Upstream Proxies"));
     resize(560, 300);
     auto *layout = new QVBoxLayout(this);
 
@@ -284,7 +284,7 @@ void ProxyServersDialog::addProxy()
     // Like Proxifier, offer to use a newly added (first) proxy by default.
     Rule &def = m_profile.rules.last();
     if (m_profile.proxies.size() == 1 && def.action.type == ActionType::Direct
-        && QMessageBox::question(this, tr("Proxy Servers"),
+        && QMessageBox::question(this, tr("Upstream Proxies"),
                                  tr("Do you want to use this proxy by default?\n\n"
                                          "The Default rule will be changed to use %1.\n"
                                          "You can change this later in Proxification Rules.")
