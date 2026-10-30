@@ -1,24 +1,19 @@
 #include "RuleDialog.h"
+#include "ui_RuleDialog.h"
+
 #include "Icons.h"
 #include "core/Utils.h"
 
-#include <QCoreApplication>
-#include <QCheckBox>
+#include <QAction>
 #include <QComboBox>
-#include <QDialogButtonBox>
+#include <QCoreApplication>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QGridLayout>
-#include <QGroupBox>
-#include <QHBoxLayout>
-#include <QAction>
-#include <QLabel>
-#include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
-#include <QVBoxLayout>
+#include <QRegularExpression>
 
 void fillActionCombo(QComboBox *combo, const Profile &profile, const RuleAction &current)
 {
@@ -44,90 +39,38 @@ RuleAction comboAction(const QComboBox *combo)
     return {ActionType(v[0].toInt()), v[1].toInt()};
 }
 
-static QLabel *exampleLabel(const QString &text)
-{
-    auto *l = new QLabel(text);
-    l->setEnabled(false);
-    return l;
-}
-
 RuleDialog::RuleDialog(const Rule &rule, const Profile &profile, bool isDefault, QWidget *parent)
-    : QDialog(parent), m_rule(rule)
+    : QDialog(parent), m_rule(rule), ui(std::make_unique<Ui::RuleDialog>())
 {
-    setWindowTitle(tr("Proxification Rule"));
-    resize(560, 520);
-    auto *layout = new QVBoxLayout(this);
+    ui->setupUi(this);
 
-    auto *nameRow = new QHBoxLayout;
-    m_name = new QLineEdit(rule.name);
-    m_enabled = new QCheckBox(tr("Enabled"));
-    m_enabled->setChecked(rule.enabled || isDefault);
-    m_enabled->setEnabled(!isDefault);
-    nameRow->addWidget(new QLabel(tr("Name:")));
-    nameRow->addWidget(m_name, 1);
-    nameRow->addWidget(m_enabled);
-    layout->addLayout(nameRow);
+    ui->nameEdit->setText(rule.name);
+    ui->enabledCheck->setChecked(rule.enabled || isDefault);
+    ui->enabledCheck->setEnabled(!isDefault);
+    ui->appsEdit->setPlainText(rule.applications);
+    ui->targetsEdit->setPlainText(rule.targets);
+    ui->portsEdit->setText(rule.ports);
+    fillActionCombo(ui->actionCombo, profile, rule.action);
 
-    auto *appBox = new QGroupBox(tr("Applications"));
-    auto *al = new QGridLayout(appBox);
-    m_apps = new QPlainTextEdit(rule.applications);
-    m_apps->setPlaceholderText(tr("Any"));
-    m_apps->setMaximumHeight(70);
-    auto *browse = new QPushButton(tr("Browse..."));
-    auto *browseMenu = new QMenu(browse);
+    // The Browse button drops a menu to add files or a folder.
+    auto *browseMenu = new QMenu(ui->browseButton);
     QAction *addFiles = browseMenu->addAction(tr("Add Files..."));
     QAction *addFolder = browseMenu->addAction(tr("Add Folder..."));
-    browse->setMenu(browseMenu);
-    al->addWidget(m_apps, 0, 0, 1, 2);
-    al->addWidget(exampleLabel(tr("Example: iexplore.exe; \"C:\\some app.exe\"; C:\\Games\\; fire*.exe")), 1, 0);
-    al->addWidget(browse, 1, 1);
-    layout->addWidget(appBox);
-
-    auto *targetBox = new QGroupBox(tr("Target hosts"));
-    auto *tl = new QVBoxLayout(targetBox);
-    m_targets = new QPlainTextEdit(rule.targets);
-    m_targets->setPlaceholderText(tr("Any"));
-    m_targets->setMaximumHeight(70);
-    tl->addWidget(m_targets);
-    tl->addWidget(exampleLabel(tr("Example: 127.0.0.1; *.example.com; 192.168.1.*; 10.1.0.0-10.5.255.255")));
-    layout->addWidget(targetBox);
-
-    auto *portBox = new QGroupBox(tr("Target ports"));
-    auto *pl = new QVBoxLayout(portBox);
-    m_ports = new QLineEdit(rule.ports);
-    m_ports->setPlaceholderText(tr("Any"));
-    pl->addWidget(m_ports);
-    pl->addWidget(exampleLabel(tr("Example: 80; 8000-9000; 3128")));
-    layout->addWidget(portBox);
-
-    auto *actionRow = new QHBoxLayout;
-    m_action = new QComboBox;
-    fillActionCombo(m_action, profile, rule.action);
-    auto *advanced = new QPushButton(tr("Advanced..."));
-    advanced->setEnabled(false);
-    advanced->setToolTip(tr("Per-rule network interface selection is not supported yet"));
-    actionRow->addWidget(new QLabel(tr("Action:")));
-    actionRow->addWidget(m_action, 1);
-    actionRow->addWidget(advanced);
-    layout->addLayout(actionRow);
+    ui->browseButton->setMenu(browseMenu);
 
     if (isDefault) {
         // The Default rule matches everything; only its action is editable.
-        for (QWidget *w : {static_cast<QWidget *>(appBox), static_cast<QWidget *>(targetBox), static_cast<QWidget *>(portBox)})
+        for (QWidget *w : {static_cast<QWidget *>(ui->appsGroup), static_cast<QWidget *>(ui->targetsGroup), static_cast<QWidget *>(ui->portsGroup)})
             w->setEnabled(false);
-        m_name->setEnabled(false);
+        ui->nameEdit->setEnabled(false);
     }
 
-    auto *bb = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    layout->addWidget(bb);
-    connect(bb, &QDialogButtonBox::accepted, this, &RuleDialog::accept);
-    connect(bb, &QDialogButtonBox::rejected, this, &QDialog::reject);
     auto appendEntry = [this](const QString &entry) {
-        QString text = m_apps->toPlainText().trimmed();
+        QString text = ui->appsEdit->toPlainText().trimmed();
         if (!text.isEmpty())
             text += "; ";
         text += entry.contains(' ') ? '"' + entry + '"' : entry;
-        m_apps->setPlainText(text);
+        ui->appsEdit->setPlainText(text);
     };
     connect(addFiles, &QAction::triggered, this, [this, appendEntry] {
         const QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Applications"), QString(),
@@ -148,11 +91,13 @@ RuleDialog::RuleDialog(const Rule &rule, const Profile &profile, bool isDefault,
     });
 }
 
+RuleDialog::~RuleDialog() = default;
+
 Rule RuleDialog::rule() const
 {
     Rule r = m_rule;
-    r.name = m_name->text().trimmed();
-    r.enabled = m_enabled->isChecked();
+    r.name = ui->nameEdit->text().trimmed();
+    r.enabled = ui->enabledCheck->isChecked();
     auto oneLine = [](const QString &s) {
         QStringList parts;
         for (const QString &line : s.split('\n')) {
@@ -163,24 +108,24 @@ Rule RuleDialog::rule() const
         return parts.join("; ");
     };
     // Quote application names containing spaces (Proxifier's required form).
-    r.applications = util::joinAppList(m_apps->toPlainText());
-    r.targets = oneLine(m_targets->toPlainText());
-    r.ports = m_ports->text().trimmed();
-    r.action = comboAction(m_action);
+    r.applications = util::joinAppList(ui->appsEdit->toPlainText());
+    r.targets = oneLine(ui->targetsEdit->toPlainText());
+    r.ports = ui->portsEdit->text().trimmed();
+    r.action = comboAction(ui->actionCombo);
     return r;
 }
 
 void RuleDialog::accept()
 {
-    if (m_name->text().trimmed().isEmpty()) {
+    if (ui->nameEdit->text().trimmed().isEmpty()) {
         QMessageBox::warning(this, tr("Proxification Rule"), tr("Please enter the rule name."));
-        m_name->setFocus();
+        ui->nameEdit->setFocus();
         return;
     }
     static const QRegularExpression portsRe(R"(^\s*(\d{1,5}(\s*-\s*\d{1,5})?)?(\s*[;,]\s*\d{1,5}(\s*-\s*\d{1,5})?)*\s*;?\s*$)");
-    if (!portsRe.match(m_ports->text()).hasMatch()) {
+    if (!portsRe.match(ui->portsEdit->text()).hasMatch()) {
         QMessageBox::warning(this, tr("Proxification Rule"), tr("Target ports must look like: 80; 8000-9000; 3128"));
-        m_ports->setFocus();
+        ui->portsEdit->setFocus();
         return;
     }
     QDialog::accept();

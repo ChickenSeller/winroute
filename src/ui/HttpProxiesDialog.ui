@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>HttpProxiesDialog</class>
+ <widget class="QDialog" name="HttpProxiesDialog">
+  <property name="windowTitle">
+   <string>HTTP Proxy Servers Support</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <widget class="QGroupBox" name="httpGroup">
+     <property name="title">
+      <string>HTTP Proxy Servers</string>
+     </property>
+     <layout class="QVBoxLayout" name="httpLayout">
+      <item>
+       <widget class="QCheckBox" name="enableCheck">
+        <property name="text">
+         <string>Enable HTTP proxy servers support</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="infoLabel">
+        <property name="text">
+         <string>When this option is enabled you can add HTTP proxy servers at the Upstream Proxies dialog.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="warnGroup">
+     <property name="title">
+      <string>WARNING</string>
+     </property>
+     <layout class="QVBoxLayout" name="warnLayout">
+      <item>
+       <widget class="QLabel" name="warnLabel">
+        <property name="text">
+         <string>HTTP proxy server can only be used for HTTP connections (web browsers and etc). WinRoute talks to HTTP proxies with CONNECT requests.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="warnLabel2">
+        <property name="text">
+         <string>Not to be confused with HTTPS connections and HTTPS proxy servers!</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>HttpProxiesDialog</receiver>
+   <slot>accept()</slot>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>HttpProxiesDialog</receiver>
+   <slot>reject()</slot>
+  </connection>
+ </connections>
+</ui>

@@ -4,24 +4,24 @@
 
 #include <QDialog>
 
-class QCheckBox;
-class QPlainTextEdit;
-class QRadioButton;
+#include <memory>
 
-// "Name Resolution" settings (resolve through proxy, exclusion list).
+namespace Ui {
+class NameResolutionDialog;
+}
+
+// "Name Resolution" settings (resolve through proxy, exclusion list). The layout
+// lives in NameResolutionDialog.ui.
 class NameResolutionDialog : public QDialog {
     Q_OBJECT
 public:
     NameResolutionDialog(const ProfileOptions &options, QWidget *parent = nullptr);
+    ~NameResolutionDialog() override;
+
     void apply(ProfileOptions *options) const;
 
 private:
     void update();
 
-    QCheckBox *m_auto;
-    QCheckBox *m_viaProxy;
-    QCheckBox *m_localFirst;
-    QRadioButton *m_exclude;
-    QRadioButton *m_only;
-    QPlainTextEdit *m_list;
+    std::unique_ptr<Ui::NameResolutionDialog> ui;
 };

@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>EncryptionDialog</class>
+ <widget class="QDialog" name="EncryptionDialog">
+  <property name="windowTitle">
+   <string>Profile Passwords Encryption</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <widget class="QLabel" name="introLabel">
+     <property name="text">
+      <string>To provide additional security WinRoute can store proxy passwords in the profile file in encrypted form.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="chooseLabel">
+     <property name="text">
+      <string>Please choose one of the following modes:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="disabledGroup">
+     <property name="title">
+      <string>Disabled</string>
+     </property>
+     <layout class="QHBoxLayout" name="disabledLayout">
+      <item>
+       <widget class="QRadioButton" name="disabledRadio">
+        <property name="text">
+         <string/>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">encryptionGroup</string>
+        </attribute>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="disabledDesc">
+        <property name="text">
+         <string>Passwords are saved in plain text. Proxy passwords can be used by everyone who has access to the profile file.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="basicGroup">
+     <property name="title">
+      <string>Basic</string>
+     </property>
+     <layout class="QHBoxLayout" name="basicLayout">
+      <item>
+       <widget class="QRadioButton" name="basicRadio">
+        <property name="text">
+         <string/>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">encryptionGroup</string>
+        </attribute>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="basicDesc">
+        <property name="text">
+         <string>Encryption with a WinRoute static key. Proxy passwords can be used by everyone who opens the profile with WinRoute.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="userGroup">
+     <property name="title">
+      <string>Current user account</string>
+     </property>
+     <layout class="QHBoxLayout" name="userLayout">
+      <item>
+       <widget class="QRadioButton" name="userRadio">
+        <property name="text">
+         <string/>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">encryptionGroup</string>
+        </attribute>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="userDesc">
+        <property name="text">
+         <string>Encryption using current user login credentials. Only current user can access proxy passwords.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="masterGroup">
+     <property name="title">
+      <string>Profile master password</string>
+     </property>
+     <layout class="QHBoxLayout" name="masterLayout">
+      <item>
+       <widget class="QRadioButton" name="masterRadio">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">encryptionGroup</string>
+        </attribute>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="masterDesc">
+        <property name="text">
+         <string>Encryption with a profile master password (not supported).</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>EncryptionDialog</receiver>
+   <slot>accept()</slot>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>EncryptionDialog</receiver>
+   <slot>reject()</slot>
+  </connection>
+ </connections>
+ <buttongroups>
+  <buttongroup name="encryptionGroup"/>
+ </buttongroups>
+</ui>

@@ -1,4 +1,6 @@
 #include "ProxyCheckerDialog.h"
+#include "ui_ProxyCheckerDialog.h"
+
 #include "core/DnsClient.h"
 #include "core/ProxyConnector.h"
 
@@ -37,43 +39,27 @@ ProxyCheckerDialog::ProxyCheckerDialog(const QList<QPair<QString, QList<ProxySer
 
 void ProxyCheckerDialog::build()
 {
-    setWindowTitle(tr("Proxy Checker"));
-    resize(620, 460);
+    ui = std::make_unique<Ui::ProxyCheckerDialog>();
+    ui->setupUi(this);
+    // Keep the existing member pointers as aliases of the .ui widgets, so the
+    // test logic below is unchanged.
+    m_choice = ui->choiceCombo;
+    m_host = ui->hostEdit;
+    m_port = ui->portSpin;
+    m_output = ui->outputEdit;
+    m_start = ui->startButton;
+
     m_dns = new DnsClient(this);
     m_dns->bind(0);
 
-    auto *layout = new QVBoxLayout(this);
-    auto *form = new QFormLayout;
-    m_choice = new QComboBox;
     for (const auto &c : m_choices)
         m_choice->addItem(c.first);
-    form->addRow(tr("Proxy server:"), m_choice);
-    auto *target = new QHBoxLayout;
-    m_host = new QLineEdit("example.com");
-    m_port = new QSpinBox;
-    m_port->setRange(1, 65535);
-    m_port->setValue(443);
-    target->addWidget(m_host, 1);
-    target->addWidget(new QLabel(tr("Port:")));
-    target->addWidget(m_port);
-    form->addRow(tr("Target host:"), target);
-    layout->addLayout(form);
 
-    m_output = new QTextEdit;
-    m_output->setReadOnly(true);
-    m_output->setFont(QFont("Consolas", 9));
-    layout->addWidget(m_output, 1);
-
-    auto *buttons = new QHBoxLayout;
-    m_start = new QPushButton(tr("Start Testing"));
-    auto *close = new QPushButton(tr("Close"));
-    buttons->addWidget(m_start);
-    buttons->addStretch();
-    buttons->addWidget(close);
-    layout->addLayout(buttons);
     connect(m_start, &QPushButton::clicked, this, &ProxyCheckerDialog::startTest);
-    connect(close, &QPushButton::clicked, this, &QDialog::reject);
+    connect(ui->closeButton, &QPushButton::clicked, this, &QDialog::reject);
 }
+
+ProxyCheckerDialog::~ProxyCheckerDialog() = default;
 
 void ProxyCheckerDialog::out(const QString &html)
 {

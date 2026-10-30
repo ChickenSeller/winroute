@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ChainTypeDialog</class>
+ <widget class="QDialog" name="ChainTypeDialog">
+  <property name="windowTitle">
+   <string>Chain Type</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <widget class="QGroupBox" name="simpleGroup">
+     <property name="title">
+      <string>Simple Chain</string>
+     </property>
+     <layout class="QVBoxLayout" name="simpleLayout">
+      <item>
+       <widget class="QRadioButton" name="simpleRadio">
+        <property name="text">
+         <string>Connection to a remote host will be performed sequentially from one proxy server to another.</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">chainTypeGroup</string>
+        </attribute>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="redundancyGroup">
+     <property name="title">
+      <string>Redundancy</string>
+     </property>
+     <layout class="QVBoxLayout" name="redundancyLayout">
+      <item>
+       <widget class="QRadioButton" name="redundancyRadio">
+        <property name="text">
+         <string>If the first proxy fails, the next one will be used, etc.</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">chainTypeGroup</string>
+        </attribute>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="optionsRow">
+        <item>
+         <widget class="QPushButton" name="optionsButton">
+          <property name="text">
+           <string>Options...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="optionsSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="balanceGroup">
+     <property name="title">
+      <string>Load Balancing</string>
+     </property>
+     <layout class="QVBoxLayout" name="balanceLayout">
+      <item>
+       <widget class="QRadioButton" name="balanceRadio">
+        <property name="text">
+         <string>Each connection will be made through a random proxy from the list.</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">chainTypeGroup</string>
+        </attribute>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="samePidCheck">
+        <property name="text">
+         <string>Use the same proxy for the same process PID</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>ChainTypeDialog</receiver>
+   <slot>accept()</slot>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>ChainTypeDialog</receiver>
+   <slot>reject()</slot>
+  </connection>
+ </connections>
+ <buttongroups>
+  <buttongroup name="chainTypeGroup"/>
+ </buttongroups>
+</ui>

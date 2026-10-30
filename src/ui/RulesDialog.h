@@ -4,6 +4,12 @@
 
 #include <QDialog>
 
+#include <memory>
+
+namespace Ui {
+class RulesDialog;
+}
+
 class QTreeWidget;
 class QTreeWidgetItem;
 
@@ -12,6 +18,7 @@ class RulesDialog : public QDialog {
     Q_OBJECT
 public:
     RulesDialog(const Profile &profile, QWidget *parent = nullptr);
+    ~RulesDialog() override;
     Profile profile() const { return m_profile; }
 
     // Opens the rule editor for a new rule pre-filled with the given application.
@@ -26,6 +33,7 @@ private:
     void remove();
     void move(int delta);
 
+    std::unique_ptr<Ui::RulesDialog> ui;
     Profile m_profile;
     QTreeWidget *m_list;
 };

@@ -1,4 +1,6 @@
 #include "ProxyServersDialog.h"
+#include "ui_ProxyServersDialog.h"
+
 #include "ChainTypeDialog.h"
 #include "Icons.h"
 #include "ProxyCheckerDialog.h"
@@ -84,14 +86,17 @@ void ChainTree::dropEvent(QDropEvent *e)
 // ---- ProxyServersDialog ------------------------------------------------------
 
 ProxyServersDialog::ProxyServersDialog(const Profile &profile, QWidget *parent)
-    : QDialog(parent), m_profile(profile)
+    : QDialog(parent), ui(std::make_unique<Ui::ProxyServersDialog>()), m_profile(profile)
 {
-    setWindowTitle(tr("Upstream Proxies"));
-    resize(560, 300);
-    auto *layout = new QVBoxLayout(this);
+    ui->setupUi(this);
+    // Keep the existing member pointers as aliases of the .ui widgets.
+    m_proxies = ui->proxiesTree;
+    m_chains = ui->chainsTree;
+    m_chainPanel = ui->chainPanel;
+    m_chainLabel = ui->chainLabel;
+    m_chainsButton = ui->chainsButton;
 
-    auto *top = new QHBoxLayout;
-    m_proxies = new QTreeWidget;
+    m_proxies->setColumnCount(3);
     m_proxies->setHeaderLabels({tr("Address"), tr("Port"), tr("Type")});
     m_proxies->setRootIsDecorated(false);
     m_proxies->setDragEnabled(true);
@@ -100,64 +105,19 @@ ProxyServersDialog::ProxyServersDialog(const Profile &profile, QWidget *parent)
     m_proxies->header()->setStretchLastSection(false);
     m_proxies->header()->resizeSection(1, 70);
     m_proxies->header()->resizeSection(2, 80);
-    top->addWidget(m_proxies, 1);
-    auto *pb = new QVBoxLayout;
-    auto *add = new QPushButton(tr("Add..."));
-    auto *edit = new QPushButton(tr("Edit..."));
-    auto *remove = new QPushButton(tr("Remove"));
-    auto *check = new QPushButton(tr("Check..."));
-    for (auto *b : {add, edit, remove, check})
-        pb->addWidget(b);
-    pb->addStretch();
-    top->addLayout(pb);
-    layout->addLayout(top, 1);
 
-    auto *chainRow = new QHBoxLayout;
-    m_chainLabel = new QLabel(tr("You can chain several proxy servers together:"));
-    m_chainsButton = new QPushButton(tr("Proxy Chains..."));
-    m_chainsButton->setCheckable(true);
-    chainRow->addWidget(m_chainLabel);
-    chainRow->addWidget(m_chainsButton);
-    chainRow->addStretch();
-    layout->addLayout(chainRow);
-
-    m_chainPanel = new QWidget;
-    auto *cl = new QVBoxLayout(m_chainPanel);
-    cl->setContentsMargins(0, 0, 0, 0);
-    auto *chainTop = new QHBoxLayout;
-    m_chains = new ChainTree;
     m_chains->setHeaderHidden(true);
     m_chains->proxySource = m_proxies;
-    chainTop->addWidget(m_chains, 1);
-    auto *cb = new QVBoxLayout;
-    auto *create = new QPushButton(tr("Create"));
-    auto *type = new QPushButton(tr("Type..."));
-    auto *cremove = new QPushButton(tr("Remove"));
-    for (auto *b : {create, type, cremove})
-        cb->addWidget(b);
-    cb->addStretch();
-    chainTop->addLayout(cb);
-    cl->addLayout(chainTop, 1);
-    auto *hint = new QLabel(tr("Drag and Drop proxy servers within a chain to alter the order.\n"
-                            "Use check boxes to enable/disable a proxy in a chain."));
-    hint->setEnabled(false);
-    cl->addWidget(hint);
-    layout->addWidget(m_chainPanel, 1);
 
-    auto *bb = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    layout->addWidget(bb);
-
-    connect(add, &QPushButton::clicked, this, &ProxyServersDialog::addProxy);
-    connect(edit, &QPushButton::clicked, this, &ProxyServersDialog::editProxy);
-    connect(remove, &QPushButton::clicked, this, &ProxyServersDialog::removeProxy);
-    connect(check, &QPushButton::clicked, this, &ProxyServersDialog::checkProxy);
+    connect(ui->addButton, &QPushButton::clicked, this, &ProxyServersDialog::addProxy);
+    connect(ui->editButton, &QPushButton::clicked, this, &ProxyServersDialog::editProxy);
+    connect(ui->removeButton, &QPushButton::clicked, this, &ProxyServersDialog::removeProxy);
+    connect(ui->checkButton, &QPushButton::clicked, this, &ProxyServersDialog::checkProxy);
     connect(m_proxies, &QTreeWidget::itemDoubleClicked, this, &ProxyServersDialog::editProxy);
     connect(m_chainsButton, &QPushButton::toggled, this, &ProxyServersDialog::showChains);
-    connect(create, &QPushButton::clicked, this, &ProxyServersDialog::createChain);
-    connect(type, &QPushButton::clicked, this, &ProxyServersDialog::chainType);
-    connect(cremove, &QPushButton::clicked, this, &ProxyServersDialog::removeChainOrMember);
-    connect(bb, &QDialogButtonBox::accepted, this, &QDialog::accept);
-    connect(bb, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    connect(ui->createButton, &QPushButton::clicked, this, &ProxyServersDialog::createChain);
+    connect(ui->typeButton, &QPushButton::clicked, this, &ProxyServersDialog::chainType);
+    connect(ui->chainRemoveButton, &QPushButton::clicked, this, &ProxyServersDialog::removeChainOrMember);
 
     connect(m_chains, &QTreeWidget::itemChanged, this, [this](QTreeWidgetItem *item, int) {
         if (!item->parent())
@@ -202,6 +162,8 @@ ProxyServersDialog::ProxyServersDialog(const Profile &profile, QWidget *parent)
     rebuildChains();
     showChains(!m_profile.chains.isEmpty());
 }
+
+ProxyServersDialog::~ProxyServersDialog() = default;
 
 void ProxyServersDialog::showChains(bool show)
 {

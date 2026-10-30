@@ -8,6 +8,12 @@
 #include <QSystemTrayIcon>
 #include <QTimer>
 
+#include <memory>
+
+namespace Ui {
+class MainWindow;
+}
+
 class QAction;
 class QActionGroup;
 class QLabel;
@@ -111,6 +117,7 @@ private:
     bool m_startMinimized = false;
     bool m_quitting = false;
 
+    std::unique_ptr<Ui::MainWindow> ui;
     QTabWidget *m_tabs = nullptr;
     QTreeView *m_connView = nullptr;
     ConnectionsModel *m_connModel = nullptr;

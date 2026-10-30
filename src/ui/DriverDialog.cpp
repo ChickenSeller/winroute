@@ -1,4 +1,6 @@
 #include "DriverDialog.h"
+#include "ui_DriverDialog.h"
+
 #include "UsageStats.h"
 #include "core/Engine.h"
 #include "core/WinDivertInterceptor.h"
@@ -12,48 +14,28 @@
 #include <QVBoxLayout>
 
 DriverDialog::DriverDialog(Engine *engine, QWidget *parent)
-    : QDialog(parent), m_engine(engine)
+    : QDialog(parent), ui(std::make_unique<Ui::DriverDialog>()), m_engine(engine)
 {
-    setWindowTitle(tr("Network Driver"));
+    ui->setupUi(this);
     setMinimumWidth(460);
     m_drivers = NetFilterInterceptor::availableDrivers();
 
-    auto *layout = new QVBoxLayout(this);
-    auto *intro = new QLabel(tr("WinRoute can capture connections with the NetFilter SDK driver or with "
-                                "WinDivert. Choose a backend; for NetFilter, choose which driver to use."),
-                             this);
-    intro->setWordWrap(true);
-    layout->addWidget(intro);
+    m_backendCombo = ui->backendCombo;
+    m_combo = ui->driverCombo;
+    m_driverLabel = ui->driverLabel;
+    m_note = ui->noteLabel;
+    m_status = ui->statusLabel;
 
-    auto *form = new QFormLayout;
-    m_backendCombo = new QComboBox(this);
     m_backendCombo->addItem(tr("NetFilter SDK driver"), "netfilter");
     m_backendCombo->addItem(WinDivertInterceptor::available() ? tr("WinDivert")
                                                               : tr("WinDivert (not available)"),
                             "windivert");
-    form->addRow(tr("Backend:"), m_backendCombo);
-
-    m_combo = new QComboBox(this);
     for (const auto &d : m_drivers)
         m_combo->addItem(d.name, d.key);
-    m_driverLabel = new QLabel(tr("Driver:"), this);
-    form->addRow(m_driverLabel, m_combo);
-    layout->addLayout(form);
 
-    m_note = new QLabel(this);
-    m_note->setWordWrap(true);
-    m_note->setMinimumHeight(48);
-    layout->addWidget(m_note);
-
-    m_status = new QLabel(this);
-    m_status->setWordWrap(true);
-    layout->addWidget(m_status);
-
-    auto *buttons = new QDialogButtonBox(this);
-    m_apply = buttons->addButton(tr("Use This Driver"), QDialogButtonBox::AcceptRole);
-    m_uninstall = buttons->addButton(tr("Uninstall Driver"), QDialogButtonBox::DestructiveRole);
-    buttons->addButton(QDialogButtonBox::Close);
-    layout->addWidget(buttons);
+    // Custom-role buttons are added here; the Close button is in the .ui.
+    m_apply = ui->buttonBox->addButton(tr("Use This Driver"), QDialogButtonBox::AcceptRole);
+    m_uninstall = ui->buttonBox->addButton(tr("Uninstall Driver"), QDialogButtonBox::DestructiveRole);
 
     const QString backend = m_engine->backendKey();
     const int bi = m_backendCombo->findData(backend);
@@ -64,10 +46,12 @@ DriverDialog::DriverDialog(Engine *engine, QWidget *parent)
     connect(m_combo, &QComboBox::currentIndexChanged, this, &DriverDialog::onSelectionChanged);
     connect(m_apply, &QPushButton::clicked, this, &DriverDialog::apply);
     connect(m_uninstall, &QPushButton::clicked, this, &DriverDialog::uninstall);
-    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
     refresh();
 }
+
+DriverDialog::~DriverDialog() = default;
 
 QString DriverDialog::selectedBackend() const
 {

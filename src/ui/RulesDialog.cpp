@@ -1,4 +1,6 @@
 #include "RulesDialog.h"
+#include "ui_RulesDialog.h"
+
 #include "Icons.h"
 #include "RuleDialog.h"
 
@@ -16,14 +18,11 @@
 enum { ColName, ColApps, ColTargets, ColPorts, ColAction };
 
 RulesDialog::RulesDialog(const Profile &profile, QWidget *parent)
-    : QDialog(parent), m_profile(profile)
+    : QDialog(parent), ui(std::make_unique<Ui::RulesDialog>()), m_profile(profile)
 {
-    setWindowTitle(tr("Proxification Rules"));
-    resize(860, 440);
-    auto *layout = new QVBoxLayout(this);
-
-    auto *top = new QHBoxLayout;
-    m_list = new QTreeWidget;
+    ui->setupUi(this);
+    m_list = ui->listTree;
+    m_list->setColumnCount(5);
     m_list->setHeaderLabels({tr("Name"), tr("Applications"), tr("Target Hosts"), tr("Target Ports"), tr("Action")});
     m_list->setRootIsDecorated(false);
     m_list->setAllColumnsShowFocus(true);
@@ -31,43 +30,19 @@ RulesDialog::RulesDialog(const Profile &profile, QWidget *parent)
     m_list->header()->resizeSection(ColApps, 200);
     m_list->header()->resizeSection(ColTargets, 200);
     m_list->header()->resizeSection(ColPorts, 90);
-    top->addWidget(m_list, 1);
-    auto *arrows = new QVBoxLayout;
-    auto *up = new QToolButton;
-    auto *down = new QToolButton;
-    up->setIcon(icons::arrowUp());
-    down->setIcon(icons::arrowDown());
-    up->setToolTip(tr("Move up"));
-    down->setToolTip(tr("Move down"));
-    arrows->addStretch();
-    arrows->addWidget(up);
-    arrows->addWidget(down);
-    arrows->addStretch();
-    top->addLayout(arrows);
-    layout->addLayout(top, 1);
 
-    auto *buttons = new QHBoxLayout;
-    auto *add = new QPushButton(tr("Add..."));
-    auto *clone = new QPushButton(tr("Clone"));
-    auto *edit = new QPushButton(tr("Edit..."));
-    auto *remove = new QPushButton(tr("Remove"));
-    for (auto *b : {add, clone, edit, remove})
-        buttons->addWidget(b);
-    buttons->addStretch();
-    layout->addLayout(buttons);
-    auto *info = new QLabel(tr("Rules are processed from top to bottom. Use the arrows at the right to change the order.\n\n"
-                            "Use check boxes to enable/disable a rule."));
-    info->setEnabled(false);
-    layout->addWidget(info);
-    auto *bb = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    layout->addWidget(bb);
+    // The move arrows are drawn icons, so they are set here rather than in the .ui.
+    ui->upButton->setIcon(icons::arrowUp());
+    ui->downButton->setIcon(icons::arrowDown());
+    ui->upButton->setToolTip(tr("Move up"));
+    ui->downButton->setToolTip(tr("Move down"));
 
-    connect(add, &QPushButton::clicked, this, &RulesDialog::add);
-    connect(clone, &QPushButton::clicked, this, &RulesDialog::clone);
-    connect(edit, &QPushButton::clicked, this, &RulesDialog::edit);
-    connect(remove, &QPushButton::clicked, this, &RulesDialog::remove);
-    connect(up, &QToolButton::clicked, this, [this] { move(-1); });
-    connect(down, &QToolButton::clicked, this, [this] { move(1); });
+    connect(ui->addButton, &QPushButton::clicked, this, &RulesDialog::add);
+    connect(ui->cloneButton, &QPushButton::clicked, this, &RulesDialog::clone);
+    connect(ui->editButton, &QPushButton::clicked, this, &RulesDialog::edit);
+    connect(ui->removeButton, &QPushButton::clicked, this, &RulesDialog::remove);
+    connect(ui->upButton, &QToolButton::clicked, this, [this] { move(-1); });
+    connect(ui->downButton, &QToolButton::clicked, this, [this] { move(1); });
     connect(m_list, &QTreeWidget::itemDoubleClicked, this, &RulesDialog::edit);
     connect(m_list, &QTreeWidget::itemChanged, this, [this](QTreeWidgetItem *item, int col) {
         if (col != ColName)
@@ -76,10 +51,10 @@ RulesDialog::RulesDialog(const Profile &profile, QWidget *parent)
         if (i >= 0 && i < m_profile.rules.size() - 1)
             m_profile.rules[i].enabled = item->checkState(ColName) == Qt::Checked;
     });
-    connect(bb, &QDialogButtonBox::accepted, this, &QDialog::accept);
-    connect(bb, &QDialogButtonBox::rejected, this, &QDialog::reject);
     rebuild(0);
 }
+
+RulesDialog::~RulesDialog() = default;
 
 void RulesDialog::rebuild(int select)
 {

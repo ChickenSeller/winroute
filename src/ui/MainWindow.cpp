@@ -1,4 +1,6 @@
 #include "MainWindow.h"
+#include "ui_MainWindow.h"
+
 #include "AdvancedDialogs.h"
 #include "ConnectionsModel.h"
 #include "Icons.h"
@@ -59,8 +61,9 @@ static const char *kTaskName = "WinRoute";
 MainWindow::MainWindow(Engine *engine, QWidget *parent)
     : QMainWindow(parent), m_engine(engine)
 {
+    ui = std::make_unique<Ui::MainWindow>();
+    ui->setupUi(this);   // the central splitter / tabs / log skeleton
     setWindowIcon(icons::app(true));
-    resize(1100, 720);
 
     createActions();
     createMenus();
@@ -409,9 +412,7 @@ void MainWindow::createToolBar()
 
 void MainWindow::createCentral()
 {
-    auto *splitter = new QSplitter(Qt::Vertical);
-    m_tabs = new QTabWidget;
-    m_tabs->setDocumentMode(true);
+    m_tabs = ui->tabWidget;
 
     m_connModel = new ConnectionsModel(this);
     m_connSort = new QSortFilterProxyModel(this);
@@ -452,10 +453,8 @@ void MainWindow::createCentral()
     m_tabs->addTab(m_traffic, tr("Traffic"));
     m_stats = new StatisticsWidget([this](const QString &path) { return m_connModel->appIcon(path); });
     m_tabs->addTab(m_stats, tr("Statistics"));
-    splitter->addWidget(m_tabs);
 
-    m_log = new QPlainTextEdit;
-    m_log->setReadOnly(true);
+    m_log = ui->logEdit;
     m_log->setMaximumBlockCount(10000);
     m_log->setLineWrapMode(QPlainTextEdit::NoWrap);
     m_log->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -471,10 +470,9 @@ void MainWindow::createCentral()
         fs->addActions(m_fontGroup->actions());
         menu.exec(m_log->viewport()->mapToGlobal(pos));
     });
-    splitter->addWidget(m_log);
-    splitter->setStretchFactor(0, 3);
-    splitter->setStretchFactor(1, 2);
-    setCentralWidget(splitter);
+    ui->splitter->setStretchFactor(0, 3);
+    ui->splitter->setStretchFactor(1, 2);
+    // The central widget (splitter) is set by ui->setupUi().
 }
 
 void MainWindow::createStatusBar()

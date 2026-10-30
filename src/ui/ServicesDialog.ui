@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ServicesDialog</class>
+ <widget class="QDialog" name="ServicesDialog">
+  <property name="windowTitle">
+   <string>Services and other users</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <widget class="QGroupBox" name="infoGroup">
+     <property name="title">
+      <string>Info</string>
+     </property>
+     <layout class="QVBoxLayout" name="infoLayout">
+      <item>
+       <widget class="QLabel" name="infoLabel1">
+        <property name="text">
+         <string>Normally WinRoute processes connections for the current user only. You can change this behavior if needed.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="infoLabel2">
+        <property name="text">
+         <string>Note: these options only affect TCP and UDP. ICMP traffic, such as ping and tracert, cannot be routed through a proxy regardless of this setting.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="targetsGroup">
+     <property name="title">
+      <string>Additional WinRoute targets</string>
+     </property>
+     <layout class="QVBoxLayout" name="targetsLayout">
+      <item>
+       <widget class="QCheckBox" name="otherUsersCheck">
+        <property name="text">
+         <string>Applications run by other users on this computer</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="servicesCheck">
+        <property name="text">
+         <string>Windows services and other system processes</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>ServicesDialog</receiver>
+   <slot>accept()</slot>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>ServicesDialog</receiver>
+   <slot>reject()</slot>
+  </connection>
+ </connections>
+</ui>

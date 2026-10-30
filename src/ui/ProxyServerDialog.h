@@ -4,18 +4,20 @@
 
 #include <QDialog>
 
-class QCheckBox;
-class QComboBox;
-class QGroupBox;
-class QLabel;
-class QLineEdit;
-class QSpinBox;
+#include <memory>
+
+namespace Ui {
+class ProxyServerDialog;
+class ProxyAdvancedDialog;
+}
 
 // "Proxy Server" editor (address, port, protocol, authentication, options).
+// The layout lives in ProxyServerDialog.ui.
 class ProxyServerDialog : public QDialog {
     Q_OBJECT
 public:
     ProxyServerDialog(const ProxyServer &server, bool httpSupport, QWidget *parent = nullptr);
+    ~ProxyServerDialog() override;
     ProxyServer server() const;
 
 private:
@@ -25,25 +27,17 @@ private:
     void onAdvanced();
 
     ProxyServer m_server;
-    QLineEdit *m_address;
-    QSpinBox *m_port;
-    QComboBox *m_protocol;
-    QGroupBox *m_auth;
-    QCheckBox *m_authEnable;
-    QLineEdit *m_user;
-    QLineEdit *m_pass;
-    QCheckBox *m_socks4a;
-    QLabel *m_noOptions;
+    std::unique_ptr<Ui::ProxyServerDialog> ui;
 };
 
-// "Advanced Proxy Server Settings".
+// "Advanced Proxy Server Settings". The layout lives in ProxyAdvancedDialog.ui.
 class ProxyAdvancedDialog : public QDialog {
     Q_OBJECT
 public:
     ProxyAdvancedDialog(const ProxyServer &server, QWidget *parent = nullptr);
+    ~ProxyAdvancedDialog() override;
     void apply(ProxyServer *server) const;
 
 private:
-    QLineEdit *m_label;
-    QCheckBox *m_useHostname;
+    std::unique_ptr<Ui::ProxyAdvancedDialog> ui;
 };

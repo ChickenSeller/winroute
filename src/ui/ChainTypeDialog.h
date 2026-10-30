@@ -4,41 +4,41 @@
 
 #include <QDialog>
 
-class QCheckBox;
-class QRadioButton;
-class QSpinBox;
+#include <memory>
 
-// "Chain Type": simple chain, redundancy or load balancing.
+namespace Ui {
+class ChainTypeDialog;
+class RedundancyOptionsDialog;
+}
+
+// "Chain Type": simple chain, redundancy or load balancing. Layout in
+// ChainTypeDialog.ui.
 class ChainTypeDialog : public QDialog {
     Q_OBJECT
 public:
     ChainTypeDialog(const ProxyChain &chain, QWidget *parent = nullptr);
+    ~ChainTypeDialog() override;
     void apply(ProxyChain *chain) const;
 
 signals:
     void resetFailuresRequested();
 
 private:
+    std::unique_ptr<Ui::ChainTypeDialog> ui;
     ProxyChain m_chain;
-    QRadioButton *m_simple;
-    QRadioButton *m_redundancy;
-    QRadioButton *m_balance;
-    QCheckBox *m_samePid;
 };
 
-// "Redundancy Options".
+// "Redundancy Options". Layout in RedundancyOptionsDialog.ui.
 class RedundancyOptionsDialog : public QDialog {
     Q_OBJECT
 public:
     RedundancyOptionsDialog(const ProxyChain &chain, QWidget *parent = nullptr);
+    ~RedundancyOptionsDialog() override;
     void apply(ProxyChain *chain) const;
 
 signals:
     void resetFailuresRequested();
 
 private:
-    QSpinBox *m_timeout;
-    QCheckBox *m_recheck;
-    QSpinBox *m_recheckSec;
-    QCheckBox *m_direct;
+    std::unique_ptr<Ui::RedundancyOptionsDialog> ui;
 };

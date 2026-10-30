@@ -5,6 +5,11 @@
 #include <QDialog>
 #include <QTreeWidget>
 #include <functional>
+#include <memory>
+
+namespace Ui {
+class ProxyServersDialog;
+}
 
 class QLabel;
 class QPushButton;
@@ -30,6 +35,7 @@ class ProxyServersDialog : public QDialog {
     Q_OBJECT
 public:
     ProxyServersDialog(const Profile &profile, QWidget *parent = nullptr);
+    ~ProxyServersDialog() override;
     Profile profile() const { return m_profile; }
     void showChains(bool show);
 
@@ -51,6 +57,7 @@ private:
     // Asks how to handle rules that use the proxy/chain about to be removed. Returns false on cancel.
     bool resolveRemoval(ActionType type, int id, const QString &name);
 
+    std::unique_ptr<Ui::ProxyServersDialog> ui;
     Profile m_profile;
     QTreeWidget *m_proxies;
     ChainTree *m_chains;

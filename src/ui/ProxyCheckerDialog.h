@@ -7,6 +7,12 @@
 #include <QHostAddress>
 #include <QPointer>
 
+#include <memory>
+
+namespace Ui {
+class ProxyCheckerDialog;
+}
+
 class QComboBox;
 class QLineEdit;
 class QPushButton;
@@ -24,6 +30,7 @@ public:
     // Each entry is a list of hops (one proxy, or a chain). Names label the combo box.
     ProxyCheckerDialog(const QList<ProxyServer> &proxies, QWidget *parent = nullptr);
     ProxyCheckerDialog(const QList<QPair<QString, QList<ProxyServer>>> &choices, QWidget *parent = nullptr);
+    ~ProxyCheckerDialog() override;
 
     void startTest();
 
@@ -44,6 +51,7 @@ private:
     void onUdpDatagram();
     void udpDone(bool ok, const QString &detail = {});
 
+    std::unique_ptr<Ui::ProxyCheckerDialog> ui;
     QList<QPair<QString, QList<ProxyServer>>> m_choices;
     QComboBox *m_choice = nullptr;
     QLineEdit *m_host = nullptr;

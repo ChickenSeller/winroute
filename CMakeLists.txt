@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network LinguistTools)
 
@@ -49,24 +50,27 @@ set(CORE_SOURCES
 )
 
 set(UI_SOURCES
-    src/ui/MainWindow.h           src/ui/MainWindow.cpp
+    src/ui/MainWindow.h           src/ui/MainWindow.cpp          src/ui/MainWindow.ui
     src/ui/ConnectionsModel.h     src/ui/ConnectionsModel.cpp
     src/ui/TrafficWidget.h        src/ui/TrafficWidget.cpp
     src/ui/StatisticsWidget.h     src/ui/StatisticsWidget.cpp
-    src/ui/ProxyServersDialog.h   src/ui/ProxyServersDialog.cpp
+    src/ui/ProxyServersDialog.h   src/ui/ProxyServersDialog.cpp  src/ui/ProxyServersDialog.ui
     src/ui/ProxyServerDialog.h    src/ui/ProxyServerDialog.cpp
+    src/ui/ProxyServerDialog.ui   src/ui/ProxyAdvancedDialog.ui
     src/ui/ChainTypeDialog.h      src/ui/ChainTypeDialog.cpp
-    src/ui/RulesDialog.h          src/ui/RulesDialog.cpp
-    src/ui/RuleDialog.h           src/ui/RuleDialog.cpp
-    src/ui/NameResolutionDialog.h src/ui/NameResolutionDialog.cpp
+    src/ui/ChainTypeDialog.ui     src/ui/RedundancyOptionsDialog.ui
+    src/ui/RulesDialog.h          src/ui/RulesDialog.cpp         src/ui/RulesDialog.ui
+    src/ui/RuleDialog.h           src/ui/RuleDialog.cpp          src/ui/RuleDialog.ui
+    src/ui/NameResolutionDialog.h src/ui/NameResolutionDialog.cpp src/ui/NameResolutionDialog.ui
     src/ui/AdvancedDialogs.h      src/ui/AdvancedDialogs.cpp
-    src/ui/ProxyCheckerDialog.h   src/ui/ProxyCheckerDialog.cpp
-    src/ui/ProxyGatewayDialog.h   src/ui/ProxyGatewayDialog.cpp
+    src/ui/HttpProxiesDialog.ui   src/ui/ServicesDialog.ui       src/ui/EncryptionDialog.ui
+    src/ui/ProxyCheckerDialog.h   src/ui/ProxyCheckerDialog.cpp  src/ui/ProxyCheckerDialog.ui
+    src/ui/ProxyGatewayDialog.h   src/ui/ProxyGatewayDialog.cpp   src/ui/ProxyGatewayDialog.ui
     src/ui/Icons.h                src/ui/Icons.cpp
     src/ui/Language.h             src/ui/Language.cpp
     src/ui/Updater.h              src/ui/Updater.cpp
     src/ui/UsageStats.h           src/ui/UsageStats.cpp
-    src/ui/DriverDialog.h         src/ui/DriverDialog.cpp
+    src/ui/DriverDialog.h         src/ui/DriverDialog.cpp        src/ui/DriverDialog.ui
 )
 
 set(WINROUTE_HOMEPAGE_URL "https://pages.yanlei.org/kaguya/winroute/" CACHE STRING "WinRoute's homepage")

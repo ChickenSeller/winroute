@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>NameResolutionDialog</class>
+ <widget class="QDialog" name="NameResolutionDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>620</width>
+    <height>420</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Name Resolution</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <widget class="QGroupBox" name="dnsGroup">
+     <property name="title">
+      <string>WinRoute DNS settings</string>
+     </property>
+     <layout class="QGridLayout" name="dnsLayout">
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="autoCheck">
+        <property name="text">
+         <string>Detect DNS settings automatically</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QCheckBox" name="viaProxyCheck">
+        <property name="text">
+         <string>Resolve hostnames through proxy</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QCheckBox" name="localFirstCheck">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Try to resolve via local DNS service first
+(may cause significant delays if local DNS is unavailable!)</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="noteGroup">
+     <property name="title">
+      <string>Note</string>
+     </property>
+     <layout class="QVBoxLayout" name="noteLayout">
+      <item>
+       <widget class="QLabel" name="noteLabel">
+        <property name="text">
+         <string>It is impossible to get real IP addresses through proxy.
+WinRoute assigns "fake" IP addresses (198.18.*.*) that are only valid when it is running.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="listGroup">
+     <property name="title">
+      <string>DNS name list</string>
+     </property>
+     <layout class="QVBoxLayout" name="listLayout">
+      <item>
+       <layout class="QHBoxLayout" name="radiosRow">
+        <item>
+         <widget class="QRadioButton" name="excludeRadio">
+          <property name="text">
+           <string>Do NOT resolve the following</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="onlyRadio">
+          <property name="text">
+           <string>Resolve ONLY the following</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="radiosSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QPlainTextEdit" name="listEdit"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="exampleLabel">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Example:
+localhost; *.example.com; %ComputerName%; %SimpleHostnames%</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>NameResolutionDialog</receiver>
+   <slot>accept()</slot>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>NameResolutionDialog</receiver>
+   <slot>reject()</slot>
+  </connection>
+ </connections>
+</ui>

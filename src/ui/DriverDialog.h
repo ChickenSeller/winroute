@@ -5,6 +5,12 @@
 #include <QDialog>
 #include <QList>
 
+#include <memory>
+
+namespace Ui {
+class DriverDialog;
+}
+
 class QComboBox;
 class QLabel;
 class QPushButton;
@@ -18,6 +24,7 @@ class DriverDialog : public QDialog {
     Q_OBJECT
 public:
     DriverDialog(Engine *engine, QWidget *parent = nullptr);
+    ~DriverDialog() override;
 
 signals:
     void log(const QString &message);   // forwarded to the main window log
@@ -30,6 +37,7 @@ private:
     void uninstall();
     bool restartEngine(QString *error);
 
+    std::unique_ptr<Ui::DriverDialog> ui;
     Engine *m_engine;
     QList<NetFilterInterceptor::DriverChoice> m_drivers;
     QComboBox *m_backendCombo;
