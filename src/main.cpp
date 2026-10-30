@@ -96,17 +96,21 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Only one instance may own the driver; a second start just shows the first window.
-    {
+    // Only one instance may run (it owns the driver). A named mutex is the
+    // authoritative lock: it is a kernel object, so the check is race-free and
+    // does not depend on a pipe or file that could fail or go stale. If we are
+    // the second instance, ask the first one to show its window, then exit.
+    HANDLE appMutex = CreateMutexW(nullptr, FALSE, kAppMutex);
+    if (appMutex && GetLastError() == ERROR_ALREADY_EXISTS) {
         QLocalSocket probe;
         probe.connectToServer(kInstanceKey);
-        if (probe.waitForConnected(300)) {
+        if (probe.waitForConnected(1000)) {
             probe.write("show");
-            probe.waitForBytesWritten(300);
-            return 0;
+            probe.waitForBytesWritten(1000);
         }
+        CloseHandle(appMutex);
+        return 0;
     }
-    HANDLE appMutex = CreateMutexW(nullptr, FALSE, kAppMutex);
     QLocalServer instanceServer;
     QLocalServer::removeServer(kInstanceKey);
     instanceServer.listen(kInstanceKey);
