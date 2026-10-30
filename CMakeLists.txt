@@ -70,6 +70,7 @@ set(UI_SOURCES
 )
 
 set(WINROUTE_HOMEPAGE_URL "https://pages.yanlei.org/kaguya/winroute/" CACHE STRING "WinRoute's homepage")
+set(WINROUTE_SOURCE_URL "https://git.yanlei.org/kaguya/winroute" CACHE STRING "WinRoute's source repository")
 # The update information the homepage's web server serves.
 set(WINROUTE_UPDATE_URL "${WINROUTE_HOMEPAGE_URL}update.json" CACHE STRING "WinRoute's update information")
 # Anonymous usage statistics (src/ui/UsageStats.h) go to this Matomo site;
@@ -98,7 +99,7 @@ qt_add_executable(WinRoute WIN32
 )
 target_link_libraries(WinRoute PRIVATE winroute_core Qt6::Widgets)
 target_compile_definitions(WinRoute PRIVATE WINROUTE_VERSION="${PROJECT_VERSION}" WINROUTE_UPDATE_URL="${WINROUTE_UPDATE_URL}"
-    WINROUTE_HOMEPAGE_URL="${WINROUTE_HOMEPAGE_URL}"
+    WINROUTE_HOMEPAGE_URL="${WINROUTE_HOMEPAGE_URL}" WINROUTE_SOURCE_URL="${WINROUTE_SOURCE_URL}"
     WINROUTE_MATOMO_URL="${WINROUTE_MATOMO_URL}" WINROUTE_MATOMO_SITE_ID="${WINROUTE_MATOMO_SITE_ID}")
 # Run by the updater once WinRoute has quit (src/ui/Updater.cpp).
 qt_add_resources(WinRoute "update" PREFIX "/" BASE resources FILES resources/update.ps1)

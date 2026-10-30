@@ -1136,6 +1136,18 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
       <translation>代理链 %1</translation>
     </message>
     <message>
+      <source>Version %1</source>
+      <translation>版本 %1</translation>
+    </message>
+    <message>
+      <source>&lt;p&gt;Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.&lt;/p&gt;&lt;p&gt;Interception: %1&lt;/p&gt;&lt;p&gt;Qt %2&lt;/p&gt;</source>
+      <translation>&lt;p&gt;按照代理规则，让 Windows 应用程序的网络连接通过 SOCKS 和 HTTPS 代理服务器。&lt;/p&gt;&lt;p&gt;拦截方式：%1&lt;/p&gt;&lt;p&gt;Qt %2&lt;/p&gt;</translation>
+    </message>
+    <message>
+      <source>&lt;p&gt;&lt;a href="%1"&gt;Homepage&lt;/a&gt; &amp;nbsp;&amp;middot;&amp;nbsp; &lt;a href="%2"&gt;Source code&lt;/a&gt;&lt;/p&gt;</source>
+      <translation>&lt;p&gt;&lt;a href="%1"&gt;主页&lt;/a&gt; &amp;nbsp;&amp;middot;&amp;nbsp; &lt;a href="%2"&gt;源代码&lt;/a&gt;&lt;/p&gt;</translation>
+    </message>
+    <message>
       <source>About WinRoute</source>
       <translation>关于 WinRoute</translation>
     </message>
@@ -1194,10 +1206,6 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>Proxy gateway settings saved.</source>
       <translation>代理网关设置已保存。</translation>
-    </message>
-    <message>
-      <source>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.&lt;/p&gt;&lt;p&gt;Interception: %2&lt;/p&gt;&lt;p&gt;Qt %3&lt;/p&gt;</source>
-      <translation>&lt;h3&gt;WinRoute %1&lt;/h3&gt;&lt;p&gt;按照代理规则，让 Windows 应用程序的网络连接通过 SOCKS 和 HTTPS 代理服务器。&lt;/p&gt;&lt;p&gt;拦截方式：%2&lt;/p&gt;&lt;p&gt;Qt %3&lt;/p&gt;</translation>
     </message>
     <message>
       <source>Terminate the following process(es)?
