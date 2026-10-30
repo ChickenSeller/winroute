@@ -272,12 +272,12 @@ T = {
     "Please add a proxy server first (Profile > Upstream Proxies).": ("请先添加代理服务器（配置文件 > 上游代理）。", "先にプロキシサーバーを追加してください（プロファイル > 上流プロキシ）。"),
     "About WinRoute": ("关于 WinRoute", "WinRoute について"),
     "Version %1": ("版本 %1", "バージョン %1"),
-    "<p>Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.</p><p>Interception: %1</p><p>Qt %2</p>":
-        ("<p>按照代理规则，让 Windows 应用程序的网络连接通过 SOCKS 和 HTTPS 代理服务器。</p><p>拦截方式：%1</p><p>Qt %2</p>",
-         "<p>プロキシ化ルールに従って、Windows アプリケーションのネットワーク接続を SOCKS / HTTPS プロキシサーバー経由にします。</p><p>捕捉方式：%1</p><p>Qt %2</p>"),
-    '<p><a href="%1">Homepage</a> &nbsp;&middot;&nbsp; <a href="%2">Source code</a></p>':
-        ('<p><a href="%1">主页</a> &nbsp;&middot;&nbsp; <a href="%2">源代码</a></p>',
-         '<p><a href="%1">ホームページ</a> &nbsp;&middot;&nbsp; <a href="%2">ソースコード</a></p>'),
+    "Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.":
+        ("按照代理规则，让 Windows 应用程序的网络连接通过 SOCKS 和 HTTPS 代理服务器。",
+         "プロキシ化ルールに従って、Windows アプリケーションのネットワーク接続を SOCKS / HTTPS プロキシサーバー経由にします。"),
+    "Source code: %1": ("源代码：%1", "ソースコード：%1"),
+    "Homepage: %1": ("主页：%1", "ホームページ：%1"),
+    "Interception: %1": ("拦截方式：%1", "捕捉方式：%1"),
     "End Process": ("结束进程", "プロセスの終了"),
     "Terminate the following process(es)?\n\n": ("要结束以下进程吗？\n\n", "次のプロセスを終了しますか？\n\n"),
     "Cannot terminate process %1: %2": ("无法结束进程 %1：%2", "プロセス %1 を終了できません：%2"),

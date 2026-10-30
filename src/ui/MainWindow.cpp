@@ -998,23 +998,29 @@ void MainWindow::showAbout()
     // A fixed epigraph (Exodus 3:14), shown as-is in Hebrew; not translated.
     const QString motto = QString::fromUtf8(
         "<p align='center' dir='rtl' style='font-size:13pt'>אֶהְיֶה אֲשֶׁר אֶהְיֶה</p>");
-    // The product name at its original (h3) size, followed by the localized
-    // version beside it, Glimpse-style.
+    // The product name, slightly enlarged, with the localized version beside it.
     const QString header =
-        QStringLiteral("<h3 style='margin-bottom:2px'>WinRoute"
-                       "<span style='font-weight:normal'>&nbsp;&nbsp;%1</span></h3>")
+        QStringLiteral("<p style='margin-bottom:2px'>"
+                       "<span style='font-size:15pt; font-weight:bold'>WinRoute</span>"
+                       "<span style='font-size:10.5pt'>&nbsp;&nbsp;%1</span></p>")
             .arg(tr("Version %1").arg(QApplication::applicationVersion()));
-    const QString body =
-        tr("<p>Routes the network connections of Windows applications through SOCKS and HTTPS "
-           "proxy servers according to proxification rules.</p>"
-           "<p>Interception: %1</p>"   // always list both backends, not just the active one
-           "<p>Qt %2</p>")
-            .arg(QStringLiteral("NetFilter SDK WFP driver / WinDivert"),
-                 QString::fromLatin1(qVersion()).section(QLatin1Char('.'), 0, 1));
+    const QString desc = QStringLiteral("<p>%1</p>").arg(
+        tr("Routes the network connections of Windows applications through SOCKS and "
+           "HTTPS proxy servers according to proxification rules."));
+    // Source code above homepage, each shown as "label: <the URL as a link>".
+    const auto link = [](const char *url) {
+        const QString u = QString::fromLatin1(url);
+        return QStringLiteral("<a href=\"%1\">%1</a>").arg(u);
+    };
     const QString links =
-        tr("<p><a href=\"%1\">Homepage</a> &nbsp;&middot;&nbsp; <a href=\"%2\">Source code</a></p>")
-            .arg(QStringLiteral(WINROUTE_HOMEPAGE_URL), QStringLiteral(WINROUTE_SOURCE_URL));
-    QMessageBox::about(this, tr("About WinRoute"), motto + header + body + links);
+        QStringLiteral("<p>%1<br>%2</p>")
+            .arg(tr("Source code: %1").arg(link(WINROUTE_SOURCE_URL)),
+                 tr("Homepage: %1").arg(link(WINROUTE_HOMEPAGE_URL)));
+    const QString footer =
+        QStringLiteral("<p>%1</p><p>Qt %2</p>")   // both backends, Qt on its own line
+            .arg(tr("Interception: %1").arg(QStringLiteral("NetFilter SDK WFP driver / WinDivert")),
+                 QString::fromLatin1(qVersion()).section(QLatin1Char('.'), 0, 1));
+    QMessageBox::about(this, tr("About WinRoute"), motto + header + desc + links + footer);
 }
 
 void MainWindow::checkForUpdatesViaProxy()

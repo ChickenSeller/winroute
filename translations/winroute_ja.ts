@@ -1140,14 +1140,6 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
       <translation>バージョン %1</translation>
     </message>
     <message>
-      <source>&lt;p&gt;Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.&lt;/p&gt;&lt;p&gt;Interception: %1&lt;/p&gt;&lt;p&gt;Qt %2&lt;/p&gt;</source>
-      <translation>&lt;p&gt;プロキシ化ルールに従って、Windows アプリケーションのネットワーク接続を SOCKS / HTTPS プロキシサーバー経由にします。&lt;/p&gt;&lt;p&gt;捕捉方式：%1&lt;/p&gt;&lt;p&gt;Qt %2&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <source>&lt;p&gt;&lt;a href="%1"&gt;Homepage&lt;/a&gt; &amp;nbsp;&amp;middot;&amp;nbsp; &lt;a href="%2"&gt;Source code&lt;/a&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;&lt;a href="%1"&gt;ホームページ&lt;/a&gt; &amp;nbsp;&amp;middot;&amp;nbsp; &lt;a href="%2"&gt;ソースコード&lt;/a&gt;&lt;/p&gt;</translation>
-    </message>
-    <message>
       <source>About WinRoute</source>
       <translation>WinRoute について</translation>
     </message>
@@ -1206,6 +1198,22 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>Proxy gateway settings saved.</source>
       <translation>プロキシゲートウェイの設定を保存しました。</translation>
+    </message>
+    <message>
+      <source>Routes the network connections of Windows applications through SOCKS and HTTPS proxy servers according to proxification rules.</source>
+      <translation>プロキシ化ルールに従って、Windows アプリケーションのネットワーク接続を SOCKS / HTTPS プロキシサーバー経由にします。</translation>
+    </message>
+    <message>
+      <source>Source code: %1</source>
+      <translation>ソースコード：%1</translation>
+    </message>
+    <message>
+      <source>Homepage: %1</source>
+      <translation>ホームページ：%1</translation>
+    </message>
+    <message>
+      <source>Interception: %1</source>
+      <translation>捕捉方式：%1</translation>
     </message>
     <message>
       <source>Terminate the following process(es)?
