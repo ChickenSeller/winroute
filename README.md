@@ -104,6 +104,7 @@ cmake --build build-forum --target installer   # 生成 build-forum/WinRoute-<�
 - **更新**：启动时不检查，“帮助”里没有“自动更新”子菜单；只保留“检查更新”和“通过代理检查更新”，用户点了才联网，确认后安装的是正常版。
 - **统计**：不含统计地址，不发送任何使用统计，菜单里也没有这一项。
 - **链接**：“关于”里只有 `https://www.52pojie.cn/`，没有源码和项目主页链接。
+- **发布**：打版本标签时 GitHub Actions 同时构建两个安装包，都上传到 GitHub release；GitLab release、主页版本列表和 `update.json` 只有正常版。
 - **设置默认值**：论坛版启动时把自动更新设为“从不检查”、统计设为关闭，但只在这两项**还没有设置过**时写入（`Updater::setDefaultMode`、`UsageStats::setDefaultEnabled`），已有的选择不改。手动更新到正常版后，正常版读到的是这两个值，所以仍然关闭，之后只有用户自己在菜单里改才会变。
 
 ## 多语言
