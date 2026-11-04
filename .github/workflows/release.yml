@@ -1,6 +1,8 @@
-# Builds the Windows installer. A version tag (v1.2.3, pushed here from GitLab)
-# publishes it as a GitHub release, which GitLab's release job then copies.
-# Started by hand, it only builds, and the installer is kept as a run artifact.
+# Builds the Windows installers: the regular one and the 52pojie forum build
+# (WINROUTE_FORUM_BUILD, see CMakeLists.txt). A version tag (v1.2.3, pushed here
+# from GitLab) publishes both as a GitHub release, which GitLab's release job
+# then copies. Started by hand, it only builds, and the installers are kept as
+# a run artifact.
 #
 # The NetFilter SDK and the drivers are not in the repository: they are a
 # release asset of a private repository (BUILD_DEPS_REPO, release
@@ -84,24 +86,35 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           cmake --build build --target installer
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          # The forum build: no automatic updates or statistics, only the forum's link.
+          cmake -S . -B build-forum -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_PREFIX_PATH=$env:QT_ROOT_DIR" -DWINROUTE_FORUM_BUILD=ON
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --build build-forum --target installer
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
-      # What the installer must carry: the app, both drivers and their API, Qt
+      # What each installer must carry: the app, both drivers and their API, Qt
       # and the MinGW runtime.
-      - name: Check the installer
+      - name: Check the installers
         shell: pwsh
         run: |
-          $missing = 'WinRoute.exe', 'nfapi.dll', 'WinDivert.dll', 'WinDivert64.sys',
-                     'drivers/demo/netfilter2.sys', 'drivers/a/netfilter2.sys', 'drivers/b/netfilter2.sys',
-                     'Qt6Core.dll', 'Qt6Widgets.dll', 'Qt6Network.dll', 'libstdc++-6.dll', 'platforms/qwindows.dll' |
-            Where-Object { -not (Test-Path "build/stage/$_") }
-          if ($missing) { throw "Missing from the installer: $($missing -join ', ')" }
-          $setup = Get-Item build/WinRoute-*-setup.exe
-          "{0}: {1:N1} MB" -f $setup.Name, ($setup.Length / 1MB)
+          foreach ($dir in 'build', 'build-forum') {
+            $missing = 'WinRoute.exe', 'nfapi.dll', 'WinDivert.dll', 'WinDivert64.sys',
+                       'drivers/demo/netfilter2.sys', 'drivers/a/netfilter2.sys', 'drivers/b/netfilter2.sys',
+                       'Qt6Core.dll', 'Qt6Widgets.dll', 'Qt6Network.dll', 'libstdc++-6.dll', 'platforms/qwindows.dll' |
+              Where-Object { -not (Test-Path "$dir/stage/$_") }
+            if ($missing) { throw "Missing from the $dir installer: $($missing -join ', ')" }
+          }
+          $regular = @(Get-Item build/WinRoute-*-setup.exe | Where-Object Name -notlike '*-52pojie-*')
+          $forum = @(Get-Item build-forum/WinRoute-*-52pojie-setup.exe)
+          if ($regular.Count -ne 1 -or $forum.Count -ne 1) { throw 'Expected one regular and one forum installer' }
+          foreach ($setup in $regular + $forum) { "{0}: {1:N1} MB" -f $setup.Name, ($setup.Length / 1MB) }
 
       - uses: actions/upload-artifact@v4
         with:
           name: winroute-windows-x64
-          path: build/WinRoute-*-setup.exe
+          path: |
+            build/WinRoute-*-setup.exe
+            build-forum/WinRoute-*-52pojie-setup.exe
 
   publish:
     if: github.ref_type == 'tag'
@@ -120,6 +133,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ls -l dist
-          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --notes-from-tag \
+          # The artifact keeps the build/ and build-forum/ folders.
+          ls -lR dist
+          gh release create "$GITHUB_REF_NAME" $(find dist -name 'WinRoute-*-setup.exe' | sort) --verify-tag --notes-from-tag \
             --title "WinRoute ${GITHUB_REF_NAME#v}"
