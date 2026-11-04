@@ -277,6 +277,20 @@ T = {
     "--> client to server\n": ("--> 客户端到服务器\n", "--> クライアントからサーバーへ\n"),
     "<-- server to client\n": ("<-- 服务器到客户端\n", "<-- サーバーからクライアントへ\n"),
     "... (%1 more bytes)\n": ("... (还有 %1 字节)\n", "... (さらに %1 バイト)\n"),
+    "Answered locally": ("本地应答", "ローカルで応答"),
+    "WinRoute answered this query with a placeholder address; the proxy resolves the real name":
+        ("WinRoute 用占位地址应答了这个查询，真实域名由代理解析",
+         "WinRoute がこの問い合わせにプレースホルダーのアドレスで応答しました。実際の名前はプロキシが解決します"),
+    "    (no records)\n": ("    (无记录)\n", "    (レコードなし)\n"),
+    "WinRoute answered with a placeholder address (resolve host names through the proxy): the proxy looks up the real name when the connection is made.\n\n":
+        ("WinRoute 用占位地址做了应答（通过代理解析主机名）：建立连接时由代理解析真实域名。\n\n",
+         "WinRoute がプレースホルダーのアドレスで応答しました（プロキシ経由でホスト名を解決）。接続時にプロキシが実際の名前を解決します。\n\n"),
+    "--> query  %1\n": ("--> 查询  %1\n", "--> 問い合わせ  %1\n"),
+    "<-- answer  %1\n": ("<-- 应答  %1\n", "<-- 応答  %1\n"),
+    "--> %1 bytes  %2\n": ("--> %1 字节  %2\n", "--> %1 バイト  %2\n"),
+    "<-- %1 bytes  %2\n": ("<-- %1 字节  %2\n", "<-- %1 バイト  %2\n"),
+    "(later datagrams were not kept: the per-connection limit was reached)\n":
+        ("（后续数据报未保留：已达到单个连接的上限）\n", "（以降のデータグラムは保持されていません：接続ごとの上限に達しました）\n"),
     "Export Capture": ("导出抓包", "キャプチャのエクスポート"),
     "There is nothing captured to export.": ("没有可导出的抓包内容。", "エクスポートできるキャプチャがありません。"),
     "The exported file can contain plaintext data, including passwords and other secrets. Only share it with people you trust.\n\nContinue?":

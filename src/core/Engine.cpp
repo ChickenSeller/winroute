@@ -97,6 +97,7 @@ bool Engine::start(QString *error)
     ctx.fakeDns = &m_fakeDns;
     ctx.dnsCache = &m_dnsCache;
     ctx.relay = m_relay;
+    ctx.capture = &m_capture;
     ctx.relayPort = m_relay->port();
     ctx.relayIPv6 = m_relay->hasIPv6();
     m_interceptor->setRules(m_rules);

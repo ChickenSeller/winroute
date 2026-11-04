@@ -1,4 +1,5 @@
 #include "Capture.h"
+#include "DnsMessage.h"
 #include "HttpParse.h"
 #include "RuleEngine.h"
 #include "Utils.h"
@@ -8,6 +9,12 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QtEndian>
+
+namespace {
+// Most entries kept at once. DNS adds one small entry per query, so the byte
+// cap alone would let the list grow without bound.
+constexpr int kMaxEntries = 20000;
+} // namespace
 
 Capture::Capture(QObject *parent) : QObject(parent) {}
 
@@ -158,13 +165,89 @@ void Capture::finish(quint64 id, qint64 tsMs)
     emit changed();
 }
 
+void Capture::datagram(const CaptureMeta &meta, const QString &proto, CaptureDir dir, const QByteArray &bytes,
+                       qint64 tsMs, bool synthesized, const QString &filterHost)
+{
+    if (!isEnabled() || bytes.isEmpty())
+        return;
+    const QString key = proto + QLatin1Char('|') + QString::number(meta.pid) + QLatin1Char('|')
+                        + meta.srcAddr.toString() + QLatin1Char(':') + QString::number(meta.srcPort)
+                        + QLatin1Char('|') + meta.dstAddr.toString() + QLatin1Char(':')
+                        + QString::number(meta.dstPort) + QLatin1Char('|') + meta.hostname;
+    bool added = false;
+    {
+        QMutexLocker lock(&m_mutex);
+        quint64 id = m_flows.value(key);
+        if (!id) {
+            // shouldCapture() takes the lock itself.
+            lock.unlock();
+            const QString host = filterHost.isEmpty() ? meta.hostname : filterHost;
+            if (!shouldCapture(meta.appName, meta.appPath, host, meta.dstAddr, meta.dstPort))
+                return;
+            lock.relock();
+            id = m_flows.value(key);
+        }
+        if (!id) {
+            id = (quint64(1) << 63) | ++m_nextFlowId;
+            CaptureEntry e;
+            e.meta = meta;
+            e.meta.id = id;
+            e.meta.udp = true;
+            e.meta.startMs = tsMs;
+            e.open = false;   // a datagram flow has no lifetime of its own
+            e.proto = proto;
+            e.flowKey = key;
+            m_entries.insert(id, e);
+            m_order.append(id);
+            m_flows.insert(key, id);
+            added = true;
+        }
+        CaptureEntry &e = m_entries[id];
+        e.endMs = tsMs;
+        if (synthesized)
+            e.synthesized = true;
+        const qint64 used = e.up + e.down;
+        if (m_perConn > 0 && used + bytes.size() > m_perConn) {
+            e.truncated = true;   // whole datagrams only; a cut one would not parse
+        } else {
+            // Deep copy: interceptors pass driver buffers wrapped with fromRawData.
+            e.segs.append(CaptureSegment{dir, tsMs, QByteArray(bytes.constData(), bytes.size())});
+            if (dir == CaptureDir::Up)
+                e.up += bytes.size();
+            else
+                e.down += bytes.size();
+            m_bytes += bytes.size();
+        }
+        evictLocked();
+    }
+    if (added)
+        emit changed();
+}
+
+void Capture::dnsMessage(const CaptureMeta &base, CaptureDir dir, const QByteArray &msg, qint64 tsMs,
+                         bool synthesized)
+{
+    if (!isEnabled() || msg.isEmpty())
+        return;
+    CaptureMeta m = base;
+    dns::Question q;
+    const QString server = util::formatEndpoint(base.dstAddr, base.dstPort);
+    const bool named = dns::parseQuestion(msg, &q) && !q.name.isEmpty();
+    m.target = named ? QStringLiteral("%1 @ %2").arg(q.name, server) : server;
+    m.hostname.clear();   // the server has no host name of its own here
+    datagram(m, QStringLiteral("DNS"), dir, msg, tsMs, synthesized, named ? q.name : QString());
+}
+
 void Capture::evictLocked()
 {
-    while (m_total > 0 && m_bytes > m_total && m_order.size() > 1) {
+    while (m_order.size() > 1
+           && ((m_total > 0 && m_bytes > m_total) || m_order.size() > kMaxEntries)) {
         const quint64 oldest = m_order.takeFirst();
         auto it = m_entries.find(oldest);
         if (it != m_entries.end()) {
             m_bytes -= (it->up + it->down);
+            if (!it->flowKey.isEmpty())
+                m_flows.remove(it->flowKey);
             m_entries.erase(it);
         }
     }
@@ -188,6 +271,7 @@ QList<CaptureSummary> Capture::summaries() const
         s.open = e.open;
         s.truncated = e.truncated;
         s.decrypted = e.decrypted;
+        s.synthesized = e.synthesized;
         s.proto = e.proto;
         out.append(s);
     }
@@ -218,6 +302,7 @@ void Capture::clear()
         QMutexLocker lock(&m_mutex);
         m_entries.clear();
         m_order.clear();
+        m_flows.clear();
         m_bytes = 0;
     }
     emit changed();
@@ -334,33 +419,40 @@ void writeNrbRecord(QByteArray &body, bool v6, const QByteArray &ip, const QStri
         body.append(char(0));
 }
 
-// One synthesized Ethernet+IP+TCP frame.
+// One synthesized Ethernet+IP+TCP frame, or Ethernet+IP+UDP when `udp` is set
+// (seq, ack and flags are then unused).
 QByteArray makeFrame(bool v6, bool toServer, const QByteArray &cAddr, const QByteArray &sAddr,
                      quint16 cPort, quint16 sPort, quint32 seq, quint32 ack, quint8 flags,
-                     const QByteArray &payload, quint16 ipId)
+                     const QByteArray &payload, quint16 ipId, bool udp = false)
 {
     const QByteArray &src = toServer ? cAddr : sAddr;
     const QByteArray &dst = toServer ? sAddr : cAddr;
     const quint16 sp = toServer ? cPort : sPort;
     const quint16 dp = toServer ? sPort : cPort;
 
-    QByteArray tcp;
+    QByteArray tcp;   // the transport header and payload (TCP or UDP)
     putBE16(tcp, sp);
     putBE16(tcp, dp);
-    putBE32(tcp, seq);
-    putBE32(tcp, ack);
-    tcp.append(char(5 << 4));   // data offset 5 (20 bytes), no options
-    tcp.append(char(flags));
-    putBE16(tcp, 65535);        // window
-    putBE16(tcp, 0);            // checksum (Wireshark does not verify by default)
-    putBE16(tcp, 0);            // urgent pointer
+    if (udp) {
+        putBE16(tcp, quint16(8 + payload.size()));   // length
+        putBE16(tcp, 0);                             // checksum: none (Wireshark does not verify by default)
+    } else {
+        putBE32(tcp, seq);
+        putBE32(tcp, ack);
+        tcp.append(char(5 << 4));   // data offset 5 (20 bytes), no options
+        tcp.append(char(flags));
+        putBE16(tcp, 65535);        // window
+        putBE16(tcp, 0);            // checksum (Wireshark does not verify by default)
+        putBE16(tcp, 0);            // urgent pointer
+    }
     tcp.append(payload);
+    const char ipProto = char(udp ? 17 : 6);
 
     QByteArray ip;
     if (v6) {
         putBE32(ip, 0x60000000u);               // version 6, no TC/flow
         putBE16(ip, quint16(tcp.size()));        // payload length
-        ip.append(char(6));                      // next header: TCP
+        ip.append(ipProto);                      // next header: TCP / UDP
         ip.append(char(64));                     // hop limit
         ip.append(src);
         ip.append(dst);
@@ -372,7 +464,7 @@ QByteArray makeFrame(bool v6, bool toServer, const QByteArray &cAddr, const QByt
         putBE16(h, ipId);
         putBE16(h, 0x4000);                      // flags: DF
         h.append(char(64));                      // TTL
-        h.append(char(6));                       // protocol: TCP
+        h.append(ipProto);                       // protocol: TCP / UDP
         putBE16(h, 0);                           // checksum placeholder
         h.append(src);
         h.append(dst);
@@ -450,7 +542,8 @@ QByteArray Capture::toPcapng(const QList<CaptureEntry> &entries, bool keepRealPo
         r.cAddr = pick(e.meta.srcAddr, e.meta.appName.isEmpty() ? QStringLiteral("client") : e.meta.appName, false);
         r.sAddr = pick(e.meta.dstAddr, e.meta.hostname.isEmpty() ? e.meta.target : e.meta.hostname, true);
         r.cPort = e.meta.srcPort ? e.meta.srcPort : 40000;
-        r.sPort = e.meta.dstPort ? e.meta.dstPort : (e.proto == "TLS" ? 443 : 80);
+        r.sPort = e.meta.dstPort ? e.meta.dstPort
+                                 : e.proto == "DNS" ? 53 : (e.proto == "TLS" ? 443 : 80);
         // For a decrypted connection the payload is plaintext, so writing it on
         // port 443 would make Wireshark run its TLS dissector over cleartext and
         // show a garbled, "incomplete" stream. Unless the real ports are kept,
@@ -463,7 +556,11 @@ QByteArray Capture::toPcapng(const QList<CaptureEntry> &entries, bool keepRealPo
         resolved.append(r);
 
         addName(v6, r.cAddr, e.meta.appName);
-        const QString host = e.meta.hostname.isEmpty() ? e.meta.target.section(':', 0, -2) : e.meta.hostname;
+        // A datagram flow's target text is not a host name ("name @ server" for
+        // DNS), so name its server only when the host name is known.
+        const QString host = e.meta.hostname.isEmpty()
+                                 ? (e.meta.udp ? QString() : e.meta.target.section(':', 0, -2))
+                                 : e.meta.hostname;
         addName(v6, r.sAddr, host);
     }
 
@@ -519,6 +616,18 @@ QByteArray Capture::toPcapng(const QList<CaptureEntry> &entries, bool keepRealPo
         const quint16 sPort = r.sPort;
         const qint64 t0 = r.t0;
 
+        // A datagram flow: one UDP packet per datagram, no handshake.
+        if (e.meta.udp) {
+            for (const CaptureSegment &seg : e.segs) {
+                if (seg.data.isEmpty())
+                    continue;
+                const bool up = seg.dir == CaptureDir::Up;
+                writeEpb(out, makeFrame(v6, up, cAddr, sAddr, cPort, sPort, 0, 0, 0, seg.data, ipId++, true),
+                         seg.tsMs);
+            }
+            continue;
+        }
+
         quint32 cSeq = 1000, sSeq = 2000;
         // Three-way handshake.
         writeEpb(out, makeFrame(v6, true, cAddr, sAddr, cPort, sPort, cSeq, 0, 0x02, {}, ipId++), t0);
@@ -552,7 +661,7 @@ QByteArray Capture::toExportedPdu(const QList<CaptureEntry> &entries)
     constexpr quint16 TAG_END = 0, TAG_PROTO = 12, TAG_IPV4_SRC = 20, TAG_IPV4_DST = 21,
                       TAG_IPV6_SRC = 22, TAG_IPV6_DST = 23, TAG_PORT_TYPE = 24, TAG_SRC_PORT = 25,
                       TAG_DST_PORT = 26;
-    constexpr quint32 PT_TCP = 2;
+    constexpr quint32 PT_TCP = 2, PT_UDP = 3;
 
     struct Resolved {
         bool v6 = false;
@@ -587,13 +696,19 @@ QByteArray Capture::toExportedPdu(const QList<CaptureEntry> &entries)
         r.cAddr = pick(e.meta.srcAddr, e.meta.appName.isEmpty() ? QStringLiteral("client") : e.meta.appName, false);
         r.sAddr = pick(e.meta.dstAddr, e.meta.hostname.isEmpty() ? e.meta.target : e.meta.hostname, true);
         r.cPort = e.meta.srcPort ? e.meta.srcPort : 40000;
-        r.sPort = e.meta.dstPort ? e.meta.dstPort : (e.proto == "TLS" ? 443 : 80);
+        r.sPort = e.meta.dstPort ? e.meta.dstPort
+                                 : e.proto == "DNS" ? 53 : (e.proto == "TLS" ? 443 : 80);
         r.t0 = e.meta.startMs ? e.meta.startMs : QDateTime::currentMSecsSinceEpoch();
         r.proto = e.proto == "HTTP" ? QStringLiteral("http")
-                                    : e.proto == "TLS" ? QStringLiteral("tls") : QStringLiteral("data");
+                  : e.proto == "TLS" ? QStringLiteral("tls")
+                  : e.proto == "DNS" ? QStringLiteral("dns") : QStringLiteral("data");
         resolved.append(r);
         addName(v6, r.cAddr, e.meta.appName);
-        const QString host = e.meta.hostname.isEmpty() ? e.meta.target.section(':', 0, -2) : e.meta.hostname;
+        // A datagram flow's target text is not a host name ("name @ server" for
+        // DNS), so name its server only when the host name is known.
+        const QString host = e.meta.hostname.isEmpty()
+                                 ? (e.meta.udp ? QString() : e.meta.target.section(':', 0, -2))
+                                 : e.meta.hostname;
         addName(v6, r.sAddr, host);
     }
 
@@ -671,7 +786,7 @@ QByteArray Capture::toExportedPdu(const QList<CaptureEntry> &entries)
                 putTag(pdu, TAG_PROTO, r.proto.toUtf8());
                 putTag(pdu, r.v6 ? TAG_IPV6_SRC : TAG_IPV4_SRC, srcIp);
                 putTag(pdu, r.v6 ? TAG_IPV6_DST : TAG_IPV4_DST, dstIp);
-                putTag(pdu, TAG_PORT_TYPE, u32be(PT_TCP));
+                putTag(pdu, TAG_PORT_TYPE, u32be(e.meta.udp ? PT_UDP : PT_TCP));
                 putTag(pdu, TAG_SRC_PORT, u32be(srcPort));
                 putTag(pdu, TAG_DST_PORT, u32be(dstPort));
                 putBE16(pdu, TAG_END);
@@ -680,6 +795,12 @@ QByteArray Capture::toExportedPdu(const QList<CaptureEntry> &entries)
                 writeEpb(out, pdu, ts);
             }
         };
+        // A datagram flow: one PDU per datagram (merging would break DNS parsing).
+        if (e.meta.udp) {
+            for (const CaptureSegment &seg : e.segs)
+                emitRun(seg.dir, seg.data, seg.tsMs ? seg.tsMs : r.t0);
+            continue;
+        }
         // Merge consecutive same-direction segments into one PDU each.
         CaptureDir last = CaptureDir::Up;
         qint64 runTs = r.t0;
@@ -740,6 +861,8 @@ QByteArray Capture::toHar(const QList<CaptureEntry> &entries)
 {
     QJsonArray harEntries;
     for (const CaptureEntry &e : entries) {
+        if (e.meta.udp)
+            continue;   // HAR holds HTTP exchanges only
         const QList<HttpExchange> exchanges = parseHttp(e);
         for (const HttpExchange &ex : exchanges) {
             if (!ex.request.valid)

@@ -5,6 +5,7 @@
 #include "Utils.h"
 
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QTcpSocket>
 #include <QUdpSocket>
 #include <QUrl>
@@ -65,6 +66,8 @@ UdpRelaySession::UdpRelaySession(Relay *relay, const UdpDatagram &first, const P
     quint16 p = 0;
     const QHostAddress a = sockaddrToHost(first.remote, &p);
     m_targetText = first.hostname.isEmpty() ? util::formatEndpoint(a, p) : QString("%1:%2").arg(first.hostname).arg(p);
+    m_meta = first;
+    m_meta.data.clear();
     m_idle.setSingleShot(true);
     m_idle.setInterval(kIdleTimeoutMs);
     connect(&m_idle, &QTimer::timeout, this, &UdpRelaySession::finish);
@@ -347,10 +350,18 @@ void UdpRelaySession::sendThrough(const UdpDatagram &dg)
 
     m_udp->writeDatagram(pkt, m_relayAddr, m_relayPort);
     m_sent += dg.data.size();
+    if (!dg.hostname.isEmpty())
+        m_hostByRemote.insert(dg.remote, {dg.hostname, dg.fakeIp});
+    capture(dg.remote, CaptureDir::Up, dg.data);
 }
 
 void UdpRelaySession::bypass(const UdpDatagram &dg)
 {
+    // Replies to bypassed datagrams go straight to the application, so only
+    // the outgoing side is seen here.
+    if (!dg.hostname.isEmpty())
+        m_hostByRemote.insert(dg.remote, {dg.hostname, dg.fakeIp});
+    capture(dg.remote, CaptureDir::Up, dg.data);
     if (m_bypassSink) {
         m_bypassSink(dg);
         m_sent += dg.data.size();
@@ -423,6 +434,7 @@ void UdpRelaySession::deliver(const QHostAddress &origin, quint16 oport, const Q
         remote = m_lastRemote;
     if (remote.isEmpty())
         return;
+    capture(remote, CaptureDir::Down, payload);
     if (m_deliverSink) {
         m_deliverSink(remote, payload);
         m_received += payload.size();
@@ -461,6 +473,32 @@ void UdpRelaySession::onControlClosed()
     } else if (m_stage != Stage::Bypass) {
         toBypass(QCoreApplication::translate("Relay", "the proxy closed the control connection"));
     }
+}
+
+void UdpRelaySession::capture(const QByteArray &remote, CaptureDir dir, const QByteArray &payload)
+{
+    Capture *cap = m_relay ? m_relay->capture() : nullptr;
+    if (!cap || !cap->isEnabled())
+        return;
+    CaptureMeta m;
+    m.pid = m_meta.pid;
+    m.appName = m_meta.appName;
+    m.appPath = m_meta.appPath;
+    m.ruleName = m_meta.ruleName;
+    m.actionText = QString("%1:%2 %3").arg(m_proxy.address).arg(m_proxy.port).arg(proxyTypeToString(m_proxy.type));
+    const QPair<QString, bool> host = m_hostByRemote.value(remote);
+    m.hostname = host.first;
+    quint16 port = 0;
+    const QHostAddress dst = sockaddrToHost(remote, &port);
+    // A fake-DNS address is not a real host; the host name stands for it.
+    m.dstAddr = host.second ? QHostAddress() : dst;
+    m.dstPort = port;
+    m.target = targetText(remote, m.hostname);
+    if (!m_meta.localEndpoint.isEmpty())
+        m.srcAddr = sockaddrToHost(m_meta.localEndpoint, &m.srcPort);
+    m.v6 = m_meta.v6;
+    cap->datagram(m, port == 53 ? QStringLiteral("DNS") : QStringLiteral("UDP"), dir, payload,
+                  QDateTime::currentMSecsSinceEpoch());
 }
 
 void UdpRelaySession::touch()

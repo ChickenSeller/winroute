@@ -3,6 +3,7 @@
 
 #include "WinDivertInterceptor.h"
 
+#include "Capture.h"
 #include "DnsMessage.h"
 #include "FakeDns.h"      // DnsCache
 #include "FlowTable.h"
@@ -87,6 +88,33 @@ QString procName(quint32 pid)
     procinfo::Info p = procinfo::lookup(pid);
     const QString nm = p.path.isEmpty() ? p.name : QFileInfo(p.path).fileName();
     return nm.isEmpty() ? QStringLiteral("pid %1").arg(pid) : nm;
+}
+
+// Records a DNS message in the packet capture (no-op unless capture is on).
+// `owner` is the application socket's process when already known, else 0.
+void captureDns(Capture *cap, quint32 selfPid, quint32 owner, const QHostAddress &local, quint16 localPort,
+                const QHostAddress &server, quint16 serverPort, CaptureDir dir, const QByteArray &msg,
+                bool synthesized = false)
+{
+    if (!cap || !cap->isEnabled())
+        return;
+    if (owner == 0)
+        owner = procinfo::udpOwnerPid(local, localPort);
+    if (owner == selfPid)
+        return;   // WinRoute's own look-ups (the relay's resolver) are not shown
+    CaptureMeta m;
+    m.pid = owner;
+    if (owner) {
+        const procinfo::Info p = procinfo::lookup(owner);
+        m.appPath = p.path;
+    }
+    m.appName = procName(owner);
+    m.srcAddr = local;
+    m.srcPort = localPort;
+    m.dstAddr = server;
+    m.dstPort = serverPort;
+    m.v6 = server.protocol() == QAbstractSocket::IPv6Protocol;
+    cap->dnsMessage(m, dir, msg, QDateTime::currentMSecsSinceEpoch(), synthesized);
 }
 
 // Short label for a DNS record type, for the DNS log.
@@ -691,6 +719,9 @@ void WinDivertInterceptor::dnsLoop()
 
         // Inbound response: learn IP -> host name, then let it reach the app.
         if (ep.srcPort == 53) {
+            captureDns(m_ctx.capture, m_selfPid, 0, hostFromBytes(ep.dst, ep.v6), ep.dstPort,
+                       hostFromBytes(ep.src, ep.v6), ep.srcPort, CaptureDir::Down,
+                       QByteArray::fromRawData(reinterpret_cast<const char *>(payload), int(plen)));
             dns::Question q;
             QList<dns::Answer> answers;
             if (dns::parseAnswers(QByteArray::fromRawData(reinterpret_cast<const char *>(payload), int(plen)), &q, &answers)) {
@@ -747,6 +778,11 @@ void WinDivertInterceptor::dnsLoop()
                     rep.Impostor = 1;   // so our own reply is not captured again
                     api->send(m_dnsHandle, pkt.data(), n, nullptr, &rep);
                     answered = true;
+                    const QHostAddress local = hostFromBytes(ep.src, ep.v6), server = hostFromBytes(ep.dst, ep.v6);
+                    captureDns(m_ctx.capture, m_selfPid, owner, local, ep.srcPort, server, ep.dstPort,
+                               CaptureDir::Up, query);
+                    captureDns(m_ctx.capture, m_selfPid, owner, local, ep.srcPort, server, ep.dstPort,
+                               CaptureDir::Down, response, true);
                 }
             }
         }
@@ -763,8 +799,11 @@ void WinDivertInterceptor::dnsLoop()
                 logNormal(QCoreApplication::translate("Interceptor", "DNS: %1 asked %2 for %3 (%4), direct")
                               .arg(app, server, q.name, dnsTypeName(q.qtype)));
         }
-        if (!answered)
+        if (!answered) {
+            captureDns(m_ctx.capture, m_selfPid, owner, hostFromBytes(ep.src, ep.v6), ep.srcPort,
+                       hostFromBytes(ep.dst, ep.v6), ep.dstPort, CaptureDir::Up, query);
             api->send(m_dnsHandle, buf.data(), len, nullptr, &addr);
+        }
     }
 }
 

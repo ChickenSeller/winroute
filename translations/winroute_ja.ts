@@ -7,6 +7,10 @@
       <translation>切り詰め</translation>
     </message>
     <message>
+      <source>Answered locally</source>
+      <translation>ローカルで応答</translation>
+    </message>
+    <message>
       <source>Open</source>
       <translation>通信中</translation>
     </message>
@@ -17,6 +21,10 @@
     <message>
       <source>Decrypted from HTTPS</source>
       <translation>HTTPS から復号</translation>
+    </message>
+    <message>
+      <source>WinRoute answered this query with a placeholder address; the proxy resolves the real name</source>
+      <translation>WinRoute がこの問い合わせにプレースホルダーのアドレスで応答しました。実際の名前はプロキシが解決します</translation>
     </message>
     <message>
       <source>Application</source>
@@ -61,6 +69,12 @@
       <source>... (%1 more bytes)
 </source>
       <translation>... (さらに %1 バイト)
+</translation>
+    </message>
+    <message>
+      <source>    (no records)
+</source>
+      <translation>    (レコードなし)
 </translation>
     </message>
     <message>
@@ -140,6 +154,44 @@
     <message>
       <source>  [decrypted]</source>
       <translation>  [復号済み]</translation>
+    </message>
+    <message>
+      <source>WinRoute answered with a placeholder address (resolve host names through the proxy): the proxy looks up the real name when the connection is made.
+
+</source>
+      <translation>WinRoute がプレースホルダーのアドレスで応答しました（プロキシ経由でホスト名を解決）。接続時にプロキシが実際の名前を解決します。
+
+</translation>
+    </message>
+    <message>
+      <source>--&gt; query  %1
+</source>
+      <translation>--&gt; 問い合わせ  %1
+</translation>
+    </message>
+    <message>
+      <source>&lt;-- answer  %1
+</source>
+      <translation>&lt;-- 応答  %1
+</translation>
+    </message>
+    <message>
+      <source>--&gt; %1 bytes  %2
+</source>
+      <translation>--&gt; %1 バイト  %2
+</translation>
+    </message>
+    <message>
+      <source>&lt;-- %1 bytes  %2
+</source>
+      <translation>&lt;-- %1 バイト  %2
+</translation>
+    </message>
+    <message>
+      <source>(later datagrams were not kept: the per-connection limit was reached)
+</source>
+      <translation>（以降のデータグラムは保持されていません：接続ごとの上限に達しました）
+</translation>
     </message>
     <message>
       <source>--&gt; client to server

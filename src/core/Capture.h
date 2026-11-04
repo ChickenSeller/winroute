@@ -13,6 +13,8 @@
 // Optional packet capture for connections that go through the local relay.
 // Off by default; when on, the relay feeds every byte of each connection's
 // application-level stream here (plaintext once Phase 2 MITM decrypts TLS).
+// Datagram flows are captured too: DNS queries and answers seen by the
+// interceptor, and UDP tunnelled through SOCKS5 (see datagram()).
 // Everything stays on this machine: nothing is reported or sent anywhere.
 
 enum class CaptureDir { Up, Down };   // Up: client -> server, Down: server -> client
@@ -58,6 +60,7 @@ struct CaptureMeta {
     quint16 dstPort = 0;
     QString hostname;      // target host name when known
     bool v6 = false;
+    bool udp = false;      // a datagram flow (UDP/DNS): one segment per datagram
     qint64 startMs = 0;
 };
 
@@ -70,7 +73,9 @@ struct CaptureEntry {
     bool open = true;
     bool truncated = false;  // hit the per-connection cap; some payload was dropped
     bool decrypted = false;  // bytes are decrypted TLS plaintext (Phase 2)
-    QString proto;           // "HTTP", "TLS", "TCP" (guessed from the first bytes)
+    bool synthesized = false;  // a DNS answer WinRoute made itself (resolve through proxy)
+    QString proto;           // "HTTP", "TLS", "TCP" (guessed from the first bytes); "DNS", "UDP"
+    QString flowKey;         // datagram flows: the key datagram() groups them by
 };
 
 // Compact row for the list view; no payload copy.
@@ -81,6 +86,7 @@ struct CaptureSummary {
     bool open = true;
     bool truncated = false;
     bool decrypted = false;
+    bool synthesized = false;
     QString proto;
 };
 
@@ -114,6 +120,23 @@ public:
     void append(quint64 id, CaptureDir dir, const QByteArray &bytes, qint64 tsMs, bool decrypted = false);
     void finish(quint64 id, qint64 tsMs);
 
+    // Records one datagram of a UDP flow, from any thread. Datagrams are grouped
+    // into one entry per (process, local endpoint, remote endpoint, protocol);
+    // the entry is created on the first datagram that passes the filter, with an
+    // id assigned here (meta.id is ignored). `proto` is "DNS" or "UDP". Set
+    // `synthesized` for a DNS answer WinRoute made up (fake DNS), so the view
+    // can say the real resolution happened at the proxy. `filterHost`, when set,
+    // is the host name the capture filter matches against (for DNS: the name
+    // asked for), instead of meta.hostname.
+    void datagram(const CaptureMeta &meta, const QString &proto, CaptureDir dir, const QByteArray &bytes,
+                  qint64 tsMs, bool synthesized = false, const QString &filterHost = {});
+
+    // A DNS message (query Up, answer Down) seen by an interceptor. `base` holds
+    // the process and the two endpoints (application socket, DNS server); the
+    // target text and the filter's host name come from the question.
+    void dnsMessage(const CaptureMeta &base, CaptureDir dir, const QByteArray &msg, qint64 tsMs,
+                    bool synthesized = false);
+
     // Reads for the UI (thread-safe snapshots).
     QList<CaptureSummary> summaries() const;
     CaptureEntry entry(quint64 id) const;
@@ -140,7 +163,7 @@ signals:
     void changed();   // a connection was added or finished, or the store was cleared
 
 private:
-    void evictLocked();   // drop oldest entries while over the total cap
+    void evictLocked();   // drop oldest entries while over the total or count cap
 
     mutable QMutex m_mutex;
     std::atomic<bool> m_enabled{false};   // read without the lock for a cheap off-path
@@ -150,5 +173,7 @@ private:
     qint64 m_bytes = 0;
     QHash<quint64, CaptureEntry> m_entries;
     QList<quint64> m_order;   // insertion order, oldest first (for eviction)
+    QHash<QString, quint64> m_flows;   // datagram flow key -> entry id
+    quint64 m_nextFlowId = 0;          // datagram entry ids: top bit set, apart from relay ids
     CaptureFilter m_filter;   // which connections to capture
 };

@@ -654,6 +654,9 @@ static void testUdpProxy()
     FlowTable flows;
     Relay relay(&flows);
     TestUdpProxy proxy;
+    Capture cap;
+    cap.setEnabled(true);
+    relay.setCapture(&cap);
 
     ProxyServer p;
     p.type = ProxyType::Socks5;
@@ -669,6 +672,21 @@ static void testUdpProxy()
     CHECK(runUdp(&relay, p, dg, &gotRemote) == "ping-udp");
     CHECK(gotRemote == dg.remote);
     CHECK(proxy.lastAtyp == 1);
+    // The tunnelled datagram and its reply are one UDP entry in the capture.
+    {
+        const QList<CaptureSummary> rows = cap.summaries();
+        CHECK(rows.size() == 1);
+        if (!rows.isEmpty()) {
+            const CaptureEntry e = cap.entry(rows.first().meta.id);
+            CHECK(e.meta.udp && e.proto == "UDP");
+            CHECK(e.meta.target == "127.0.0.1:9999");
+            CHECK(e.segs.size() == 2);
+            if (e.segs.size() == 2) {
+                CHECK(e.segs[0].dir == CaptureDir::Up && e.segs[0].data == "ping-udp");
+                CHECK(e.segs[1].dir == CaptureDir::Down && e.segs[1].data == "ping-udp");
+            }
+        }
+    }
 
     // Fake-DNS target: sent by host name with ATYP=3, delivered as from the fake IP.
     UdpDatagram dgn;
@@ -681,6 +699,19 @@ static void testUdpProxy()
     CHECK(runUdp(&relay, p, dgn, &gotRemote2) == "by-name");
     CHECK(gotRemote2 == dgn.remote);
     CHECK(proxy.lastAtyp == 3);
+    // A fake-DNS target is captured by host name, without the placeholder IP.
+    {
+        bool found = false;
+        for (const CaptureSummary &r : cap.summaries())
+            if (r.meta.hostname == "echo.test") {
+                found = true;
+                CHECK(r.meta.dstAddr.isNull());
+                CHECK(r.meta.target == "echo.test:5353");
+                CHECK(r.up == 7 && r.down == 7);
+            }
+        CHECK(found);
+    }
+    relay.setCapture(nullptr);
 
     // A proxy that is not reachable falls back to sending directly (bypass).
     ProxyServer dead;
@@ -1137,6 +1168,131 @@ QStringList sans(X509 *x)
 
 } // namespace certtest
 
+// Reads the first Enhanced Packet Block's frame (Ethernet onwards), or empty.
+static QByteArray firstEpbFrame(const QByteArray &pcap)
+{
+    int off = 0;
+    while (off + 8 <= pcap.size()) {
+        const quint32 type = quint8(pcap[off]) | (quint8(pcap[off + 1]) << 8)
+                             | (quint8(pcap[off + 2]) << 16) | (quint32(quint8(pcap[off + 3])) << 24);
+        const quint32 len = quint8(pcap[off + 4]) | (quint8(pcap[off + 5]) << 8)
+                            | (quint8(pcap[off + 6]) << 16) | (quint32(quint8(pcap[off + 7])) << 24);
+        if (type == 0x00000006u) {
+            const int capLen = quint8(pcap[off + 20]) | (quint8(pcap[off + 21]) << 8)
+                               | (quint8(pcap[off + 22]) << 16) | (quint8(pcap[off + 23]) << 24);
+            return pcap.mid(off + 28, capLen);
+        }
+        if (len < 12)
+            break;
+        off += len;
+    }
+    return {};
+}
+
+static void testCaptureDatagrams()
+{
+    CaptureMeta base;
+    base.pid = 1234;
+    base.appName = "svchost.exe";
+    base.srcAddr = QHostAddress("192.168.1.5");
+    base.srcPort = 53001;
+    base.dstAddr = QHostAddress("8.8.8.8");
+    base.dstPort = 53;
+
+    dns::Question q;
+    q.name = "www.example.com";
+    q.qtype = dns::TypeA;
+    const QByteArray query = dns::buildQuery(0x1234, q.name, dns::TypeA);
+    CHECK(dns::parseQuestion(query, &q));
+    const QByteArray answer = dns::buildResponse(query, q, {QHostAddress("93.184.216.34")}, 300);
+
+    // Off: nothing is recorded.
+    {
+        Capture cap;
+        cap.dnsMessage(base, CaptureDir::Up, query, 1000);
+        CHECK(cap.count() == 0);
+    }
+
+    // A query and its answer on one socket form one DNS entry.
+    Capture cap;
+    cap.setEnabled(true);
+    cap.dnsMessage(base, CaptureDir::Up, query, 1000);
+    cap.dnsMessage(base, CaptureDir::Down, answer, 1010);
+    CHECK(cap.count() == 1);
+    const QList<CaptureSummary> rows = cap.summaries();
+    if (!rows.isEmpty()) {
+        const CaptureSummary &r = rows.first();
+        CHECK(r.proto == "DNS");
+        CHECK(r.meta.udp);
+        CHECK(!r.open);
+        CHECK(!r.synthesized);
+        CHECK(r.meta.target == "www.example.com @ 8.8.8.8:53");
+        CHECK(r.meta.id & (quint64(1) << 63));   // apart from the relay's connection ids
+        CHECK(r.up == query.size() && r.down == answer.size());
+        const CaptureEntry e = cap.entry(r.meta.id);
+        CHECK(e.segs.size() == 2);
+    }
+
+    // Another socket (source port) is another entry; a made-up answer is flagged.
+    CaptureMeta other = base;
+    other.srcPort = 53002;
+    cap.dnsMessage(other, CaptureDir::Up, query, 2000);
+    cap.dnsMessage(other, CaptureDir::Down, answer, 2001, true);
+    CHECK(cap.count() == 2);
+    bool sawSynth = false;
+    for (const CaptureSummary &r : cap.summaries())
+        sawSynth = sawSynth || (r.meta.srcPort == 53002 && r.synthesized);
+    CHECK(sawSynth);
+
+    // Clearing forgets the flows too: the same socket starts a fresh entry.
+    cap.clear();
+    CHECK(cap.count() == 0);
+    cap.dnsMessage(base, CaptureDir::Up, query, 3000);
+    CHECK(cap.count() == 1);
+
+    // The capture filter matches DNS by the name asked for.
+    {
+        Capture f;
+        f.setEnabled(true);
+        CaptureFilter flt;
+        flt.mode = CaptureFilter::Only;
+        CaptureRule rule;
+        rule.targets = "*.example.com";
+        flt.rules << rule;
+        f.setFilter(flt);
+        f.dnsMessage(base, CaptureDir::Up, query, 1);
+        CaptureMeta m2 = base;
+        m2.srcPort = 53010;
+        f.dnsMessage(m2, CaptureDir::Up, dns::buildQuery(7, "other.org", dns::TypeA), 2);
+        CHECK(f.count() == 1);
+    }
+
+    // Exports: real UDP packets on port 53 in PCAPNG, "dns" PDUs, nothing in HAR.
+    {
+        Capture c;
+        c.setEnabled(true);
+        c.dnsMessage(base, CaptureDir::Up, query, 1000);
+        c.dnsMessage(base, CaptureDir::Down, answer, 1010);
+        const CaptureEntry e = c.entry(c.summaries().first().meta.id);
+
+        const QByteArray frame = firstEpbFrame(Capture::toPcapng({e}));
+        CHECK(frame.size() == 14 + 20 + 8 + query.size());   // Ethernet + IPv4 + UDP + query, no handshake
+        if (frame.size() >= 14 + 20 + 8) {
+            CHECK(quint8(frame[14 + 9]) == 17);                                       // IP protocol: UDP
+            CHECK(((quint8(frame[34 + 2]) << 8) | quint8(frame[34 + 3])) == 53);     // destination port
+            CHECK(((quint8(frame[34]) << 8) | quint8(frame[35])) == 53001);         // source port
+            CHECK(frame.mid(42) == query);
+        }
+
+        const QByteArray pdu = Capture::toExportedPdu({e});
+        CHECK(pdu.contains(QByteArray("dns")));
+        CHECK(pdu.contains(query) && pdu.contains(answer));
+
+        const QJsonObject har = QJsonDocument::fromJson(Capture::toHar({e})).object();
+        CHECK(har["log"].toObject()["entries"].toArray().isEmpty());
+    }
+}
+
 static void testCertAuthority()
 {
     using namespace certtest;
@@ -1264,6 +1420,7 @@ int main(int argc, char **argv)
     testUdpProxy();
     testWinDivertPacket();
     testCapture();
+    testCaptureDatagrams();
     testCertAuthority();
     std::printf("%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

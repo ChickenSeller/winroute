@@ -108,6 +108,7 @@ public:
     // Optional packet capture. Set once from the relay thread before connections
     // arrive; nullptr means no capture is wired. Sessions feed it in pump().
     void setCapture(Capture *capture) { m_capture = capture; }
+    Capture *capture() const { return m_capture; }
 
     // Local CA for optional HTTPS decryption. Set once before connections
     // arrive; nullptr disables decryption regardless of the capture toggle.

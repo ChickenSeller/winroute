@@ -7,6 +7,10 @@
       <translation>已截断</translation>
     </message>
     <message>
+      <source>Answered locally</source>
+      <translation>本地应答</translation>
+    </message>
+    <message>
       <source>Open</source>
       <translation>进行中</translation>
     </message>
@@ -17,6 +21,10 @@
     <message>
       <source>Decrypted from HTTPS</source>
       <translation>由 HTTPS 解密</translation>
+    </message>
+    <message>
+      <source>WinRoute answered this query with a placeholder address; the proxy resolves the real name</source>
+      <translation>WinRoute 用占位地址应答了这个查询，真实域名由代理解析</translation>
     </message>
     <message>
       <source>Application</source>
@@ -61,6 +69,12 @@
       <source>... (%1 more bytes)
 </source>
       <translation>... (还有 %1 字节)
+</translation>
+    </message>
+    <message>
+      <source>    (no records)
+</source>
+      <translation>    (无记录)
 </translation>
     </message>
     <message>
@@ -140,6 +154,44 @@
     <message>
       <source>  [decrypted]</source>
       <translation>  [已解密]</translation>
+    </message>
+    <message>
+      <source>WinRoute answered with a placeholder address (resolve host names through the proxy): the proxy looks up the real name when the connection is made.
+
+</source>
+      <translation>WinRoute 用占位地址做了应答（通过代理解析主机名）：建立连接时由代理解析真实域名。
+
+</translation>
+    </message>
+    <message>
+      <source>--&gt; query  %1
+</source>
+      <translation>--&gt; 查询  %1
+</translation>
+    </message>
+    <message>
+      <source>&lt;-- answer  %1
+</source>
+      <translation>&lt;-- 应答  %1
+</translation>
+    </message>
+    <message>
+      <source>--&gt; %1 bytes  %2
+</source>
+      <translation>--&gt; %1 字节  %2
+</translation>
+    </message>
+    <message>
+      <source>&lt;-- %1 bytes  %2
+</source>
+      <translation>&lt;-- %1 字节  %2
+</translation>
+    </message>
+    <message>
+      <source>(later datagrams were not kept: the per-connection limit was reached)
+</source>
+      <translation>（后续数据报未保留：已达到单个连接的上限）
+</translation>
     </message>
     <message>
       <source>--&gt; client to server

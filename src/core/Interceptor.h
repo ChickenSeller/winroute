@@ -8,12 +8,14 @@ class FlowTable;
 class FakeDns;
 class DnsCache;
 class Relay;
+class Capture;
 
 struct InterceptorContext {
     FlowTable *flows = nullptr;
     FakeDns *fakeDns = nullptr;
     DnsCache *dnsCache = nullptr;
     Relay *relay = nullptr;   // UDP datagrams are handed here for SOCKS5 tunnelling
+    Capture *capture = nullptr;   // DNS queries and answers are recorded here when capture is on
     quint16 relayPort = 0;
     bool relayIPv6 = false;   // the relay also accepts IPv6 connections
 };

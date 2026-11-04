@@ -44,6 +44,8 @@ QVariant CaptureModel::data(const QModelIndex &index, int role) const
         case ColStatus:
             if (r.truncated)
                 return QCoreApplication::translate("CaptureModel", "Truncated");
+            if (r.meta.udp)   // datagrams: no connection to be open or closed
+                return r.synthesized ? QCoreApplication::translate("CaptureModel", "Answered locally") : QString();
             return r.open ? QCoreApplication::translate("CaptureModel", "Open")
                           : QCoreApplication::translate("CaptureModel", "Closed");
         }
@@ -53,6 +55,10 @@ QVariant CaptureModel::data(const QModelIndex &index, int role) const
     } else if (role == Qt::ToolTipRole) {
         if (index.column() == ColProto && r.decrypted)
             return QCoreApplication::translate("CaptureModel", "Decrypted from HTTPS");
+        if (index.column() == ColStatus && r.synthesized)
+            return QCoreApplication::translate("CaptureModel",
+                                               "WinRoute answered this query with a placeholder address; "
+                                               "the proxy resolves the real name");
     } else if (role == Qt::TextAlignmentRole) {
         if (index.column() == ColSent || index.column() == ColReceived)
             return int(Qt::AlignRight | Qt::AlignVCenter);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Capture.h"
 #include "Interceptor.h"
 #include "NetFilterApi.h"
 
@@ -93,6 +94,10 @@ private:
     // the caller never blocks on DNS. Re-runs when woken and every 60 seconds.
     void proxyResolveLoop();
     QString dnsClient(ENDPOINT_ID id) const;   // display name of a UDP socket's process, for the DNS log
+    // Records a DNS message on a UDP socket in the packet capture (no-op unless
+    // capture is on). `server`/`port`: the DNS server the socket talks to.
+    void captureDns(ENDPOINT_ID id, const QHostAddress &server, quint16 port, CaptureDir dir,
+                    const QByteArray &msg, bool synthesized = false);
     void handleUdpProxy(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len, PNF_UDP_OPTIONS opt,
                         const RuleEnginePtr &engine, const QHostAddress &dst, quint16 dport);
     int decideUdp(const RuleMatch &match, bool skip, const Profile &profile, const ProfileOptions &opt,
@@ -106,6 +111,8 @@ private:
         bool haveProc = false;
         QString appName;
         QString appPath;
+        QHostAddress localAddr;   // the socket's local endpoint, for the capture
+        quint16 localPort = 0;
         QHash<QString, QPair<int, int>> decisions;   // remoteKey -> (UdpDecision, proxyId)
     };
 

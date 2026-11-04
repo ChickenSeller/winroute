@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Capture.h"
 #include "Profile.h"
 #include "Relay.h"
 
@@ -75,6 +76,9 @@ private:
     void toBypass(const QString &reason);        // switch the whole session to bypass
     void deliver(const QHostAddress &origin, quint16 oport, const QByteArray &payload);
     void touch();                                 // reset the idle timer
+    // Records one datagram in the packet capture (no-op unless capture is on).
+    // `remote`: the address the application sent to / receives from.
+    void capture(const QByteArray &remote, CaptureDir dir, const QByteArray &payload);
     void finish();
 
     Relay *m_relay;
@@ -83,6 +87,8 @@ private:
     ProxyServer m_proxy;
     QString m_appName;
     QString m_targetText;
+    UdpDatagram m_meta;                // the first datagram's process/rule fields (no payload), for the capture
+    QHash<QByteArray, QPair<QString, bool>> m_hostByRemote;   // app sockaddr -> (host name, is a fake-DNS IP)
 
     QPointer<QTcpSocket> m_control;
     QPointer<QUdpSocket> m_udp;

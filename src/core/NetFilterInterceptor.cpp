@@ -699,6 +699,54 @@ QString NetFilterInterceptor::dnsClient(ENDPOINT_ID id) const
     return nm.isEmpty() ? QStringLiteral("pid %1").arg(pid) : nm;
 }
 
+void NetFilterInterceptor::captureDns(ENDPOINT_ID id, const QHostAddress &server, quint16 port, CaptureDir dir,
+                                      const QByteArray &msg, bool synthesized)
+{
+    Capture *cap = m_ctx.capture;
+    if (!cap || !cap->isEnabled())
+        return;
+    CaptureMeta m;
+    bool haveProc = false;
+    {
+        QMutexLocker lock(&m_udpMutex);
+        auto it = m_udpSocks.constFind(id);
+        if (it != m_udpSocks.constEnd()) {
+            m.pid = it->pid;
+            haveProc = it->haveProc;
+            m.appName = it->appName;
+            m.appPath = it->appPath;
+            m.srcAddr = it->localAddr;
+            m.srcPort = it->localPort;
+        }
+    }
+    if (m.pid == 0 && m_api && m_api->getUDPConnInfo) {
+        NF_UDP_CONN_INFO ci{};
+        if (m_api->getUDPConnInfo(id, &ci) == NF_STATUS_SUCCESS) {
+            m.pid = ci.processId;
+            m.srcAddr = fromSockaddr(ci.localAddress, &m.srcPort);
+        }
+    }
+    if (m.pid == m_selfPid)
+        return;   // WinRoute's own look-ups (the relay's resolver) are not shown
+    if (!haveProc && m.pid) {
+        procinfo::Info pinfo = procinfo::lookup(m.pid);
+        m.appPath = processPath(m.pid, pinfo.path);
+        m.appName = m.appPath.isEmpty() ? pinfo.name : QFileInfo(m.appPath).fileName();
+        QMutexLocker lock(&m_udpMutex);
+        UdpSock &sock = m_udpSocks[id];
+        sock.pid = m.pid;
+        sock.appName = m.appName;
+        sock.appPath = m.appPath;
+        sock.haveProc = true;
+    }
+    if (m.appName.isEmpty())
+        m.appName = m.pid ? QStringLiteral("pid %1").arg(m.pid) : QCoreApplication::translate("Interceptor", "unknown");
+    m.dstAddr = server;
+    m.dstPort = port;
+    m.v6 = server.protocol() == QAbstractSocket::IPv6Protocol;
+    cap->dnsMessage(m, dir, msg, QDateTime::currentMSecsSinceEpoch(), synthesized);
+}
+
 // Short label for a DNS record type, for the DNS log.
 static QString dnsTypeName(quint16 t)
 {
@@ -861,6 +909,7 @@ void NetFilterInterceptor::onUdpCreated(ENDPOINT_ID id, PNF_UDP_CONN_INFO info)
     QMutexLocker lock(&m_udpMutex);
     UdpSock &sock = m_udpSocks[id];
     sock.pid = info->processId;
+    sock.localAddr = fromSockaddr(info->localAddress, &sock.localPort);
 }
 
 void NetFilterInterceptor::onUdpClosed(ENDPOINT_ID id)
@@ -912,6 +961,8 @@ void NetFilterInterceptor::onUdpSend(ENDPOINT_ID id, const unsigned char *remote
                         logNormal(QCoreApplication::translate("Interceptor", "DNS: %1 asked %2 for %3 (%4), via proxy, no record")
                                       .arg(dnsClient(id), util::formatEndpoint(dst, dport), q.name, dnsTypeName(q.qtype)));
                 }
+                captureDns(id, dst, dport, CaptureDir::Up, query);
+                captureDns(id, dst, dport, CaptureDir::Down, response, true);
                 m_api->udpPostReceive(id, remote, response.constData(), int(response.size()), opt);
                 return;
             }
@@ -919,6 +970,7 @@ void NetFilterInterceptor::onUdpSend(ENDPOINT_ID id, const unsigned char *remote
         if (logDns && haveQuery)
             logNormal(QCoreApplication::translate("Interceptor", "DNS: %1 asked %2 for %3 (%4), direct")
                           .arg(dnsClient(id), util::formatEndpoint(dst, dport), q.name, dnsTypeName(q.qtype)));
+        captureDns(id, dst, dport, CaptureDir::Up, query);
         m_api->udpPostSend(id, remote, buf, len, opt);
         return;
     }
@@ -1090,6 +1142,12 @@ int NetFilterInterceptor::decideUdp(const RuleMatch &match, bool skip, const Pro
 void NetFilterInterceptor::onUdpReceive(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len,
                                         PNF_UDP_OPTIONS opt)
 {
+    {
+        quint16 sport = 0;
+        const QHostAddress server = fromSockaddr(remote, &sport);
+        if (sport == 53)
+            captureDns(id, server, sport, CaptureDir::Down, QByteArray(buf, len));
+    }
     dns::Question q;
     QList<dns::Answer> answers;
     if (dns::parseAnswers(QByteArray::fromRawData(buf, len), &q, &answers)) {

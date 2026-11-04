@@ -4,6 +4,7 @@
 
 #include "core/Capture.h"
 #include "core/CertAuthority.h"
+#include "core/DnsMessage.h"
 #include "core/HttpParse.h"
 #include "core/Utils.h"
 
@@ -90,6 +91,62 @@ QString hexDump(const QByteArray &data)
     }
     if (data.size() > limit)
         out += QCoreApplication::translate("CaptureTab", "... (%1 more bytes)\n").arg(data.size() - limit);
+    return out;
+}
+
+QString dnsTypeText(quint16 t)
+{
+    switch (t) {
+    case dns::TypeA: return QStringLiteral("A");
+    case dns::TypeCNAME: return QStringLiteral("CNAME");
+    case dns::TypeAAAA: return QStringLiteral("AAAA");
+    case dns::TypeHTTPS: return QStringLiteral("HTTPS");
+    case 2: return QStringLiteral("NS");
+    case 6: return QStringLiteral("SOA");
+    case 12: return QStringLiteral("PTR");
+    case 15: return QStringLiteral("MX");
+    case 16: return QStringLiteral("TXT");
+    case 33: return QStringLiteral("SRV");
+    case 64: return QStringLiteral("SVCB");
+    default: return QStringLiteral("TYPE%1").arg(t);
+    }
+}
+
+QString dnsRcodeText(int rcode)
+{
+    switch (rcode) {
+    case 0: return QStringLiteral("NOERROR");
+    case 1: return QStringLiteral("FORMERR");
+    case 2: return QStringLiteral("SERVFAIL");
+    case 3: return QStringLiteral("NXDOMAIN");
+    case 4: return QStringLiteral("NOTIMP");
+    case 5: return QStringLiteral("REFUSED");
+    default: return QStringLiteral("RCODE%1").arg(rcode);
+    }
+}
+
+// One DNS message as readable lines: the question, and for an answer its
+// status and records. Falls back to a hex dump when it does not parse.
+QString dnsText(const QByteArray &msg)
+{
+    dns::Question q;
+    if (!dns::parseQuestion(msg, &q))
+        return hexDump(msg);
+    const bool response = q.flags & 0x8000;
+    QString out = QStringLiteral("  #%1  %2 %3\n").arg(q.id).arg(q.name, dnsTypeText(q.qtype));
+    if (!response)
+        return out;
+    QList<dns::Answer> answers;
+    dns::Question q2;
+    dns::parseAnswers(msg, &q2, &answers);
+    out += QStringLiteral("  %1\n").arg(dnsRcodeText(q.flags & 0x000f));
+    for (const dns::Answer &a : answers) {
+        const QString value = !a.address.isNull() ? a.address.toString()
+                              : !a.target.isEmpty() ? a.target : QString();
+        out += QStringLiteral("    %1  %2  %3  TTL %4\n").arg(a.name, dnsTypeText(a.type), value).arg(a.ttl);
+    }
+    if (answers.isEmpty())
+        out += QCoreApplication::translate("CaptureTab", "    (no records)\n");
     return out;
 }
 
@@ -303,6 +360,29 @@ void CaptureTab::renderDetail(quint64 id)
                .arg(e.meta.appName, e.meta.target, util::formatBytes(e.up), util::formatBytes(e.down),
                     e.decrypted ? tr("  [decrypted]") : QString());
     out += QString(60, '-') + "\n\n";
+
+    // Datagram flows: one block per datagram, DNS decoded.
+    if (e.meta.udp) {
+        if (e.synthesized)
+            out += tr("WinRoute answered with a placeholder address (resolve host names through the proxy): "
+                      "the proxy looks up the real name when the connection is made.\n\n");
+        for (const CaptureSegment &seg : e.segs) {
+            const QString time = QDateTime::fromMSecsSinceEpoch(seg.tsMs).toString("HH:mm:ss.zzz");
+            const bool up = seg.dir == CaptureDir::Up;
+            if (e.proto == QLatin1String("DNS")) {
+                out += (up ? tr("--> query  %1\n") : tr("<-- answer  %1\n")).arg(time);
+                out += dnsText(seg.data);
+            } else {
+                out += (up ? tr("--> %1 bytes  %2\n") : tr("<-- %1 bytes  %2\n")).arg(seg.data.size()).arg(time);
+                out += hexDump(seg.data);
+            }
+            out += "\n";
+        }
+        if (e.truncated)
+            out += tr("(later datagrams were not kept: the per-connection limit was reached)\n");
+        m_detail->setPlainText(out);
+        return;
+    }
 
     const QList<HttpExchange> xs = parseHttp(e);
     if (!xs.isEmpty()) {
