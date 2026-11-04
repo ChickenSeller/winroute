@@ -461,7 +461,7 @@ void MainWindow::createCentral()
     m_tabs->addTab(m_traffic, tr("Traffic"));
     m_stats = new StatisticsWidget([this](const QString &path) { return m_connModel->appIcon(path); });
     m_tabs->addTab(m_stats, tr("Statistics"));
-    m_captureTab = new CaptureTab(m_engine->capture(), this);
+    m_captureTab = new CaptureTab(m_engine->capture(), m_engine->certAuthority(), this);
     m_tabs->addTab(m_captureTab, tr("Capture"));
 
     m_log = ui->logEdit;

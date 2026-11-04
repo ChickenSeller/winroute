@@ -1,5 +1,6 @@
 #include "Relay.h"
 #include "Capture.h"
+#include "CertAuthority.h"
 #include "DnsClient.h"
 #include "Logger.h"
 #include "UdpRelaySession.h"
@@ -9,9 +10,17 @@
 #include <QDateTime>
 #include <QPointer>
 #include <QRandomGenerator>
+#include <QSslCertificate>
+#include <QSslConfiguration>
+#include <QSslKey>
+#include <QSslSocket>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QThread>
+#include <QtEndian>
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
 static constexpr qint64 kMaxBuffered = 4 * 1024 * 1024;
 static constexpr int kChunk = 64 * 1024;
@@ -24,6 +33,38 @@ static QString bytesText(qint64 n)
     return QCoreApplication::translate("Relay", "%1 bytes (%2)").arg(n).arg(util::formatBytes(n));
 }
 
+// A QTcpServer that hands every accepted connection to the relay, which decides
+// (before any byte is read) whether to terminate TLS for HTTPS decryption.
+class RelayServer : public QTcpServer {
+public:
+    explicit RelayServer(Relay *relay, QObject *parent = nullptr) : QTcpServer(parent), m_relay(relay) {}
+
+protected:
+    void incomingConnection(qintptr socketDescriptor) override { m_relay->incomingConnection(socketDescriptor); }
+
+private:
+    Relay *m_relay;
+};
+
+// The application's local endpoint for an accepted socket, read straight from
+// the OS so no data is consumed from the socket's buffer before we decide how
+// to wrap it.
+static bool peerEndpoint(qintptr fd, QHostAddress *addr, quint16 *port)
+{
+    sockaddr_storage ss{};
+    int len = int(sizeof(ss));
+    if (::getpeername(SOCKET(fd), reinterpret_cast<sockaddr *>(&ss), &len) != 0)
+        return false;
+    addr->setAddress(reinterpret_cast<sockaddr *>(&ss));
+    if (ss.ss_family == AF_INET)
+        *port = qFromBigEndian<quint16>(reinterpret_cast<sockaddr_in *>(&ss)->sin_port);
+    else if (ss.ss_family == AF_INET6)
+        *port = qFromBigEndian<quint16>(reinterpret_cast<sockaddr_in6 *>(&ss)->sin6_port);
+    else
+        return false;
+    return true;
+}
+
 // One connection attempt: the hops to go through (empty = direct).
 struct Attempt {
     QList<ProxyServer> hops;
@@ -34,8 +75,8 @@ struct Attempt {
 
 class RelaySession : public QObject {
 public:
-    RelaySession(Relay *relay, quint64 id, QTcpSocket *client, const RedirectInfo &info)
-        : QObject(relay), m_relay(relay), m_id(id), m_client(client), m_info(info)
+    RelaySession(Relay *relay, quint64 id, QTcpSocket *client, const RedirectInfo &info, bool mitm = false)
+        : QObject(relay), m_relay(relay), m_id(id), m_client(client), m_info(info), m_mitm(mitm)
     {
         m_client->setParent(this);
         m_start = QDateTime::currentMSecsSinceEpoch();
@@ -142,7 +183,13 @@ public:
         noteCapture();
         logVerbose(QCoreApplication::translate("Relay", "%1 - %2 matching %3 rule : using %4").arg(m_info.appName, m_targetText, m_info.match.ruleName,
                                                                        action.type == ActionType::Direct ? QCoreApplication::translate("Relay", "direct connection") : m_actionText));
-        nextAttempt();
+        // Start the client-side TLS handshake now, before the event loop runs
+        // again, so the ClientHello is read by the SSL engine and not buffered
+        // as plaintext. The upstream handshake follows once the tunnel is up.
+        if (m_mitm)
+            startClientTls();
+        if (!m_finished)
+            nextAttempt();
     }
 
     void abort()
@@ -163,7 +210,9 @@ private:
         }
         const Attempt a = m_attempts[m_attemptIndex++];
         delete m_upstream;
-        m_upstream = new QTcpSocket(this);
+        // For HTTPS decryption the upstream leg is a TLS client; the proxy
+        // handshake still runs in the clear on it until startClientEncryption().
+        m_upstream = m_mitm ? new QSslSocket(this) : new QTcpSocket(this);
         m_upstream->setSocketOption(QAbstractSocket::LowDelayOption, 1);
         auto *connector = new ProxyConnector(m_upstream, a.hops, m_target, m_relay->dns(), a.timeoutMs, this);
         QObject::connect(connector, &ProxyConnector::connected, this, [this, connector, a](const QByteArray &leftover) {
@@ -202,10 +251,18 @@ private:
         m_open = true;
         emit m_relay->statusChanged(m_id, "Open");
 
-        connect(m_upstream, &QTcpSocket::readyRead, this, [this] { pump(m_upstream, m_client, &m_received); });
-        connect(m_upstream, &QTcpSocket::bytesWritten, this, [this] { pump(m_client, m_upstream, &m_sent); });
         connect(m_upstream, &QTcpSocket::disconnected, this, [this] { onSideClosed(m_upstream); });
         connect(m_upstream, &QTcpSocket::errorOccurred, this, [this] { onSideClosed(m_upstream); });
+
+        if (m_mitm) {
+            // The TCP/proxy tunnel is up; now do TLS to the real server. Data is
+            // pumped only once both the client and upstream handshakes finish.
+            startUpstreamTls(leftover);
+            return;
+        }
+
+        connect(m_upstream, &QTcpSocket::readyRead, this, [this] { pump(m_upstream, m_client, &m_received); });
+        connect(m_upstream, &QTcpSocket::bytesWritten, this, [this] { pump(m_client, m_upstream, &m_sent); });
         if (!leftover.isEmpty() && m_client) {
             m_client->write(leftover);
             m_received += leftover.size();
@@ -218,9 +275,86 @@ private:
             onSideClosed(m_upstream);
     }
 
+    // Presents our leaf certificate to the application and begins the TLS
+    // server handshake on the client side.
+    void startClientTls()
+    {
+        auto *ssl = qobject_cast<QSslSocket *>(m_client.data());
+        if (!ssl || !m_relay->m_certAuthority) {
+            finishWithError(QCoreApplication::translate("Relay", "HTTPS decryption is not available"));
+            return;
+        }
+        const QString host = m_info.hostname.isEmpty() ? m_info.dstAddr.toString() : m_info.hostname;
+        const CertAuthority::Leaf leaf = m_relay->m_certAuthority->leafFor(host);
+        const QSslCertificate cert(leaf.certPem, QSsl::Pem);
+        const QSslKey key(leaf.keyPem, QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey);
+        if (cert.isNull() || key.isNull()) {
+            finishWithError(QCoreApplication::translate("Relay", "could not create a certificate for %1").arg(host));
+            return;
+        }
+        QSslConfiguration cfg = QSslConfiguration::defaultConfiguration();
+        cfg.setLocalCertificate(cert);
+        cfg.setPrivateKey(key);
+        cfg.setAllowedNextProtocols({QByteArrayLiteral("http/1.1")});
+        ssl->setSslConfiguration(cfg);
+        connect(ssl, &QSslSocket::encrypted, this, [this] {
+            m_clientTls = true;
+            beginTunnel();
+        });
+        ssl->startServerEncryption();
+    }
+
+    // Begins the TLS client handshake to the real server, verifying its
+    // certificate against the system roots (a MITM upstream is refused).
+    void startUpstreamTls(const QByteArray &leftover)
+    {
+        auto *ssl = qobject_cast<QSslSocket *>(m_upstream.data());
+        if (!ssl) {
+            finishWithError(QCoreApplication::translate("Relay", "HTTPS decryption is not available"));
+            return;
+        }
+        if (!leftover.isEmpty()) {
+            finishWithError(QCoreApplication::translate("Relay", "unexpected data before the TLS handshake"));
+            return;
+        }
+        const QString host = m_info.hostname.isEmpty() ? m_info.dstAddr.toString() : m_info.hostname;
+        ssl->setPeerVerifyName(host);
+        QSslConfiguration cfg = ssl->sslConfiguration();
+        cfg.setAllowedNextProtocols({QByteArrayLiteral("http/1.1")});
+        ssl->setSslConfiguration(cfg);
+        connect(ssl, &QSslSocket::encrypted, this, [this] {
+            m_upstreamTls = true;
+            beginTunnel();
+        });
+        connect(ssl, &QSslSocket::sslErrors, this, [this](const QList<QSslError> &errs) {
+            QStringList msgs;
+            for (const QSslError &e : errs)
+                msgs << e.errorString();
+            finishWithError(QCoreApplication::translate("Relay", "the server's certificate was rejected: %1")
+                                .arg(msgs.join(QStringLiteral("; "))));
+        });
+        ssl->startClientEncryption();
+    }
+
+    // Both TLS legs are up: wire the plaintext pumps and start moving data. The
+    // bytes handed to the capture store are now decrypted.
+    void beginTunnel()
+    {
+        if (m_finished || m_tunnel || !m_clientTls || !m_upstreamTls)
+            return;
+        m_tunnel = true;
+        connect(m_upstream, &QTcpSocket::readyRead, this, [this] { pump(m_upstream, m_client, &m_received); });
+        connect(m_upstream, &QTcpSocket::bytesWritten, this, [this] { pump(m_client, m_upstream, &m_sent); });
+        pump(m_client, m_upstream, &m_sent);
+        pump(m_upstream, m_client, &m_received);
+    }
+
     void pump(QTcpSocket *from, QTcpSocket *to, qint64 *counter)
     {
         if (!m_open || !from || !to || to->state() != QAbstractSocket::ConnectedState)
+            return;
+        // For a decrypted tunnel, hold off until both TLS handshakes are done.
+        if (m_mitm && !m_tunnel)
             return;
         while (from->bytesAvailable() > 0 && to->bytesToWrite() < kMaxBuffered) {
             const QByteArray chunk = from->read(kChunk);
@@ -230,7 +364,7 @@ private:
             *counter += chunk.size();
             if (m_relay->m_capture && m_relay->m_capture->isEnabled())
                 m_relay->m_capture->append(m_id, from == m_client ? CaptureDir::Up : CaptureDir::Down,
-                                           chunk, QDateTime::currentMSecsSinceEpoch());
+                                           chunk, QDateTime::currentMSecsSinceEpoch(), m_mitm);
         }
     }
 
@@ -352,6 +486,10 @@ private:
     bool m_failed = false;
     bool m_finished = false;
     bool m_announced = false;
+    bool m_mitm = false;        // terminate TLS to decrypt this connection
+    bool m_clientTls = false;   // client-side handshake finished
+    bool m_upstreamTls = false; // upstream handshake finished
+    bool m_tunnel = false;      // both handshakes done; plaintext is flowing
 };
 
 Relay::Relay(FlowTable *flows, QObject *parent)
@@ -375,20 +513,18 @@ bool Relay::listen(QString *error)
     if (!m_dns->bind(0))
         logError(QCoreApplication::translate("Relay", "Cannot bind the DNS resolver socket"));
 
-    m_server4 = new QTcpServer(this);
+    m_server4 = new RelayServer(this, this);
     m_server4->setMaxPendingConnections(1024);
     if (!m_server4->listen(QHostAddress::AnyIPv4, 0)) {
         *error = QCoreApplication::translate("Relay", "Cannot start the local relay: ") + m_server4->errorString();
         return false;
     }
     m_port = m_server4->serverPort();
-    m_server6 = new QTcpServer(this);
+    m_server6 = new RelayServer(this, this);
     m_server6->setMaxPendingConnections(1024);
     m_hasV6 = m_server6->listen(QHostAddress::AnyIPv6, m_port);
     if (!m_hasV6)
         logVerbose(QCoreApplication::translate("Relay", "IPv6 relay is not available: ") + m_server6->errorString());
-    connect(m_server4, &QTcpServer::newConnection, this, [this] { onNewConnection(m_server4); });
-    connect(m_server6, &QTcpServer::newConnection, this, [this] { onNewConnection(m_server6); });
 
     connect(&m_trafficTimer, &QTimer::timeout, this, &Relay::emitTraffic);
     m_trafficTimer.start(500);
@@ -397,26 +533,45 @@ bool Relay::listen(QString *error)
     return true;
 }
 
-void Relay::onNewConnection(QTcpServer *server)
+void Relay::incomingConnection(qintptr fd)
 {
-    while (QTcpSocket *s = server->nextPendingConnection()) {
-        const auto info = m_flows->take(s->peerPort());
-        // Only connections from this machine that the interceptor announced are relayed.
-        const QHostAddress peer = util::normalize(s->peerAddress());
-        const QHostAddress src = util::normalize(info ? info->srcAddr : QHostAddress());
-        const bool local = peer.isLoopback() || src.isNull() || src.isEqual(QHostAddress::AnyIPv4)
-                           || src.isEqual(QHostAddress::AnyIPv6) || src.isEqual(peer);
-        if (!info || !local) {
-            logDebug(QCoreApplication::translate("Relay", "Relay: unexpected connection from %1 dropped").arg(util::formatEndpoint(peer, s->peerPort())));
-            s->abort();
-            s->deleteLater();
-            continue;
-        }
-        s->setSocketOption(QAbstractSocket::LowDelayOption, 1);
-        auto *session = new RelaySession(this, m_nextId++, s, *info);
-        m_sessions.insert(session->id(), session);
-        session->start();
+    QHostAddress peerAddr;
+    quint16 peerPort = 0;
+    if (!peerEndpoint(fd, &peerAddr, &peerPort)) {
+        ::closesocket(SOCKET(fd));
+        return;
     }
+    const auto info = m_flows->take(peerPort);
+    // Only connections from this machine that the interceptor announced are relayed.
+    const QHostAddress peer = util::normalize(peerAddr);
+    const QHostAddress src = util::normalize(info ? info->srcAddr : QHostAddress());
+    const bool local = peer.isLoopback() || src.isNull() || src.isEqual(QHostAddress::AnyIPv4)
+                       || src.isEqual(QHostAddress::AnyIPv6) || src.isEqual(peer);
+    if (!info || !local) {
+        logDebug(QCoreApplication::translate("Relay", "Relay: unexpected connection from %1 dropped").arg(util::formatEndpoint(peer, peerPort)));
+        ::closesocket(SOCKET(fd));
+        return;
+    }
+
+    // Decide whether to terminate TLS for HTTPS decryption. Only when capture
+    // and decryption are both on, a CA is wired, the target is the standard
+    // HTTPS port, and the connection passes the capture filter. Committed here,
+    // before any byte is read, because QSslSocket must own the ClientHello.
+    const bool mitm = m_capture && m_capture->isEnabled() && m_capture->decrypt() && m_certAuthority
+                      && info->dstPort == 443
+                      && m_capture->shouldCapture(info->appName, info->appPath, info->hostname,
+                                                  info->fakeIp ? QHostAddress() : info->dstAddr, info->dstPort);
+
+    QTcpSocket *s = mitm ? new QSslSocket : new QTcpSocket;
+    if (!s->setSocketDescriptor(fd, QAbstractSocket::ConnectedState)) {
+        delete s;
+        ::closesocket(SOCKET(fd));
+        return;
+    }
+    s->setSocketOption(QAbstractSocket::LowDelayOption, 1);
+    auto *session = new RelaySession(this, m_nextId++, s, *info, mitm);
+    m_sessions.insert(session->id(), session);
+    session->start();
 }
 
 void Relay::sessionFinished(quint64 id)

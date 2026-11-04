@@ -13,6 +13,7 @@ QIcon checker();
 QIcon capture();
 QIcon play();
 QIcon pause();
+QIcon lock();
 QIcon disconnect();
 QIcon endProcess();
 QIcon chain();

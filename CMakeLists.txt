@@ -9,6 +9,18 @@ set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network LinguistTools)
 
+# OpenSSL's libcrypto signs the local CA used for optional HTTPS decryption
+# (src/core/CertAuthority.cpp). The MinGW toolchain that ships with Qt carries
+# the matching OpenSSL (headers + import libs under <toolchain>/opt), which is
+# also the OpenSSL that Qt's qopensslbackend.dll uses; point OpenSSL_ROOT there.
+get_filename_component(_mingw_bin ${CMAKE_CXX_COMPILER} DIRECTORY)
+get_filename_component(_mingw_root ${_mingw_bin} DIRECTORY)
+if(NOT DEFINED OPENSSL_ROOT_DIR AND EXISTS ${_mingw_root}/opt/include/openssl/ssl.h)
+    set(OPENSSL_ROOT_DIR ${_mingw_root}/opt)
+endif()
+set(OPENSSL_RUNTIME_DIR ${_mingw_root}/opt/bin CACHE PATH "Directory holding libcrypto/libssl runtime DLLs")
+find_package(OpenSSL REQUIRED COMPONENTS Crypto)
+
 set(NETFILTER_SDK_DIR ${CMAKE_SOURCE_DIR}/netfilter/nfsdk CACHE PATH "NetFilter SDK root (nfsdk folder)")
 # Several drivers ship, the installer lets the user pick one: the NetFilter SDK
 # demo driver (default) and the release drivers "A", "B", each as
@@ -37,6 +49,7 @@ set(CORE_SOURCES
     src/core/ProxyGateway.h       src/core/ProxyGateway.cpp
     src/core/Relay.h              src/core/Relay.cpp
     src/core/Capture.h            src/core/Capture.cpp
+    src/core/CertAuthority.h      src/core/CertAuthority.cpp
     src/core/HttpParse.h          src/core/HttpParse.cpp
     src/core/UdpRelaySession.h    src/core/UdpRelaySession.cpp
     src/core/Interceptor.h
@@ -94,7 +107,7 @@ set(TS_FILES
 add_library(winroute_core STATIC ${CORE_SOURCES})
 target_include_directories(winroute_core PUBLIC src ${NETFILTER_SDK_DIR}/wfp/include ${NETFILTER_SDK_DIR}/include ${WINDIVERT_DIR}/include)
 target_compile_definitions(winroute_core PUBLIC UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _WIN32_WINNT=0x0A00)
-target_link_libraries(winroute_core PUBLIC Qt6::Core Qt6::Network ws2_32 iphlpapi psapi advapi32 shell32 crypt32 version)
+target_link_libraries(winroute_core PUBLIC Qt6::Core Qt6::Network OpenSSL::Crypto ws2_32 iphlpapi psapi advapi32 shell32 crypt32 version)
 
 option(WINROUTE_BUILD_GUI "Build the WinRoute application" ON)
 # Development builds can drop the requireAdministrator manifest to test the UI unelevated.
@@ -141,6 +154,15 @@ add_custom_command(TARGET WinRoute POST_BUILD
     ${POSTBUILD_DRIVER_COMMANDS}
 )
 
+# OpenSSL's runtime DLLs for QSslSocket's OpenSSL backend (HTTPS decryption).
+# windeployqt copies the TLS plugin but not these, so copy them next to the exe
+# for development runs and stage them for the installer.
+file(GLOB OPENSSL_RUNTIME_DLLS "${OPENSSL_RUNTIME_DIR}/libcrypto-*-x64.dll" "${OPENSSL_RUNTIME_DIR}/libssl-*-x64.dll")
+if(OPENSSL_RUNTIME_DLLS)
+    add_custom_command(TARGET WinRoute POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENSSL_RUNTIME_DLLS} $<TARGET_FILE_DIR:WinRoute>)
+endif()
+
 # WinDivert.dll and its driver are loaded at run time from next to the exe. Copy
 # them when present; the backend is optional, so a missing WinDivert is not fatal.
 if(EXISTS ${WINDIVERT_DIR}/x64/WinDivert.dll)
@@ -168,6 +190,7 @@ if(WINDEPLOYQT_EXECUTABLE AND ISCC_EXECUTABLE)
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:WinRoute> ${NETFILTER_API_DLL}
                 ${WINDIVERT_DIR}/x64/WinDivert.dll ${WINDIVERT_DIR}/x64/WinDivert64.sys ${INSTALLER_STAGE}
         ${STAGE_DRIVER_COMMANDS}
+        COMMAND ${CMAKE_COMMAND} -E copy ${OPENSSL_RUNTIME_DLLS} ${INSTALLER_STAGE}
         COMMAND ${WINDEPLOYQT_EXECUTABLE} --release --no-translations --no-system-d3d-compiler --no-opengl-sw
                 ${INSTALLER_STAGE}/WinRoute.exe
         COMMAND ${ISCC_EXECUTABLE} /Q /DAppVersion=${PROJECT_VERSION}

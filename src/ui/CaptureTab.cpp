@@ -3,6 +3,7 @@
 #include "Icons.h"
 
 #include "core/Capture.h"
+#include "core/CertAuthority.h"
 #include "core/HttpParse.h"
 #include "core/Utils.h"
 
@@ -11,20 +12,24 @@
 #include <QDateTime>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QDir>
 #include <QFileDialog>
 #include <QFont>
 #include <QFontDatabase>
 #include <QFormLayout>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QSslCertificate>
 #include <QTableWidget>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSaveFile>
 #include <QSettings>
+#include <QSpinBox>
 #include <QSplitter>
 #include <QTableView>
 #include <QTimer>
@@ -134,10 +139,52 @@ bool editCaptureRule(QWidget *parent, CaptureRule *rule)
     return true;
 }
 
+// Asks for the subject of a new root certificate, pre-filled with the defaults.
+// Returns true when accepted.
+bool promptCaInfo(QWidget *parent, CertAuthority::CaInfo *info)
+{
+    QDialog dlg(parent);
+    dlg.setWindowTitle(QCoreApplication::translate("CaptureTab", "New Root Certificate"));
+    auto *lay = new QVBoxLayout(&dlg);
+
+    auto *form = new QFormLayout;
+    auto *cn = new QLineEdit(info->commonName);
+    cn->setMinimumWidth(300);
+    auto *org = new QLineEdit(info->organization);
+    auto *years = new QSpinBox;
+    years->setRange(1, 30);
+    years->setValue(qMax(1, info->validityDays / 365));
+    years->setSuffix(QCoreApplication::translate("CaptureTab", " years"));
+    form->addRow(QCoreApplication::translate("CaptureTab", "Common name:"), cn);
+    form->addRow(QCoreApplication::translate("CaptureTab", "Organization:"), org);
+    form->addRow(QCoreApplication::translate("CaptureTab", "Valid for:"), years);
+    lay->addLayout(form);
+
+    auto *note = new QLabel(QCoreApplication::translate(
+        "CaptureTab", "This name identifies WinRoute's certificate in your browser and the Windows "
+                      "certificate store."));
+    note->setWordWrap(true);
+    note->setEnabled(false);
+    lay->addWidget(note);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    lay->addWidget(buttons);
+
+    if (dlg.exec() != QDialog::Accepted)
+        return false;
+    const QString name = cn->text().trimmed();
+    info->commonName = name.isEmpty() ? CertAuthority::defaultInfo().commonName : name;
+    info->organization = org->text().trimmed();
+    info->validityDays = years->value() * 365;
+    return true;
+}
+
 } // namespace
 
-CaptureTab::CaptureTab(Capture *capture, QWidget *parent)
-    : QWidget(parent), m_capture(capture)
+CaptureTab::CaptureTab(Capture *capture, CertAuthority *ca, QWidget *parent)
+    : QWidget(parent), m_capture(capture), m_ca(ca)
 {
     auto *root = new QVBoxLayout(this);
     root->setContentsMargins(6, 6, 6, 6);
@@ -154,10 +201,25 @@ CaptureTab::CaptureTab(Capture *capture, QWidget *parent)
     connect(exportBtn, &QPushButton::clicked, this, &CaptureTab::onExport);
     auto *filterBtn = new QPushButton(tr("Filter..."));
     connect(filterBtn, &QPushButton::clicked, this, &CaptureTab::onFilter);
+
+    auto *sep = new QFrame;
+    sep->setFrameShape(QFrame::VLine);
+    sep->setFrameShadow(QFrame::Sunken);
+
+    m_decrypt = new QCheckBox(tr("Decrypt HTTPS"));
+    m_decrypt->setToolTip(tr("Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. "
+                             "Capture must be started as well."));
+    connect(m_decrypt, &QCheckBox::toggled, this, &CaptureTab::onDecryptToggled);
+    auto *certBtn = new QPushButton(icons::certificate(), tr("Root Certificate..."));
+    connect(certBtn, &QPushButton::clicked, this, &CaptureTab::onCertificate);
+
     bar->addWidget(m_toggle);
     bar->addWidget(clearBtn);
     bar->addWidget(exportBtn);
     bar->addWidget(filterBtn);
+    bar->addWidget(sep);
+    bar->addWidget(m_decrypt);
+    bar->addWidget(certBtn);
     bar->addStretch();
     root->addLayout(bar);
 
@@ -195,6 +257,12 @@ CaptureTab::CaptureTab(Capture *capture, QWidget *parent)
     m_capture->setEnabled(on);
     m_toggle->setIcon(on ? icons::pause() : icons::play());
     m_toggle->setText(on ? tr("Pause") : tr("Start"));
+
+    const bool decrypt = util::appSettings().value("capture/decrypt", false).toBool();
+    m_decrypt->blockSignals(true);
+    m_decrypt->setChecked(decrypt);
+    m_decrypt->blockSignals(false);
+    m_capture->setDecrypt(decrypt);
     loadFilter();
 
     m_timer = new QTimer(this);
@@ -296,6 +364,149 @@ void CaptureTab::onToggled(bool on)
     util::appSettings().setValue("capture/enabled", on);
     m_toggle->setIcon(on ? icons::pause() : icons::play());
     m_toggle->setText(on ? tr("Pause") : tr("Start"));
+}
+
+void CaptureTab::onDecryptToggled(bool on)
+{
+    if (on) {
+        QString err;
+        if (!m_ca->ensureCa(&err)) {
+            QMessageBox::warning(this, tr("Decrypt HTTPS"),
+                                 tr("Could not prepare the root certificate:\n%1").arg(err));
+            m_decrypt->blockSignals(true);
+            m_decrypt->setChecked(false);
+            m_decrypt->blockSignals(false);
+            return;
+        }
+        if (!m_ca->isInstalled()) {
+            const auto btn = QMessageBox::question(
+                this, tr("Decrypt HTTPS"),
+                tr("To decrypt HTTPS, this computer must trust WinRoute's root certificate. "
+                   "Without it, browsers will warn about every decrypted site.\n\n"
+                   "Install the root certificate now?"),
+                QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, QMessageBox::Yes);
+            if (btn == QMessageBox::Cancel) {
+                m_decrypt->blockSignals(true);
+                m_decrypt->setChecked(false);
+                m_decrypt->blockSignals(false);
+                return;
+            }
+            if (btn == QMessageBox::Yes) {
+                QString ierr;
+                if (!m_ca->install(&ierr))
+                    QMessageBox::warning(this, tr("Decrypt HTTPS"),
+                                         tr("Could not install the root certificate:\n%1").arg(ierr));
+            }
+        }
+    }
+    m_capture->setDecrypt(on);
+    util::appSettings().setValue("capture/decrypt", on);
+}
+
+void CaptureTab::onCertificate()
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("WinRoute Root Certificate"));
+    dlg.resize(520, 0);
+    auto *lay = new QVBoxLayout(&dlg);
+
+    auto *status = new QLabel;
+    status->setWordWrap(true);
+    status->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    lay->addWidget(status);
+
+    auto *note = new QLabel(tr(
+        "WinRoute uses this certificate to sign the per-site certificates it presents when decrypting "
+        "HTTPS. Installing it marks it trusted on this computer, which covers browsers that use the "
+        "Windows certificate store (Chrome, Edge). Firefox has its own store: import the exported "
+        "certificate there manually."));
+    note->setWordWrap(true);
+    note->setEnabled(false);
+    lay->addWidget(note);
+
+    auto *btnRow = new QHBoxLayout;
+    auto *genBtn = new QPushButton(tr("Generate..."));
+    auto *installBtn = new QPushButton(tr("Install"));
+    auto *removeBtn = new QPushButton(tr("Remove"));
+    auto *exportBtn = new QPushButton(tr("Export..."));
+    btnRow->addWidget(genBtn);
+    btnRow->addWidget(installBtn);
+    btnRow->addWidget(removeBtn);
+    btnRow->addWidget(exportBtn);
+    btnRow->addStretch();
+    lay->addLayout(btnRow);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close);
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    lay->addWidget(buttons);
+
+    auto updateStatus = [&] {
+        const bool exists = m_ca->exists();
+        const bool installed = exists && m_ca->isInstalled();
+        QString expiry;
+        if (exists) {
+            const auto certs = QSslCertificate::fromData(m_ca->caCertPem(), QSsl::Pem);
+            if (!certs.isEmpty())
+                expiry = certs.first().expiryDate().toLocalTime().toString(QStringLiteral("yyyy-MM-dd"));
+        }
+        QString text = tr("Status: %1").arg(
+            !exists ? tr("not created yet")
+                    : installed ? tr("created and trusted by this computer")
+                                : tr("created, but not trusted by this computer"));
+        if (!expiry.isEmpty())
+            text += tr("\nValid until: %1").arg(expiry);
+        text += tr("\nLocation: %1").arg(QDir::toNativeSeparators(CertAuthority::caDir()));
+        status->setText(text);
+        genBtn->setText(exists ? tr("Regenerate...") : tr("Generate..."));
+        installBtn->setEnabled(exists && !installed);
+        removeBtn->setEnabled(installed);
+        exportBtn->setEnabled(exists);
+    };
+    updateStatus();
+
+    connect(genBtn, &QPushButton::clicked, &dlg, [&] {
+        if (m_ca->exists()) {
+            const auto r = QMessageBox::warning(
+                &dlg, tr("Regenerate Root Certificate"),
+                tr("This replaces the current root certificate. You will need to install the new one, and "
+                   "anything that trusted the old certificate will stop trusting WinRoute until then.\n\nContinue?"),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+            if (r != QMessageBox::Yes)
+                return;
+        }
+        CertAuthority::CaInfo info = CertAuthority::defaultInfo();
+        if (!promptCaInfo(&dlg, &info))
+            return;
+        QString err;
+        if (!m_ca->createCa(info, &err))
+            QMessageBox::warning(&dlg, tr("Root Certificate"), tr("Could not create the certificate:\n%1").arg(err));
+        updateStatus();
+    });
+    connect(installBtn, &QPushButton::clicked, &dlg, [&] {
+        QString err;
+        if (!m_ca->install(&err))
+            QMessageBox::warning(&dlg, tr("Root Certificate"), tr("Could not install the certificate:\n%1").arg(err));
+        updateStatus();
+    });
+    connect(removeBtn, &QPushButton::clicked, &dlg, [&] {
+        QString err;
+        if (!m_ca->uninstall(&err))
+            QMessageBox::warning(&dlg, tr("Root Certificate"), tr("Could not remove the certificate:\n%1").arg(err));
+        updateStatus();
+    });
+    connect(exportBtn, &QPushButton::clicked, &dlg, [&] {
+        const QString path = QFileDialog::getSaveFileName(&dlg, tr("Export Root Certificate"),
+                                                          QStringLiteral("winroute-ca.crt"),
+                                                          tr("Certificate (*.crt *.pem)"));
+        if (path.isEmpty())
+            return;
+        QString err;
+        if (!m_ca->exportCaCert(path, &err))
+            QMessageBox::warning(&dlg, tr("Root Certificate"), tr("Could not export the certificate:\n%1").arg(err));
+    });
+
+    dlg.exec();
 }
 
 void CaptureTab::onClear()

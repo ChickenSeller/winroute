@@ -14,7 +14,9 @@
 
 class QTcpServer;
 class Capture;
+class CertAuthority;
 class DnsClient;
+class RelayServer;
 class RelaySession;
 class UdpRelaySession;
 
@@ -107,6 +109,10 @@ public:
     // arrive; nullptr means no capture is wired. Sessions feed it in pump().
     void setCapture(Capture *capture) { m_capture = capture; }
 
+    // Local CA for optional HTTPS decryption. Set once before connections
+    // arrive; nullptr disables decryption regardless of the capture toggle.
+    void setCertAuthority(CertAuthority *ca) { m_certAuthority = ca; }
+
     // Redundancy chains remember failed proxies until the recheck time.
     bool proxyFailed(int proxyId) const;
     void markProxyFailed(int proxyId, int recheckSec);
@@ -120,16 +126,20 @@ signals:
     void traffic(const QList<TrafficSample> &samples);
 
 private:
+    friend class RelayServer;
     friend class RelaySession;
     friend class UdpRelaySession;
-    void onNewConnection(QTcpServer *server);
+    // Called by RelayServer when a redirected connection is accepted. Decides
+    // whether to terminate TLS (HTTPS decryption) and starts a RelaySession.
+    void incomingConnection(qintptr socketDescriptor);
     void sessionFinished(quint64 id);
     void emitTraffic();
 
     FlowTable *m_flows;
     Capture *m_capture = nullptr;
-    QTcpServer *m_server4 = nullptr;
-    QTcpServer *m_server6 = nullptr;
+    CertAuthority *m_certAuthority = nullptr;
+    RelayServer *m_server4 = nullptr;
+    RelayServer *m_server6 = nullptr;
     DnsClient *m_dns = nullptr;
     quint16 m_port = 0;
     bool m_hasV6 = false;

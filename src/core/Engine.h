@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Capture.h"
+#include "CertAuthority.h"
 #include "FakeDns.h"
 #include "FlowTable.h"
 #include "Interceptor.h"
@@ -45,6 +46,8 @@ public:
 
     // Optional packet capture (off by default). Lives here, fed by the relay.
     Capture *capture() { return &m_capture; }
+    // The local CA used for optional HTTPS decryption (off by default).
+    CertAuthority *certAuthority() { return &m_certAuthority; }
     void closeConnection(quint64 id) { m_relay->closeConnection(id); }
     void resetProxyFailures() { m_relay->resetProxyFailures(); }
     void setLocalDnsAvailable(bool available) { m_interceptor->setLocalDnsAvailable(available); }
@@ -52,6 +55,7 @@ public:
 private:
     FlowTable m_flows;
     Capture m_capture;
+    CertAuthority m_certAuthority;
     FakeDns m_fakeDns;
     DnsCache m_dnsCache;
     QThread m_relayThread;

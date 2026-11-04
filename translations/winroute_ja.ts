@@ -15,6 +15,10 @@
       <translation>切断済み</translation>
     </message>
     <message>
+      <source>Decrypted from HTTPS</source>
+      <translation>HTTPS から復号</translation>
+    </message>
+    <message>
       <source>Application</source>
       <translation>アプリケーション</translation>
     </message>
@@ -72,6 +76,30 @@
       <translation>入力した各フィールドがすべて一致したとき、ルールが命中とみなされます。空欄のフィールドは条件にしません。ルールと同じ書式です。</translation>
     </message>
     <message>
+      <source>New Root Certificate</source>
+      <translation>新しいルート証明書</translation>
+    </message>
+    <message>
+      <source> years</source>
+      <translation> 年</translation>
+    </message>
+    <message>
+      <source>Common name:</source>
+      <translation>コモンネーム:</translation>
+    </message>
+    <message>
+      <source>Organization:</source>
+      <translation>組織:</translation>
+    </message>
+    <message>
+      <source>Valid for:</source>
+      <translation>有効期間:</translation>
+    </message>
+    <message>
+      <source>This name identifies WinRoute's certificate in your browser and the Windows certificate store.</source>
+      <translation>この名前は、ブラウザーや Windows の証明書ストアで WinRoute の証明書を識別するために使われます。</translation>
+    </message>
+    <message>
       <source>Clear</source>
       <translation>クリア</translation>
     </message>
@@ -82,6 +110,18 @@
     <message>
       <source>Filter...</source>
       <translation>フィルター...</translation>
+    </message>
+    <message>
+      <source>Decrypt HTTPS</source>
+      <translation>HTTPS を復号</translation>
+    </message>
+    <message>
+      <source>Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. Capture must be started as well.</source>
+      <translation>WinRoute のルート証明書でキャプチャした HTTPS(ポート 443)接続を復号します。キャプチャも開始する必要があります。</translation>
+    </message>
+    <message>
+      <source>Root Certificate...</source>
+      <translation>ルート証明書...</translation>
     </message>
     <message>
       <source>Pause</source>
@@ -120,6 +160,122 @@
     <message>
       <source>Capturing records the traffic going through WinRoute, and with HTTPS decryption on it can include plaintext such as passwords. It all stays on this computer; take care when exporting or sharing a capture.</source>
       <translation>キャプチャは WinRoute を通る通信を記録し、HTTPS 復号を有効にするとパスワードなどの平文を含むことがあります。すべてこの PC 内にのみ保存されます。エクスポートや共有の際はご注意ください。</translation>
+    </message>
+    <message>
+      <source>Could not prepare the root certificate:
+%1</source>
+      <translation>ルート証明書を準備できませんでした：
+%1</translation>
+    </message>
+    <message>
+      <source>To decrypt HTTPS, this computer must trust WinRoute's root certificate. Without it, browsers will warn about every decrypted site.
+
+Install the root certificate now?</source>
+      <translation>HTTPS を復号するには、この PC が WinRoute のルート証明書を信頼する必要があります。信頼しないと、復号したサイトごとにブラウザーが警告します。
+
+今すぐルート証明書をインストールしますか？</translation>
+    </message>
+    <message>
+      <source>Could not install the root certificate:
+%1</source>
+      <translation>ルート証明書をインストールできませんでした：
+%1</translation>
+    </message>
+    <message>
+      <source>WinRoute Root Certificate</source>
+      <translation>WinRoute ルート証明書</translation>
+    </message>
+    <message>
+      <source>WinRoute uses this certificate to sign the per-site certificates it presents when decrypting HTTPS. Installing it marks it trusted on this computer, which covers browsers that use the Windows certificate store (Chrome, Edge). Firefox has its own store: import the exported certificate there manually.</source>
+      <translation>WinRoute は HTTPS 復号時に提示するサイトごとの証明書をこの証明書で署名します。インストールするとこの PC で信頼済みとして扱われ、Windows の証明書ストアを使うブラウザー(Chrome、Edge)に適用されます。Firefox は独自のストアを持つため、エクスポートした証明書を手動でインポートしてください。</translation>
+    </message>
+    <message>
+      <source>Generate...</source>
+      <translation>生成...</translation>
+    </message>
+    <message>
+      <source>Install</source>
+      <translation>インストール</translation>
+    </message>
+    <message>
+      <source>Status: %1</source>
+      <translation>状態：%1</translation>
+    </message>
+    <message>
+      <source>not created yet</source>
+      <translation>未作成</translation>
+    </message>
+    <message>
+      <source>created and trusted by this computer</source>
+      <translation>作成済み・この PC が信頼</translation>
+    </message>
+    <message>
+      <source>created, but not trusted by this computer</source>
+      <translation>作成済み・この PC は未信頼</translation>
+    </message>
+    <message>
+      <source>
+Valid until: %1</source>
+      <translation>
+有効期限：%1</translation>
+    </message>
+    <message>
+      <source>
+Location: %1</source>
+      <translation>
+場所：%1</translation>
+    </message>
+    <message>
+      <source>Regenerate...</source>
+      <translation>再生成...</translation>
+    </message>
+    <message>
+      <source>Regenerate Root Certificate</source>
+      <translation>ルート証明書を再生成</translation>
+    </message>
+    <message>
+      <source>This replaces the current root certificate. You will need to install the new one, and anything that trusted the old certificate will stop trusting WinRoute until then.
+
+Continue?</source>
+      <translation>現在のルート証明書を置き換えます。新しい証明書をインストールする必要があり、それまでは古い証明書を信頼していたものは WinRoute を信頼しなくなります。
+
+続行しますか？</translation>
+    </message>
+    <message>
+      <source>Root Certificate</source>
+      <translation>ルート証明書</translation>
+    </message>
+    <message>
+      <source>Could not create the certificate:
+%1</source>
+      <translation>証明書を作成できませんでした：
+%1</translation>
+    </message>
+    <message>
+      <source>Could not install the certificate:
+%1</source>
+      <translation>証明書をインストールできませんでした：
+%1</translation>
+    </message>
+    <message>
+      <source>Could not remove the certificate:
+%1</source>
+      <translation>証明書を削除できませんでした：
+%1</translation>
+    </message>
+    <message>
+      <source>Export Root Certificate</source>
+      <translation>ルート証明書をエクスポート</translation>
+    </message>
+    <message>
+      <source>Certificate (*.crt *.pem)</source>
+      <translation>証明書 (*.crt *.pem)</translation>
+    </message>
+    <message>
+      <source>Could not export the certificate:
+%1</source>
+      <translation>証明書をエクスポートできませんでした：
+%1</translation>
     </message>
     <message>
       <source>Export Capture</source>
@@ -2473,6 +2629,22 @@ Default ルールが %1 を使用するように変更されます。
     <message>
       <source>%1 - %2 open through %3</source>
       <translation>%1 - %2 %3 経由で接続</translation>
+    </message>
+    <message>
+      <source>HTTPS decryption is not available</source>
+      <translation>HTTPS の復号は利用できません</translation>
+    </message>
+    <message>
+      <source>could not create a certificate for %1</source>
+      <translation>%1 の証明書を作成できませんでした</translation>
+    </message>
+    <message>
+      <source>unexpected data before the TLS handshake</source>
+      <translation>TLS ハンドシェイク前に想定外のデータがありました</translation>
+    </message>
+    <message>
+      <source>the server's certificate was rejected: %1</source>
+      <translation>サーバーの証明書が拒否されました：%1</translation>
     </message>
     <message>
       <source>%1 - %2 error : %3</source>

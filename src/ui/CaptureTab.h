@@ -4,6 +4,8 @@
 
 class Capture;
 class CaptureModel;
+class CertAuthority;
+class QCheckBox;
 class QItemSelection;
 class QPlainTextEdit;
 class QTableView;
@@ -17,23 +19,27 @@ class QToolButton;
 class CaptureTab : public QWidget {
     Q_OBJECT
 public:
-    explicit CaptureTab(Capture *capture, QWidget *parent = nullptr);
+    explicit CaptureTab(Capture *capture, CertAuthority *ca, QWidget *parent = nullptr);
 
 private:
     void refresh();
     void onSelectionChanged();
     void renderDetail(quint64 id);
     void onToggled(bool on);
+    void onDecryptToggled(bool on);
+    void onCertificate();   // the root-certificate dialog (generate / install)
     void onClear();
     void onExport();
     void onFilter();
     void loadFilter();   // read the saved filter and apply it to the capture
 
     Capture *m_capture;
+    CertAuthority *m_ca;
     CaptureModel *m_model;
     QTableView *m_view;
     QPlainTextEdit *m_detail;
     QToolButton *m_toggle;
+    QCheckBox *m_decrypt;
     QTimer *m_timer;
     quint64 m_selectedId = 0;
 };

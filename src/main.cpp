@@ -12,6 +12,7 @@
 #include <QSettings>
 #include <QLocalSocket>
 #include <QMessageBox>
+#include <QSslSocket>
 #include <QThread>
 
 #include <winsock2.h>
@@ -34,6 +35,13 @@ int main(int argc, char *argv[])
     // from a version that still used it; harmless on a fresh install.
     util::migrateLegacySettings();
     i18n::install(app);
+
+    // HTTPS decryption (the Capture tab) terminates TLS with WinRoute's own
+    // certificates; the OpenSSL backend does server-side TLS with a supplied
+    // key/cert more reliably than SChannel, so prefer it when it is available.
+    if (QSslSocket::activeBackend() != QLatin1String("openssl")
+        && QSslSocket::availableBackends().contains(QLatin1String("openssl")))
+        QSslSocket::setActiveBackend(QStringLiteral("openssl"));
 
     // --install-driver / --uninstall-driver are run by the installer; with --quiet
     // errors are only reported through the exit code (0 = success, 1 = failure).

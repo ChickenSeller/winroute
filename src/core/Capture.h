@@ -93,6 +93,12 @@ public:
     void setEnabled(bool on);
     bool isEnabled() const;
 
+    // HTTPS decryption (MITM). When on, the relay terminates TLS for the
+    // connections it captures and feeds this store the plaintext. Off by
+    // default; read without the lock on the relay's fast path.
+    void setDecrypt(bool on);
+    bool decrypt() const;
+
     // Per-connection and total byte caps (thread-safe). 0 = unlimited.
     void setLimits(qint64 perConn, qint64 total);
 
@@ -127,6 +133,7 @@ private:
 
     mutable QMutex m_mutex;
     std::atomic<bool> m_enabled{false};   // read without the lock for a cheap off-path
+    std::atomic<bool> m_decrypt{false};   // HTTPS decryption (MITM)
     qint64 m_perConn = 8LL * 1024 * 1024;
     qint64 m_total = 256LL * 1024 * 1024;
     qint64 m_bytes = 0;

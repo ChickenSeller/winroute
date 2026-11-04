@@ -85,6 +85,7 @@ bool Engine::start(QString *error)
     QString err;
     QMetaObject::invokeMethod(m_relay, [&] {
         m_relay->setCapture(&m_capture);
+        m_relay->setCertAuthority(&m_certAuthority);
         listening = m_relay->port() != 0 || m_relay->listen(&err);
     }, Qt::BlockingQueuedConnection);
     if (!listening) {

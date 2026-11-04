@@ -2,6 +2,7 @@
 // DNS messages and the proxy protocol handshakes (against in-process proxies).
 
 #include "core/Capture.h"
+#include "core/CertAuthority.h"
 #include "core/DnsMessage.h"
 #include "core/FakeDns.h"
 #include "core/FlowTable.h"
@@ -21,10 +22,16 @@
 #include <QJsonObject>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QTemporaryDir>
 #include <QUdpSocket>
 #include <QtEndian>
 #include <cstdio>
 #include <cstring>
+
+#include <openssl/bio.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
 
 static int g_failures = 0;
 static int g_checks = 0;
@@ -929,6 +936,48 @@ static void testCapture()
         }
     }
 
+    // A decrypted HTTPS connection must not be exported on port 443: the payload
+    // is plaintext, and Wireshark would otherwise dissect it as TLS and show a
+    // garbled, incomplete stream. HTTP moves to port 80; a raw TLS capture keeps
+    // 443 (it really is TLS there).
+    {
+        // Reads the first EPB's TCP destination port (the synthesized SYN goes
+        // client -> server, so its destination port is the server port).
+        auto firstTcpDstPort = [](const QByteArray &pcap) -> int {
+            int off = 0;
+            while (off + 8 <= pcap.size()) {
+                const quint32 type = quint8(pcap[off]) | (quint8(pcap[off + 1]) << 8)
+                                     | (quint8(pcap[off + 2]) << 16) | (quint32(quint8(pcap[off + 3])) << 24);
+                const quint32 len = quint8(pcap[off + 4]) | (quint8(pcap[off + 5]) << 8)
+                                    | (quint8(pcap[off + 6]) << 16) | (quint32(quint8(pcap[off + 7])) << 24);
+                if (type == 0x00000006u) {
+                    const int tcp = off + 28 + 14 + 20;   // EPB hdr + Ethernet + IPv4
+                    return (quint8(pcap[tcp + 2]) << 8) | quint8(pcap[tcp + 3]);
+                }
+                if (len < 12)
+                    break;
+                off += len;
+            }
+            return -1;
+        };
+
+        CaptureEntry dec;
+        dec.proto = "HTTP";
+        dec.decrypted = true;
+        dec.meta.srcAddr = QHostAddress("192.168.1.5");
+        dec.meta.srcPort = 50000;
+        dec.meta.dstAddr = QHostAddress("93.184.216.34");
+        dec.meta.dstPort = 443;
+        dec.segs << seg(CaptureDir::Up, "GET / HTTP/1.1\r\nHost: x\r\n\r\n", 10)
+                 << seg(CaptureDir::Down, "HTTP/1.1 200 OK\r\n\r\n", 20);
+        CHECK(firstTcpDstPort(Capture::toPcapng({dec})) == 80);
+
+        CaptureEntry raw = dec;
+        raw.proto = "TLS";
+        raw.decrypted = false;
+        CHECK(firstTcpDstPort(Capture::toPcapng({raw})) == 443);
+    }
+
     // Per-connection cap truncates and flags the entry.
     {
         Capture cap;
@@ -1004,6 +1053,165 @@ static void testCapture()
     }
 }
 
+// Certificates are inspected with OpenSSL directly (the same library the CA
+// signs them with) rather than QSslCertificate, so the test verifies the real
+// security properties: the leaf is signed by the root, carries the right SAN,
+// and is not itself a CA.
+namespace certtest {
+
+X509 *parse(const QByteArray &pem)
+{
+    BIO *bio = BIO_new_mem_buf(pem.constData(), int(pem.size()));
+    if (!bio)
+        return nullptr;
+    X509 *x = PEM_read_bio_X509(bio, nullptr, nullptr, nullptr);
+    BIO_free(bio);
+    return x;
+}
+
+QString commonName(X509_NAME *name)
+{
+    char buf[256] = {0};
+    const int n = X509_NAME_get_text_by_NID(name, NID_commonName, buf, sizeof(buf));
+    return n > 0 ? QString::fromUtf8(buf, n) : QString();
+}
+
+QStringList sans(X509 *x)
+{
+    QStringList out;
+    auto *names = static_cast<GENERAL_NAMES *>(X509_get_ext_d2i(x, NID_subject_alt_name, nullptr, nullptr));
+    if (!names)
+        return out;
+    for (int i = 0; i < sk_GENERAL_NAME_num(names); ++i) {
+        const GENERAL_NAME *gn = sk_GENERAL_NAME_value(names, i);
+        if (gn->type == GEN_DNS) {
+            const auto *s = gn->d.dNSName;
+            out << "DNS:" + QString::fromUtf8(reinterpret_cast<const char *>(ASN1_STRING_get0_data(s)),
+                                              ASN1_STRING_length(s));
+        } else if (gn->type == GEN_IPADD) {
+            const auto *s = gn->d.iPAddress;
+            if (ASN1_STRING_length(s) == 4) {
+                const unsigned char *d = ASN1_STRING_get0_data(s);
+                out << QString("IP:%1.%2.%3.%4").arg(d[0]).arg(d[1]).arg(d[2]).arg(d[3]);
+            }
+        }
+    }
+    GENERAL_NAMES_free(names);
+    return out;
+}
+
+} // namespace certtest
+
+static void testCertAuthority()
+{
+    using namespace certtest;
+    // Keep the generated CA out of the real %APPDATA% by pointing it at a temp
+    // directory for the duration of the test.
+    QTemporaryDir tmp;
+    CHECK(tmp.isValid());
+    const QByteArray savedAppData = qgetenv("APPDATA");
+    qputenv("APPDATA", QDir::toNativeSeparators(tmp.path()).toUtf8());
+
+    QByteArray caPem;
+    {
+        CertAuthority ca;
+        CHECK(!ca.exists());
+        QString err;
+        CHECK(ca.ensureCa(&err));
+        CHECK(ca.exists());
+
+        caPem = ca.caCertPem();
+        X509 *caCert = parse(caPem);
+        CHECK(caCert != nullptr);
+        if (caCert) {
+            CHECK(commonName(X509_get_subject_name(caCert)) == QStringLiteral("WinRoute Root CA"));
+            // Self-signed root: issuer == subject, and it is a CA.
+            CHECK(commonName(X509_get_issuer_name(caCert)) == commonName(X509_get_subject_name(caCert)));
+            CHECK(X509_check_ca(caCert) >= 1);
+        }
+
+        // A leaf for a host name: CN + DNS SAN, issued by and signed by the root,
+        // and not itself a CA.
+        const CertAuthority::Leaf leaf = ca.leafFor(QStringLiteral("www.example.com"));
+        CHECK(!leaf.certPem.isEmpty());
+        CHECK(leaf.keyPem.contains("PRIVATE KEY"));
+        X509 *leafCert = parse(leaf.certPem);
+        CHECK(leafCert != nullptr);
+        if (leafCert && caCert) {
+            CHECK(commonName(X509_get_subject_name(leafCert)) == QStringLiteral("www.example.com"));
+            CHECK(commonName(X509_get_issuer_name(leafCert)) == QStringLiteral("WinRoute Root CA"));
+            CHECK(sans(leafCert).contains(QStringLiteral("DNS:www.example.com")));
+            CHECK(X509_check_ca(leafCert) == 0);
+            // The signature verifies against the root's public key.
+            EVP_PKEY *caPub = X509_get_pubkey(caCert);
+            CHECK(caPub && X509_verify(leafCert, caPub) == 1);
+            if (caPub)
+                EVP_PKEY_free(caPub);
+        }
+
+        // A leaf for an IP literal gets an IP SAN instead.
+        const CertAuthority::Leaf ipLeaf = ca.leafFor(QStringLiteral("10.1.2.3"));
+        X509 *ipCert = parse(ipLeaf.certPem);
+        CHECK(ipCert != nullptr);
+        if (ipCert) {
+            CHECK(sans(ipCert).contains(QStringLiteral("IP:10.1.2.3")));
+            X509_free(ipCert);
+        }
+
+        // A repeat lookup is cached (same PEM).
+        CHECK(ca.leafFor(QStringLiteral("www.example.com")).certPem == leaf.certPem);
+
+        if (leafCert)
+            X509_free(leafCert);
+        if (caCert)
+            X509_free(caCert);
+    }
+    {
+        // A fresh instance loads the CA persisted above rather than making a new
+        // one.
+        CertAuthority reloaded;
+        CHECK(reloaded.exists());
+        CHECK(reloaded.caCertPem() == caPem);
+    }
+    {
+        // createCa replaces the CA with a custom subject.
+        CertAuthority ca;
+        CertAuthority::CaInfo cfg;
+        cfg.commonName = QStringLiteral("My Custom CA");
+        cfg.organization = QStringLiteral("Acme Ltd");
+        cfg.validityDays = 365;
+        CHECK(ca.createCa(cfg, nullptr));
+        CHECK(ca.caCertPem() != caPem);   // a new certificate
+        X509 *c = parse(ca.caCertPem());
+        CHECK(c != nullptr);
+        if (c) {
+            CHECK(commonName(X509_get_subject_name(c)) == QStringLiteral("My Custom CA"));
+            char ob[128] = {0};
+            const int on = X509_NAME_get_text_by_NID(X509_get_subject_name(c), NID_organizationName, ob, sizeof(ob));
+            CHECK(on > 0 && QString::fromUtf8(ob, on) == QStringLiteral("Acme Ltd"));
+            X509_free(c);
+        }
+        // A leaf still verifies against the regenerated root.
+        const CertAuthority::Leaf lf = ca.leafFor(QStringLiteral("host.test"));
+        X509 *lc = parse(lf.certPem), *cc = parse(ca.caCertPem());
+        CHECK(lc && cc);
+        if (lc && cc) {
+            EVP_PKEY *pub = X509_get_pubkey(cc);
+            CHECK(pub && X509_verify(lc, pub) == 1);
+            if (pub) EVP_PKEY_free(pub);
+        }
+        if (lc) X509_free(lc);
+        if (cc) X509_free(cc);
+        // Querying installation status must not crash (not installed here).
+        (void)ca.isInstalled();
+    }
+
+    if (savedAppData.isEmpty())
+        qunsetenv("APPDATA");
+    else
+        qputenv("APPDATA", savedAppData);
+}
+
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
@@ -1014,6 +1222,7 @@ int main(int argc, char **argv)
     testUdpProxy();
     testWinDivertPacket();
     testCapture();
+    testCertAuthority();
     std::printf("%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
 }

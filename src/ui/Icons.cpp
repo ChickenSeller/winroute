@@ -195,6 +195,25 @@ QIcon pause()
     });
 }
 
+QIcon lock()
+{
+    // An open padlock, marking a capture row whose TLS was decrypted.
+    return render([](QPainter &p, double s) {
+        const QColor c(80, 150, 105);
+        p.setPen(QPen(c, qMax(1.0, s * 0.085), Qt::SolidLine, Qt::RoundCap));
+        p.setBrush(Qt::NoBrush);
+        // Shackle, hinged on the left and swung open to the right.
+        p.drawArc(QRectF(s * 0.30, s * 0.15, s * 0.32, s * 0.36), 30 * 16, 210 * 16);
+        // Body.
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawRoundedRect(QRectF(s * 0.25, s * 0.45, s * 0.50, s * 0.38), s * 0.08, s * 0.08);
+        // Keyhole.
+        p.setBrush(QColor(255, 255, 255, 220));
+        p.drawEllipse(QRectF(s * 0.45, s * 0.56, s * 0.10, s * 0.10));
+    });
+}
+
 QIcon disconnect()
 {
     return render([](QPainter &p, double s) {

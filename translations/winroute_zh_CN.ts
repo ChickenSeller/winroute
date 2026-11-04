@@ -15,6 +15,10 @@
       <translation>已关闭</translation>
     </message>
     <message>
+      <source>Decrypted from HTTPS</source>
+      <translation>由 HTTPS 解密</translation>
+    </message>
+    <message>
       <source>Application</source>
       <translation>应用程序</translation>
     </message>
@@ -72,6 +76,30 @@
       <translation>当你填写的每个字段都匹配时,该规则才算命中;留空的字段不作限制。语法与规则相同。</translation>
     </message>
     <message>
+      <source>New Root Certificate</source>
+      <translation>新建根证书</translation>
+    </message>
+    <message>
+      <source> years</source>
+      <translation> 年</translation>
+    </message>
+    <message>
+      <source>Common name:</source>
+      <translation>通用名称:</translation>
+    </message>
+    <message>
+      <source>Organization:</source>
+      <translation>组织:</translation>
+    </message>
+    <message>
+      <source>Valid for:</source>
+      <translation>有效期:</translation>
+    </message>
+    <message>
+      <source>This name identifies WinRoute's certificate in your browser and the Windows certificate store.</source>
+      <translation>此名称用于在浏览器和 Windows 证书存储中标识 WinRoute 的证书。</translation>
+    </message>
+    <message>
       <source>Clear</source>
       <translation>清除</translation>
     </message>
@@ -82,6 +110,18 @@
     <message>
       <source>Filter...</source>
       <translation>过滤...</translation>
+    </message>
+    <message>
+      <source>Decrypt HTTPS</source>
+      <translation>解密 HTTPS</translation>
+    </message>
+    <message>
+      <source>Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. Capture must be started as well.</source>
+      <translation>用 WinRoute 的根证书解密抓取到的 HTTPS(443 端口)连接。还需先开始抓包。</translation>
+    </message>
+    <message>
+      <source>Root Certificate...</source>
+      <translation>根证书...</translation>
     </message>
     <message>
       <source>Pause</source>
@@ -120,6 +160,122 @@
     <message>
       <source>Capturing records the traffic going through WinRoute, and with HTTPS decryption on it can include plaintext such as passwords. It all stays on this computer; take care when exporting or sharing a capture.</source>
       <translation>抓包会记录经过 WinRoute 的流量，开启 HTTPS 解密后还可能包含密码等明文。所有内容只保存在本机；导出或分享抓包时请注意。</translation>
+    </message>
+    <message>
+      <source>Could not prepare the root certificate:
+%1</source>
+      <translation>无法准备根证书：
+%1</translation>
+    </message>
+    <message>
+      <source>To decrypt HTTPS, this computer must trust WinRoute's root certificate. Without it, browsers will warn about every decrypted site.
+
+Install the root certificate now?</source>
+      <translation>要解密 HTTPS，本机必须信任 WinRoute 的根证书。否则浏览器会对每个被解密的站点发出警告。
+
+现在安装根证书吗？</translation>
+    </message>
+    <message>
+      <source>Could not install the root certificate:
+%1</source>
+      <translation>无法安装根证书：
+%1</translation>
+    </message>
+    <message>
+      <source>WinRoute Root Certificate</source>
+      <translation>WinRoute 根证书</translation>
+    </message>
+    <message>
+      <source>WinRoute uses this certificate to sign the per-site certificates it presents when decrypting HTTPS. Installing it marks it trusted on this computer, which covers browsers that use the Windows certificate store (Chrome, Edge). Firefox has its own store: import the exported certificate there manually.</source>
+      <translation>WinRoute 用此证书为解密 HTTPS 时出示的各站点证书签名。安装它会在本机标记为受信任，适用于使用 Windows 证书存储的浏览器(Chrome、Edge)。Firefox 有自己的证书存储：请将导出的证书手动导入其中。</translation>
+    </message>
+    <message>
+      <source>Generate...</source>
+      <translation>生成...</translation>
+    </message>
+    <message>
+      <source>Install</source>
+      <translation>安装</translation>
+    </message>
+    <message>
+      <source>Status: %1</source>
+      <translation>状态：%1</translation>
+    </message>
+    <message>
+      <source>not created yet</source>
+      <translation>尚未创建</translation>
+    </message>
+    <message>
+      <source>created and trusted by this computer</source>
+      <translation>已创建并被本机信任</translation>
+    </message>
+    <message>
+      <source>created, but not trusted by this computer</source>
+      <translation>已创建，但本机尚未信任</translation>
+    </message>
+    <message>
+      <source>
+Valid until: %1</source>
+      <translation>
+有效期至：%1</translation>
+    </message>
+    <message>
+      <source>
+Location: %1</source>
+      <translation>
+位置：%1</translation>
+    </message>
+    <message>
+      <source>Regenerate...</source>
+      <translation>重新生成...</translation>
+    </message>
+    <message>
+      <source>Regenerate Root Certificate</source>
+      <translation>重新生成根证书</translation>
+    </message>
+    <message>
+      <source>This replaces the current root certificate. You will need to install the new one, and anything that trusted the old certificate will stop trusting WinRoute until then.
+
+Continue?</source>
+      <translation>这会替换当前的根证书。你需要安装新证书,在此之前信任旧证书的一切都将不再信任 WinRoute。
+
+是否继续？</translation>
+    </message>
+    <message>
+      <source>Root Certificate</source>
+      <translation>根证书</translation>
+    </message>
+    <message>
+      <source>Could not create the certificate:
+%1</source>
+      <translation>无法创建证书：
+%1</translation>
+    </message>
+    <message>
+      <source>Could not install the certificate:
+%1</source>
+      <translation>无法安装证书：
+%1</translation>
+    </message>
+    <message>
+      <source>Could not remove the certificate:
+%1</source>
+      <translation>无法移除证书：
+%1</translation>
+    </message>
+    <message>
+      <source>Export Root Certificate</source>
+      <translation>导出根证书</translation>
+    </message>
+    <message>
+      <source>Certificate (*.crt *.pem)</source>
+      <translation>证书 (*.crt *.pem)</translation>
+    </message>
+    <message>
+      <source>Could not export the certificate:
+%1</source>
+      <translation>无法导出证书：
+%1</translation>
     </message>
     <message>
       <source>Export Capture</source>
@@ -2473,6 +2629,22 @@ Default 规则将改为使用 %1。
     <message>
       <source>%1 - %2 open through %3</source>
       <translation>%1 - %2 通过 %3 连接</translation>
+    </message>
+    <message>
+      <source>HTTPS decryption is not available</source>
+      <translation>HTTPS 解密不可用</translation>
+    </message>
+    <message>
+      <source>could not create a certificate for %1</source>
+      <translation>无法为 %1 创建证书</translation>
+    </message>
+    <message>
+      <source>unexpected data before the TLS handshake</source>
+      <translation>TLS 握手前出现意外数据</translation>
+    </message>
+    <message>
+      <source>the server's certificate was rejected: %1</source>
+      <translation>服务器证书被拒绝：%1</translation>
     </message>
     <message>
       <source>%1 - %2 error : %3</source>

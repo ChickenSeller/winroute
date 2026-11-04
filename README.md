@@ -32,7 +32,9 @@ Relay (独立线程, 0.0.0.0/:: 随机端口)
 
 ### 抓包（本机调试）
 
-“工具 > 抓包”可选开一个抓包开关（默认关，状态存 `QSettings` 的 `capture/enabled`）：开启后，经本地中继的每条连接的应用层字节被 `Capture`（`src/core/Capture.*`）记录，“抓包”标签页按连接查看——HTTP/1.x 解析成请求/响应（`src/core/HttpParse.*`），其余按十六进制显示；可导出 **PCAPNG**（合成握手与分段，供 Wireshark 重组）或 **HAR**。抓取内容只在本机，不上报。可选的 MITM 解密 HTTPS 为后续阶段。
+“工具 > 抓包”可选开一个抓包开关（默认关，状态存 `QSettings` 的 `capture/enabled`）：开启后，经本地中继的每条连接的应用层字节被 `Capture`（`src/core/Capture.*`）记录，“抓包”标签页按连接查看——HTTP/1.x 解析成请求/响应（`src/core/HttpParse.*`），其余按十六进制显示；可导出 **PCAPNG**（合成握手与分段，供 Wireshark 重组）或 **HAR**。抓取内容只在本机，不上报。
+
+**解密 HTTPS（MITM）**：抓包标签页的“解密 HTTPS”复选框（默认关，状态存 `capture/decrypt`）开启后，WinRoute 对经中继且命中抓包过滤的 443 端口连接做中间人——用自建根 CA（`src/core/CertAuthority.*`，基于 OpenSSL，密钥存 `%APPDATA%\WinRoute\ca`，不入 git）按主机名临时签发叶证书，在 client 侧做 TLS 服务端、对真实服务器做 TLS 客户端（校验其证书，校验失败则断开），于是抓包里看到明文。“根证书…”按钮可生成、安装到 Windows 受信任根（供 Chrome/Edge；Firefox 需手动导入导出的证书）、移除和导出根证书。界面需走 Qt 的 OpenSSL 后端（启动时 `QSslSocket::setActiveBackend("openssl")`），安装包随附 `libcrypto`/`libssl` 运行期 DLL。已知限制：仅解密 TCP 443；v1 把 ALPN 降到 http/1.1，不解密 HTTP/2 与 QUIC（UDP）；证书固定的应用需用抓包过滤排除。
 
 ## 目录
 
@@ -57,6 +59,8 @@ windeployqt --release build/WinRoute.exe
 ```
 
 构建后，`nfapi.dll` 复制到 `WinRoute.exe` 旁边，三个驱动复制到 `drivers/<代号>/`（没有多余的顶层 `netfilter2.sys`）。放好 `windivert/` 时，`WinDivert.dll` 和 `WinDivert64.sys` 也一并复制到 exe 旁（供 WinDivert 后端运行时加载）。程序 manifest 要求管理员权限。首次启动时，程序把选定的驱动从 `drivers/<代号>/` 复制到 `System32\drivers` 并注册 `netfilter2` 服务。卸载驱动：`WinRoute.exe --uninstall-driver`（同时移除 WinDivert 服务）。
+
+HTTPS 解密用的根 CA 由 OpenSSL 的 `libcrypto` 签发。Qt 自带的 MinGW 工具链里就有 OpenSSL（头文件和导入库在 `<工具链>/opt`），CMake 会自动找到（也可用 `-DOPENSSL_ROOT_DIR=...` 指定）。`libcrypto`/`libssl` 运行期 DLL 会在构建时复制到 exe 旁（`windeployqt` 不复制这两个，但会复制 `plugins/tls/qopensslbackend.dll`）。
 
 加 `-DWINROUTE_REQUIRE_ADMIN=OFF` 可以构建不带管理员 manifest 的开发版，用于不提权调试界面（此时网络拦截不会启动）。
 

@@ -21,6 +21,16 @@ bool Capture::isEnabled() const
     return m_enabled.load(std::memory_order_relaxed);
 }
 
+void Capture::setDecrypt(bool on)
+{
+    m_decrypt.store(on, std::memory_order_relaxed);
+}
+
+bool Capture::decrypt() const
+{
+    return m_decrypt.load(std::memory_order_relaxed);
+}
+
 void Capture::setLimits(qint64 perConn, qint64 total)
 {
     QMutexLocker lock(&m_mutex);
@@ -441,6 +451,13 @@ QByteArray Capture::toPcapng(const QList<CaptureEntry> &entries)
         r.sAddr = pick(e.meta.dstAddr, e.meta.hostname.isEmpty() ? e.meta.target : e.meta.hostname, true);
         r.cPort = e.meta.srcPort ? e.meta.srcPort : 40000;
         r.sPort = e.meta.dstPort ? e.meta.dstPort : (e.proto == "TLS" ? 443 : 80);
+        // For a decrypted connection the payload is plaintext, so writing it on
+        // port 443 would make Wireshark run its TLS dissector over cleartext and
+        // show a garbled, "incomplete" stream. Move it to a port whose default
+        // dissector matches the plaintext: 80 for HTTP, otherwise a neutral port
+        // with no dissector (Follow TCP Stream still shows the bytes).
+        if (e.decrypted)
+            r.sPort = (e.proto == "HTTP") ? 80 : (r.sPort != 443 ? r.sPort : 8000);
         r.t0 = e.meta.startMs ? e.meta.startMs : QDateTime::currentMSecsSinceEpoch();
         resolved.append(r);
 

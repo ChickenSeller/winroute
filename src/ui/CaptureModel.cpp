@@ -1,4 +1,5 @@
 #include "CaptureModel.h"
+#include "Icons.h"
 
 #include "core/Utils.h"
 
@@ -33,7 +34,7 @@ QVariant CaptureModel::data(const QModelIndex &index, int role) const
         case ColTarget:
             return r.meta.target;
         case ColProto:
-            return r.decrypted ? QStringLiteral("%1 \xF0\x9F\x94\x93").arg(r.proto) : r.proto;
+            return r.proto;
         case ColSent:
             return util::formatBytes(r.up);
         case ColReceived:
@@ -46,6 +47,12 @@ QVariant CaptureModel::data(const QModelIndex &index, int role) const
             return r.open ? QCoreApplication::translate("CaptureModel", "Open")
                           : QCoreApplication::translate("CaptureModel", "Closed");
         }
+    } else if (role == Qt::DecorationRole) {
+        if (index.column() == ColProto && r.decrypted)
+            return icons::lock();
+    } else if (role == Qt::ToolTipRole) {
+        if (index.column() == ColProto && r.decrypted)
+            return QCoreApplication::translate("CaptureModel", "Decrypted from HTTPS");
     } else if (role == Qt::TextAlignmentRole) {
         if (index.column() == ColSent || index.column() == ColReceived)
             return int(Qt::AlignRight | Qt::AlignVCenter);
