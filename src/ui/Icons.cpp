@@ -150,6 +150,51 @@ QIcon checker()
     });
 }
 
+QIcon capture()
+{
+    return render([](QPainter &p, double s) {
+        // Stacked "packets" of traffic.
+        p.setPen(Qt::NoPen);
+        const QColor bars[3] = {QColor(90, 160, 240), QColor(120, 200, 140), QColor(240, 180, 80)};
+        for (int i = 0; i < 3; ++i) {
+            p.setBrush(bars[i]);
+            p.drawRoundedRect(QRectF(s * 0.12, s * 0.17 + i * s * 0.18, s * 0.52 - i * s * 0.08, s * 0.11),
+                              s * 0.03, s * 0.03);
+        }
+        // A magnifier inspecting them.
+        p.setPen(QPen(QColor(50, 50, 60), s * 0.07, Qt::SolidLine, Qt::RoundCap));
+        p.setBrush(QColor(200, 230, 255, 180));
+        p.drawEllipse(QPointF(s * 0.62, s * 0.6), s * 0.2, s * 0.2);
+        p.setPen(QPen(QColor(50, 50, 60), s * 0.1, Qt::SolidLine, Qt::RoundCap));
+        p.drawLine(QPointF(s * 0.77, s * 0.75), QPointF(s * 0.93, s * 0.91));
+    });
+}
+
+QIcon play()
+{
+    return render([](QPainter &p, double s) {
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor(70, 165, 90));
+        QPainterPath tri;
+        tri.moveTo(s * 0.34, s * 0.24);
+        tri.lineTo(s * 0.34, s * 0.76);
+        tri.lineTo(s * 0.76, s * 0.50);
+        tri.closeSubpath();
+        p.drawPath(tri);
+    });
+}
+
+QIcon pause()
+{
+    return render([](QPainter &p, double s) {
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor(200, 120, 50));
+        const double w = s * 0.13, h = s * 0.52, y = s * 0.24;
+        p.drawRoundedRect(QRectF(s * 0.33, y, w, h), w * 0.35, w * 0.35);
+        p.drawRoundedRect(QRectF(s * 0.54, y, w, h), w * 0.35, w * 0.35);
+    });
+}
+
 QIcon disconnect()
 {
     return render([](QPainter &p, double s) {

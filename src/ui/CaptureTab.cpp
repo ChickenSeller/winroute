@@ -1,0 +1,488 @@
+#include "CaptureTab.h"
+#include "CaptureModel.h"
+#include "Icons.h"
+
+#include "core/Capture.h"
+#include "core/HttpParse.h"
+#include "core/Utils.h"
+
+#include <QCheckBox>
+#include <QComboBox>
+#include <QDateTime>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QFileDialog>
+#include <QFont>
+#include <QFontDatabase>
+#include <QFormLayout>
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QLabel>
+#include <QLineEdit>
+#include <QMessageBox>
+#include <QTableWidget>
+#include <QPlainTextEdit>
+#include <QPushButton>
+#include <QSaveFile>
+#include <QSettings>
+#include <QSplitter>
+#include <QTableView>
+#include <QTimer>
+#include <QToolButton>
+#include <QVBoxLayout>
+
+namespace {
+
+// True when the bytes are mostly printable text (so they are worth showing as
+// text rather than a hex dump).
+bool looksTextual(const QByteArray &b)
+{
+    if (b.isEmpty())
+        return true;
+    int printable = 0;
+    const int n = qMin(b.size(), 4096);
+    for (int i = 0; i < n; ++i) {
+        const unsigned char c = b[i];
+        if (c == '\t' || c == '\r' || c == '\n' || (c >= 0x20 && c < 0x7f) || c >= 0x80)
+            ++printable;
+    }
+    return printable >= n * 9 / 10;
+}
+
+QString headersText(const HttpMessage &m)
+{
+    QString out;
+    for (const HttpHeader &h : m.headers)
+        out += h.name + ": " + h.value + "\n";
+    return out;
+}
+
+QString bodyText(const HttpMessage &m)
+{
+    if (m.body.isEmpty())
+        return QString();
+    if (looksTextual(m.body))
+        return "\n" + QString::fromUtf8(m.body) + "\n";
+    return QCoreApplication::translate("CaptureTab", "\n[%1 bytes of binary body]\n").arg(m.body.size());
+}
+
+QString hexDump(const QByteArray &data)
+{
+    QString out;
+    const int limit = qMin(data.size(), 256 * 1024);
+    for (int off = 0; off < limit; off += 16) {
+        QString hex, asc;
+        for (int i = 0; i < 16; ++i) {
+            if (off + i < limit) {
+                const unsigned char c = data[off + i];
+                hex += QString("%1 ").arg(c, 2, 16, QChar('0'));
+                asc += (c >= 0x20 && c < 0x7f) ? QChar(c) : QChar('.');
+            } else {
+                hex += "   ";
+            }
+        }
+        out += QString("%1  %2 %3\n").arg(off, 8, 16, QChar('0')).arg(hex, asc);
+    }
+    if (data.size() > limit)
+        out += QCoreApplication::translate("CaptureTab", "... (%1 more bytes)\n").arg(data.size() - limit);
+    return out;
+}
+
+// Edits one capture rule (enabled + the three match fields) in a small dialog.
+// Returns true when accepted.
+bool editCaptureRule(QWidget *parent, CaptureRule *rule)
+{
+    QDialog dlg(parent);
+    dlg.setWindowTitle(QCoreApplication::translate("CaptureTab", "Capture Rule"));
+    auto *lay = new QVBoxLayout(&dlg);
+
+    auto *enabled = new QCheckBox(QCoreApplication::translate("CaptureTab", "Enabled"));
+    enabled->setChecked(rule->enabled);
+    lay->addWidget(enabled);
+
+    auto *form = new QFormLayout;
+    auto *apps = new QLineEdit(rule->applications);
+    apps->setPlaceholderText(QStringLiteral("chrome.exe; firefox.exe"));
+    auto *targets = new QLineEdit(rule->targets);
+    targets->setPlaceholderText(QStringLiteral("*.example.com; 10.0.0.0-10.255.255.255"));
+    auto *ports = new QLineEdit(rule->ports);
+    ports->setPlaceholderText(QStringLiteral("80; 443; 8000-9000"));
+    form->addRow(QCoreApplication::translate("CaptureTab", "Applications:"), apps);
+    form->addRow(QCoreApplication::translate("CaptureTab", "Target hosts:"), targets);
+    form->addRow(QCoreApplication::translate("CaptureTab", "Ports:"), ports);
+    lay->addLayout(form);
+
+    auto *note = new QLabel(QCoreApplication::translate(
+        "CaptureTab", "The rule matches when every field you fill in matches; leave a field blank to "
+                      "ignore it. Uses the same syntax as rules."));
+    note->setWordWrap(true);
+    note->setEnabled(false);
+    lay->addWidget(note);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    lay->addWidget(buttons);
+    apps->setMinimumWidth(320);
+
+    if (dlg.exec() != QDialog::Accepted)
+        return false;
+    rule->enabled = enabled->isChecked();
+    rule->applications = apps->text().trimmed();
+    rule->targets = targets->text().trimmed();
+    rule->ports = ports->text().trimmed();
+    return true;
+}
+
+} // namespace
+
+CaptureTab::CaptureTab(Capture *capture, QWidget *parent)
+    : QWidget(parent), m_capture(capture)
+{
+    auto *root = new QVBoxLayout(this);
+    root->setContentsMargins(6, 6, 6, 6);
+
+    // Toolbar row.
+    auto *bar = new QHBoxLayout;
+    m_toggle = new QToolButton;
+    m_toggle->setCheckable(true);
+    m_toggle->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    connect(m_toggle, &QToolButton::toggled, this, &CaptureTab::onToggled);
+    auto *clearBtn = new QPushButton(tr("Clear"));
+    connect(clearBtn, &QPushButton::clicked, this, &CaptureTab::onClear);
+    auto *exportBtn = new QPushButton(tr("Export..."));
+    connect(exportBtn, &QPushButton::clicked, this, &CaptureTab::onExport);
+    auto *filterBtn = new QPushButton(tr("Filter..."));
+    connect(filterBtn, &QPushButton::clicked, this, &CaptureTab::onFilter);
+    bar->addWidget(m_toggle);
+    bar->addWidget(clearBtn);
+    bar->addWidget(exportBtn);
+    bar->addWidget(filterBtn);
+    bar->addStretch();
+    root->addLayout(bar);
+
+    // List + detail.
+    auto *split = new QSplitter(Qt::Horizontal);
+    m_model = new CaptureModel(m_capture, this);
+    m_view = new QTableView;
+    m_view->setModel(m_model);
+    m_view->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    m_view->verticalHeader()->setVisible(false);
+    m_view->horizontalHeader()->setStretchLastSection(true);
+    m_view->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_view->setColumnWidth(CaptureModel::ColApp, 160);
+    m_view->setColumnWidth(CaptureModel::ColTarget, 240);
+    m_view->setColumnWidth(CaptureModel::ColProto, 80);
+    connect(m_view->selectionModel(), &QItemSelectionModel::selectionChanged, this, &CaptureTab::onSelectionChanged);
+    split->addWidget(m_view);
+
+    m_detail = new QPlainTextEdit;
+    m_detail->setReadOnly(true);
+    m_detail->setLineWrapMode(QPlainTextEdit::NoWrap);
+    m_detail->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    split->addWidget(m_detail);
+    split->setStretchFactor(0, 3);
+    split->setStretchFactor(1, 2);
+    root->addWidget(split, 1);
+
+    // Restore the persisted toggle before the engine starts catching traffic.
+    // Done with signals blocked so the one-time warning never fires at startup.
+    const bool on = util::appSettings().value("capture/enabled", false).toBool();
+    m_toggle->blockSignals(true);
+    m_toggle->setChecked(on);
+    m_toggle->blockSignals(false);
+    m_capture->setEnabled(on);
+    m_toggle->setIcon(on ? icons::pause() : icons::play());
+    m_toggle->setText(on ? tr("Pause") : tr("Start"));
+    loadFilter();
+
+    m_timer = new QTimer(this);
+    m_timer->setInterval(1000);
+    connect(m_timer, &QTimer::timeout, this, &CaptureTab::refresh);
+    m_timer->start();
+    connect(m_capture, &Capture::changed, this, &CaptureTab::refresh);
+    refresh();
+}
+
+void CaptureTab::refresh()
+{
+    m_model->refresh();
+    // Keep the selection pinned to the same connection across refreshes.
+    if (m_selectedId) {
+        const int row = m_model->rowOfId(m_selectedId);
+        if (row >= 0 && !m_view->selectionModel()->isRowSelected(row, {}))
+            m_view->selectRow(row);
+    }
+}
+
+void CaptureTab::onSelectionChanged()
+{
+    const QModelIndexList sel = m_view->selectionModel()->selectedRows();
+    m_selectedId = sel.isEmpty() ? 0 : m_model->idAt(sel.first().row());
+    renderDetail(m_selectedId);
+}
+
+void CaptureTab::renderDetail(quint64 id)
+{
+    if (!id || !m_capture->hasEntry(id)) {
+        m_detail->clear();
+        return;
+    }
+    const CaptureEntry e = m_capture->entry(id);
+    QString out;
+    out += tr("%1  %2  (%3 sent, %4 received)%5\n")
+               .arg(e.meta.appName, e.meta.target, util::formatBytes(e.up), util::formatBytes(e.down),
+                    e.decrypted ? tr("  [decrypted]") : QString());
+    out += QString(60, '-') + "\n\n";
+
+    const QList<HttpExchange> xs = parseHttp(e);
+    if (!xs.isEmpty()) {
+        for (const HttpExchange &ex : xs) {
+            if (ex.request.valid) {
+                out += "> " + ex.request.method + " " + ex.request.uri + " " + ex.request.version + "\n";
+                out += headersText(ex.request);
+                out += bodyText(ex.request);
+                out += "\n";
+            }
+            if (ex.response.valid) {
+                out += "< " + ex.response.version + " " + QString::number(ex.response.statusCode) + " "
+                       + ex.response.reason + "\n";
+                out += headersText(ex.response);
+                out += bodyText(ex.response);
+            }
+            out += "\n" + QString(60, '-') + "\n\n";
+        }
+    } else {
+        // Non-HTTP: a hex dump of each run, marked by direction.
+        CaptureDir last = CaptureDir::Up;
+        bool first = true;
+        QByteArray run;
+        auto flush = [&] {
+            if (!run.isEmpty()) {
+                out += (last == CaptureDir::Up ? tr("--> client to server\n") : tr("<-- server to client\n"));
+                out += hexDump(run);
+                out += "\n";
+                run.clear();
+            }
+        };
+        for (const CaptureSegment &seg : e.segs) {
+            if (!first && seg.dir != last)
+                flush();
+            last = seg.dir;
+            first = false;
+            run.append(seg.data);
+        }
+        flush();
+    }
+    m_detail->setPlainText(out);
+}
+
+void CaptureTab::onToggled(bool on)
+{
+    if (on) {
+        // Warn about captured plaintext once, the first time capture is started.
+        QSettings s = util::appSettings();
+        if (!s.value("capture/warned", false).toBool()) {
+            QMessageBox::information(
+                this, tr("Packet Capture"),
+                tr("Capturing records the traffic going through WinRoute, and with HTTPS decryption on it "
+                   "can include plaintext such as passwords. It all stays on this computer; take care when "
+                   "exporting or sharing a capture."));
+            s.setValue("capture/warned", true);
+        }
+    }
+    m_capture->setEnabled(on);
+    util::appSettings().setValue("capture/enabled", on);
+    m_toggle->setIcon(on ? icons::pause() : icons::play());
+    m_toggle->setText(on ? tr("Pause") : tr("Start"));
+}
+
+void CaptureTab::onClear()
+{
+    m_capture->clear();
+    m_selectedId = 0;
+    m_detail->clear();
+    refresh();
+}
+
+void CaptureTab::onExport()
+{
+    if (m_capture->count() == 0) {
+        QMessageBox::information(this, tr("Export Capture"), tr("There is nothing captured to export."));
+        return;
+    }
+
+    const QString stamp = QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss");
+    QString selected;
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Export Capture"), QStringLiteral("winroute-capture-%1").arg(stamp),
+        tr("PCAPNG, for Wireshark (*.pcapng);;HAR, HTTP exchanges (*.har)"), &selected);
+    if (path.isEmpty())
+        return;
+
+    // Export the selected connections, or all of them when none is selected.
+    QList<CaptureEntry> entries;
+    const QModelIndexList sel = m_view->selectionModel()->selectedRows();
+    if (!sel.isEmpty()) {
+        for (const QModelIndex &idx : sel)
+            if (const quint64 id = m_model->idAt(idx.row()))
+                entries.append(m_capture->entry(id));
+    } else {
+        for (const CaptureSummary &s : m_capture->summaries())
+            entries.append(m_capture->entry(s.meta.id));
+    }
+
+    const bool har = selected.contains("HAR") || path.endsWith(".har", Qt::CaseInsensitive);
+    const QByteArray data = har ? Capture::toHar(entries) : Capture::toPcapng(entries);
+
+    QSaveFile f(path);
+    if (!f.open(QIODevice::WriteOnly) || f.write(data) != data.size() || !f.commit()) {
+        QMessageBox::warning(this, tr("Export Capture"), tr("Could not write the file:\n%1").arg(f.errorString()));
+        return;
+    }
+}
+
+void CaptureTab::loadFilter()
+{
+    QSettings s = util::appSettings();
+    CaptureFilter f;
+    f.mode = CaptureFilter::Mode(s.value("capture/filterMode", int(CaptureFilter::All)).toInt());
+    const int n = s.beginReadArray("capture/rules");
+    for (int i = 0; i < n; ++i) {
+        s.setArrayIndex(i);
+        CaptureRule r;
+        r.enabled = s.value("enabled", true).toBool();
+        r.applications = s.value("apps").toString();
+        r.targets = s.value("targets").toString();
+        r.ports = s.value("ports").toString();
+        f.rules.append(r);
+    }
+    s.endArray();
+    m_capture->setFilter(f);
+}
+
+void CaptureTab::onFilter()
+{
+    CaptureFilter f = m_capture->filter();
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Capture Filter"));
+    dlg.resize(560, 360);
+    auto *lay = new QVBoxLayout(&dlg);
+
+    auto *modeRow = new QHBoxLayout;
+    modeRow->addWidget(new QLabel(tr("Capture:")));
+    auto *modeBox = new QComboBox;
+    modeBox->addItem(tr("Everything"), int(CaptureFilter::All));
+    modeBox->addItem(tr("Only connections matching a rule (whitelist)"), int(CaptureFilter::Only));
+    modeBox->addItem(tr("All except connections matching a rule (blacklist)"), int(CaptureFilter::Except));
+    modeBox->setCurrentIndex(modeBox->findData(int(f.mode)));
+    modeRow->addWidget(modeBox, 1);
+    lay->addLayout(modeRow);
+
+    // The rule table + its buttons.
+    auto *table = new QTableWidget(0, 4);
+    table->setHorizontalHeaderLabels({tr("On"), tr("Applications"), tr("Target hosts"), tr("Ports")});
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table->setSelectionMode(QAbstractItemView::SingleSelection);
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->verticalHeader()->setVisible(false);
+    table->horizontalHeader()->setStretchLastSection(true);
+    table->setColumnWidth(0, 36);
+    table->setColumnWidth(1, 170);
+    table->setColumnWidth(2, 200);
+
+    auto fill = [&] {
+        table->setRowCount(f.rules.size());
+        for (int i = 0; i < f.rules.size(); ++i) {
+            const CaptureRule &r = f.rules[i];
+            auto set = [&](int col, const QString &text) {
+                auto *it = new QTableWidgetItem(text);
+                it->setFlags(it->flags() & ~Qt::ItemIsEditable);
+                table->setItem(i, col, it);
+            };
+            set(0, r.enabled ? QStringLiteral("✓") : QString());
+            set(1, r.applications);
+            set(2, r.targets);
+            set(3, r.ports);
+        }
+    };
+    fill();
+
+    auto *tableRow = new QHBoxLayout;
+    tableRow->addWidget(table, 1);
+    auto *btnCol = new QVBoxLayout;
+    auto *addBtn = new QPushButton(tr("Add..."));
+    auto *editBtn = new QPushButton(tr("Edit..."));
+    auto *removeBtn = new QPushButton(tr("Remove"));
+    btnCol->addWidget(addBtn);
+    btnCol->addWidget(editBtn);
+    btnCol->addWidget(removeBtn);
+    btnCol->addStretch();
+    tableRow->addLayout(btnCol);
+    lay->addLayout(tableRow);
+
+    auto editRow = [&](int row) {
+        if (row < 0 || row >= f.rules.size())
+            return;
+        CaptureRule r = f.rules[row];
+        if (editCaptureRule(&dlg, &r)) {
+            f.rules[row] = r;
+            fill();
+            table->selectRow(row);
+        }
+    };
+    QObject::connect(addBtn, &QPushButton::clicked, &dlg, [&] {
+        CaptureRule r;
+        if (editCaptureRule(&dlg, &r)) {
+            f.rules.append(r);
+            fill();
+            table->selectRow(f.rules.size() - 1);
+        }
+    });
+    QObject::connect(editBtn, &QPushButton::clicked, &dlg, [&] { editRow(table->currentRow()); });
+    QObject::connect(table, &QTableWidget::doubleClicked, &dlg,
+                     [&](const QModelIndex &idx) { editRow(idx.row()); });
+    QObject::connect(removeBtn, &QPushButton::clicked, &dlg, [&] {
+        const int row = table->currentRow();
+        if (row >= 0 && row < f.rules.size()) {
+            f.rules.removeAt(row);
+            fill();
+        }
+    });
+
+    // The rule table is only relevant for the whitelist/blacklist modes.
+    auto modeChanged = [&] {
+        const bool on = modeBox->currentData().toInt() != int(CaptureFilter::All);
+        table->setEnabled(on);
+        addBtn->setEnabled(on);
+        editBtn->setEnabled(on);
+        removeBtn->setEnabled(on);
+    };
+    modeChanged();
+    QObject::connect(modeBox, &QComboBox::currentIndexChanged, &dlg, [&] { modeChanged(); });
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    lay->addWidget(buttons);
+
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+
+    f.mode = CaptureFilter::Mode(modeBox->currentData().toInt());
+    m_capture->setFilter(f);
+
+    QSettings s = util::appSettings();
+    s.setValue("capture/filterMode", int(f.mode));
+    s.beginWriteArray("capture/rules", f.rules.size());
+    for (int i = 0; i < f.rules.size(); ++i) {
+        s.setArrayIndex(i);
+        s.setValue("enabled", f.rules[i].enabled);
+        s.setValue("apps", f.rules[i].applications);
+        s.setValue("targets", f.rules[i].targets);
+        s.setValue("ports", f.rules[i].ports);
+    }
+    s.endArray();
+}

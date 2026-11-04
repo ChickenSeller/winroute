@@ -1,6 +1,206 @@
 <?xml version='1.0' encoding='utf-8'?>
 <TS version="2.1" language="ja">
   <context>
+    <name>CaptureModel</name>
+    <message>
+      <source>Truncated</source>
+      <translation>切り詰め</translation>
+    </message>
+    <message>
+      <source>Open</source>
+      <translation>通信中</translation>
+    </message>
+    <message>
+      <source>Closed</source>
+      <translation>切断済み</translation>
+    </message>
+    <message>
+      <source>Application</source>
+      <translation>アプリケーション</translation>
+    </message>
+    <message>
+      <source>Target</source>
+      <translation>接続先</translation>
+    </message>
+    <message>
+      <source>Protocol</source>
+      <translation>プロトコル</translation>
+    </message>
+    <message>
+      <source>Sent</source>
+      <translation>送信</translation>
+    </message>
+    <message>
+      <source>Received</source>
+      <translation>受信</translation>
+    </message>
+    <message>
+      <source>Time</source>
+      <translation>時刻</translation>
+    </message>
+    <message>
+      <source>Status</source>
+      <translation>状態</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaptureTab</name>
+    <message>
+      <source>
+[%1 bytes of binary body]
+</source>
+      <translation>
+[%1 バイトのバイナリ本文]
+</translation>
+    </message>
+    <message>
+      <source>... (%1 more bytes)
+</source>
+      <translation>... (さらに %1 バイト)
+</translation>
+    </message>
+    <message>
+      <source>Capture Rule</source>
+      <translation>キャプチャルール</translation>
+    </message>
+    <message>
+      <source>Enabled</source>
+      <translation>有効</translation>
+    </message>
+    <message>
+      <source>The rule matches when every field you fill in matches; leave a field blank to ignore it. Uses the same syntax as rules.</source>
+      <translation>入力した各フィールドがすべて一致したとき、ルールが命中とみなされます。空欄のフィールドは条件にしません。ルールと同じ書式です。</translation>
+    </message>
+    <message>
+      <source>Clear</source>
+      <translation>クリア</translation>
+    </message>
+    <message>
+      <source>Export...</source>
+      <translation>エクスポート...</translation>
+    </message>
+    <message>
+      <source>Filter...</source>
+      <translation>フィルター...</translation>
+    </message>
+    <message>
+      <source>Pause</source>
+      <translation>一時停止</translation>
+    </message>
+    <message>
+      <source>Start</source>
+      <translation>開始</translation>
+    </message>
+    <message>
+      <source>%1  %2  (%3 sent, %4 received)%5
+</source>
+      <translation>%1  %2  (送信 %3、受信 %4)%5
+</translation>
+    </message>
+    <message>
+      <source>  [decrypted]</source>
+      <translation>  [復号済み]</translation>
+    </message>
+    <message>
+      <source>--&gt; client to server
+</source>
+      <translation>--&gt; クライアントからサーバーへ
+</translation>
+    </message>
+    <message>
+      <source>&lt;-- server to client
+</source>
+      <translation>&lt;-- サーバーからクライアントへ
+</translation>
+    </message>
+    <message>
+      <source>Packet Capture</source>
+      <translation>パケットキャプチャ</translation>
+    </message>
+    <message>
+      <source>Capturing records the traffic going through WinRoute, and with HTTPS decryption on it can include plaintext such as passwords. It all stays on this computer; take care when exporting or sharing a capture.</source>
+      <translation>キャプチャは WinRoute を通る通信を記録し、HTTPS 復号を有効にするとパスワードなどの平文を含むことがあります。すべてこの PC 内にのみ保存されます。エクスポートや共有の際はご注意ください。</translation>
+    </message>
+    <message>
+      <source>Export Capture</source>
+      <translation>キャプチャのエクスポート</translation>
+    </message>
+    <message>
+      <source>There is nothing captured to export.</source>
+      <translation>エクスポートできるキャプチャがありません。</translation>
+    </message>
+    <message>
+      <source>PCAPNG, for Wireshark (*.pcapng);;HAR, HTTP exchanges (*.har)</source>
+      <translation>PCAPNG、Wireshark 用 (*.pcapng);;HAR、HTTP のやり取り (*.har)</translation>
+    </message>
+    <message>
+      <source>Could not write the file:
+%1</source>
+      <translation>ファイルを書き込めませんでした：
+%1</translation>
+    </message>
+    <message>
+      <source>Capture Filter</source>
+      <translation>キャプチャフィルター</translation>
+    </message>
+    <message>
+      <source>Capture:</source>
+      <translation>キャプチャ:</translation>
+    </message>
+    <message>
+      <source>Everything</source>
+      <translation>すべて</translation>
+    </message>
+    <message>
+      <source>Only connections matching a rule (whitelist)</source>
+      <translation>ルールに一致する接続のみ(ホワイトリスト)</translation>
+    </message>
+    <message>
+      <source>All except connections matching a rule (blacklist)</source>
+      <translation>ルールに一致する接続以外すべて(ブラックリスト)</translation>
+    </message>
+    <message>
+      <source>On</source>
+      <translation>有効</translation>
+    </message>
+    <message>
+      <source>Applications</source>
+      <translation>アプリケーション</translation>
+    </message>
+    <message>
+      <source>Target hosts</source>
+      <translation>接続先ホスト</translation>
+    </message>
+    <message>
+      <source>Ports</source>
+      <translation>ポート</translation>
+    </message>
+    <message>
+      <source>Add...</source>
+      <translation>追加...</translation>
+    </message>
+    <message>
+      <source>Edit...</source>
+      <translation>編集...</translation>
+    </message>
+    <message>
+      <source>Remove</source>
+      <translation>削除</translation>
+    </message>
+    <message>
+      <source>Applications:</source>
+      <translation>アプリケーション:</translation>
+    </message>
+    <message>
+      <source>Target hosts:</source>
+      <translation>接続先ホスト:</translation>
+    </message>
+    <message>
+      <source>Ports:</source>
+      <translation>ポート:</translation>
+    </message>
+  </context>
+  <context>
     <name>ChainTypeDialog</name>
     <message>
       <source>Chain Type</source>
@@ -718,6 +918,14 @@
       <translation>プロキシサーバーをテストします</translation>
     </message>
     <message>
+      <source>Packet &amp;Capture</source>
+      <translation>パケットキャプチャ(&amp;C)</translation>
+    </message>
+    <message>
+      <source>Capture and inspect the traffic going through WinRoute</source>
+      <translation>WinRoute を通る通信をキャプチャして確認します</translation>
+    </message>
+    <message>
       <source>&amp;Network Driver...</source>
       <translation>ネットワークドライバー(&amp;N)...</translation>
     </message>
@@ -898,6 +1106,14 @@
       <translation>プロキシサーバーに接続できるか、応答がどれくらい速いかをテストします。</translation>
     </message>
     <message>
+      <source>Packet Capture</source>
+      <translation>パケットキャプチャ</translation>
+    </message>
+    <message>
+      <source>Capture the traffic going through WinRoute and inspect it, with optional HTTPS decryption.</source>
+      <translation>WinRoute を通る通信をキャプチャして確認します。HTTPS の復号も選べます。</translation>
+    </message>
+    <message>
       <source>Proxy Gateway</source>
       <translation>プロキシゲートウェイ</translation>
     </message>
@@ -920,6 +1136,10 @@
     <message>
       <source>Statistics</source>
       <translation>統計</translation>
+    </message>
+    <message>
+      <source>Capture</source>
+      <translation>キャプチャ</translation>
     </message>
     <message>
       <source>0 active connections</source>

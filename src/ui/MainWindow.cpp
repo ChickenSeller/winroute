@@ -2,6 +2,7 @@
 #include "ui_MainWindow.h"
 
 #include "AdvancedDialogs.h"
+#include "CaptureTab.h"
 #include "ConnectionsModel.h"
 #include "Icons.h"
 #include "Language.h"
@@ -217,6 +218,8 @@ void MainWindow::createActions()
 
     m_actChecker = act(tr("Proxy &Checker..."), &MainWindow::showProxyChecker, {}, icons::checker());
     m_actChecker->setStatusTip(tr("Test proxy servers"));
+    m_actCapture = act(tr("Packet &Capture"), &MainWindow::showCapture, {}, icons::capture());
+    m_actCapture->setStatusTip(tr("Capture and inspect the traffic going through WinRoute"));
     m_actDriver = act(tr("&Network Driver..."), [this] {
         DriverDialog dlg(m_engine, this);
         connect(&dlg, &DriverDialog::log, this, [this](const QString &m) { logNormal(m); });
@@ -343,6 +346,7 @@ void MainWindow::createMenus()
 
     QMenu *tools = menuBar()->addMenu(tr("&Tools"));
     tools->addAction(m_actChecker);
+    tools->addAction(m_actCapture);
     tools->addAction(m_actDriver);
 
     QMenu *help = menuBar()->addMenu(tr("&Help"));
@@ -389,6 +393,9 @@ void MainWindow::createToolBar()
     dns->setToolTip(tr("Choose how host names are resolved: locally or through the proxy."));
     auto *checker = new QAction(icons::checker(), tr("Proxy Checker"), this);
     checker->setToolTip(tr("Test whether proxy servers are reachable and how fast they respond."));
+    auto *capture = new QAction(icons::capture(), tr("Packet Capture"), this);
+    capture->setToolTip(tr("Capture the traffic going through WinRoute and inspect it, with optional HTTPS decryption."));
+    connect(capture, &QAction::triggered, this, &MainWindow::showCapture);
     auto *proxyServer = new QAction(icons::proxyService(), tr("Proxy Gateway"), this);
     proxyServer->setToolTip(tr("Let other machines use this computer as an HTTP/HTTPS or SOCKS5 proxy to reach the network."));
     proxyServer->setStatusTip(tr("Let other machines reach the network through this one"));
@@ -407,6 +414,7 @@ void MainWindow::createToolBar()
     m_toolBar->addAction(m_actEndProcess);
     m_toolBar->addSeparator();
     m_toolBar->addAction(checker);
+    m_toolBar->addAction(capture);
     connect(m_actToolbar, &QAction::toggled, m_toolBar, &QToolBar::setVisible);
 }
 
@@ -453,6 +461,8 @@ void MainWindow::createCentral()
     m_tabs->addTab(m_traffic, tr("Traffic"));
     m_stats = new StatisticsWidget([this](const QString &path) { return m_connModel->appIcon(path); });
     m_tabs->addTab(m_stats, tr("Statistics"));
+    m_captureTab = new CaptureTab(m_engine->capture(), this);
+    m_tabs->addTab(m_captureTab, tr("Capture"));
 
     m_log = ui->logEdit;
     m_log->setMaximumBlockCount(10000);
@@ -953,6 +963,12 @@ void MainWindow::showEncryption()
         p.options.encryption = dlg.mode();
         applyProfile(p);
     }
+}
+
+void MainWindow::showCapture()
+{
+    if (m_captureTab)
+        m_tabs->setCurrentWidget(m_captureTab);
 }
 
 void MainWindow::showProxyChecker()

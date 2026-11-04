@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Capture.h"
 #include "FakeDns.h"
 #include "FlowTable.h"
 #include "Interceptor.h"
@@ -41,12 +42,16 @@ public:
     ProxyGateway *gateway() const { return m_gateway; }
 
     Relay *relay() const { return m_relay; }
+
+    // Optional packet capture (off by default). Lives here, fed by the relay.
+    Capture *capture() { return &m_capture; }
     void closeConnection(quint64 id) { m_relay->closeConnection(id); }
     void resetProxyFailures() { m_relay->resetProxyFailures(); }
     void setLocalDnsAvailable(bool available) { m_interceptor->setLocalDnsAvailable(available); }
 
 private:
     FlowTable m_flows;
+    Capture m_capture;
     FakeDns m_fakeDns;
     DnsCache m_dnsCache;
     QThread m_relayThread;

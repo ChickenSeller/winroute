@@ -1,4 +1,5 @@
 #include "Relay.h"
+#include "Capture.h"
 #include "DnsClient.h"
 #include "Logger.h"
 #include "UdpRelaySession.h"
@@ -138,6 +139,7 @@ public:
         ev.startMs = m_start;
         emit m_relay->opened(ev);
         m_announced = true;
+        noteCapture();
         logVerbose(QCoreApplication::translate("Relay", "%1 - %2 matching %3 rule : using %4").arg(m_info.appName, m_targetText, m_info.match.ruleName,
                                                                        action.type == ActionType::Direct ? QCoreApplication::translate("Relay", "direct connection") : m_actionText));
         nextAttempt();
@@ -207,6 +209,8 @@ private:
         if (!leftover.isEmpty() && m_client) {
             m_client->write(leftover);
             m_received += leftover.size();
+            if (m_relay->m_capture && m_relay->m_capture->isEnabled())
+                m_relay->m_capture->append(m_id, CaptureDir::Down, leftover, QDateTime::currentMSecsSinceEpoch());
         }
         pump(m_client, m_upstream, &m_sent);
         pump(m_upstream, m_client, &m_received);
@@ -224,7 +228,38 @@ private:
                 break;
             to->write(chunk);
             *counter += chunk.size();
+            if (m_relay->m_capture && m_relay->m_capture->isEnabled())
+                m_relay->m_capture->append(m_id, from == m_client ? CaptureDir::Up : CaptureDir::Down,
+                                           chunk, QDateTime::currentMSecsSinceEpoch());
         }
+    }
+
+    // Registers this connection with the capture store (no-op unless capture is
+    // on). Called once, right after the "opened" event.
+    void noteCapture()
+    {
+        Capture *cap = m_relay->m_capture;
+        if (!cap || !cap->isEnabled())
+            return;
+        const QHostAddress dip = m_info.fakeIp ? QHostAddress() : m_info.dstAddr;
+        if (!cap->shouldCapture(m_info.appName, m_info.appPath, m_info.hostname, dip, m_info.dstPort))
+            return;
+        CaptureMeta cm;
+        cm.id = m_id;
+        cm.pid = m_info.pid;
+        cm.appName = m_info.appName;
+        cm.appPath = m_info.appPath;
+        cm.target = m_targetText;
+        cm.ruleName = m_info.match.ruleName;
+        cm.actionText = m_actionText;
+        cm.srcAddr = m_info.srcAddr;
+        cm.srcPort = m_info.srcPort;
+        cm.dstAddr = m_info.dstAddr;   // may be a fake-DNS IP; named via NRB on export
+        cm.dstPort = m_info.dstPort;
+        cm.hostname = m_info.hostname;
+        cm.v6 = m_info.srcAddr.protocol() == QAbstractSocket::IPv6Protocol;
+        cm.startMs = m_start;
+        cap->note(cm);
     }
 
     // Qt sockets cannot half-close, so when one side finishes we flush what is
@@ -292,6 +327,8 @@ private:
             logVerbose(QCoreApplication::translate("Relay", "%1 - %2 closed by the application before the connection was established")
                            .arg(m_info.appName, m_targetText));
         }
+        if (m_relay->m_capture)
+            m_relay->m_capture->finish(m_id, QDateTime::currentMSecsSinceEpoch());
         m_relay->sessionFinished(m_id);
         emit m_relay->closed(m_id, m_sent, m_received);
         deleteLater();

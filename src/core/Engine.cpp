@@ -83,8 +83,10 @@ bool Engine::start(QString *error)
         return true;
     bool listening = false;
     QString err;
-    QMetaObject::invokeMethod(m_relay, [&] { listening = m_relay->port() != 0 || m_relay->listen(&err); },
-                              Qt::BlockingQueuedConnection);
+    QMetaObject::invokeMethod(m_relay, [&] {
+        m_relay->setCapture(&m_capture);
+        listening = m_relay->port() != 0 || m_relay->listen(&err);
+    }, Qt::BlockingQueuedConnection);
     if (!listening) {
         *error = err;
         return false;

@@ -23,6 +23,7 @@ class QSortFilterProxyModel;
 class QTabWidget;
 class QToolButton;
 class QTreeView;
+class CaptureTab;
 class ConnectionsModel;
 class DnsClient;
 class StatisticsWidget;
@@ -76,6 +77,7 @@ private:
     void showEncryption();
     void showProxyChecker();
     void showProxyServerSettings();
+    void showCapture();
     void showAbout();
 
     // connections
@@ -124,6 +126,7 @@ private:
     QSortFilterProxyModel *m_connSort = nullptr;
     TrafficWidget *m_traffic = nullptr;
     StatisticsWidget *m_stats = nullptr;
+    CaptureTab *m_captureTab = nullptr;
     QPlainTextEdit *m_log = nullptr;
     QLabel *m_statusState = nullptr;
     QLabel *m_statusConns = nullptr;
@@ -143,7 +146,7 @@ private:
     QAction *m_actDisconnect, *m_actEndProcess, *m_actCreateRule, *m_actCopyConn;
     QAction *m_actLogCopy, *m_actLogSelectAll, *m_actLogClear;
     QAction *m_actTrayIcon, *m_actToolbar, *m_actStatusBar;
-    QAction *m_actChecker, *m_actDriver, *m_actAbout, *m_actCheckUpdates, *m_actCheckUpdatesProxy;
+    QAction *m_actChecker, *m_actDriver, *m_actCapture, *m_actAbout, *m_actCheckUpdates, *m_actCheckUpdatesProxy;
     Updater *m_updater = nullptr;
     QActionGroup *m_logLevelGroup = nullptr;
     QActionGroup *m_logFileGroup = nullptr;

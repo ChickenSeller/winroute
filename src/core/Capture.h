@@ -1,0 +1,136 @@
+#pragma once
+
+#include <QByteArray>
+#include <QHash>
+#include <QHostAddress>
+#include <QList>
+#include <QMutex>
+#include <QObject>
+#include <QString>
+
+#include <atomic>
+
+// Optional packet capture for connections that go through the local relay.
+// Off by default; when on, the relay feeds every byte of each connection's
+// application-level stream here (plaintext once Phase 2 MITM decrypts TLS).
+// Everything stays on this machine: nothing is reported or sent anywhere.
+
+enum class CaptureDir { Up, Down };   // Up: client -> server, Down: server -> client
+
+// One capture-filter rule. Match fields use WinRoute's rule syntax (semicolon
+// lists, wildcards, IP ranges, port ranges); an empty field does not constrain.
+// A rule matches a connection when every non-empty field matches (a rule with
+// no fields at all never matches).
+struct CaptureRule {
+    bool enabled = true;
+    QString applications;   // e.g. "chrome.exe; firefox.exe"
+    QString targets;        // e.g. "*.example.com; 10.0.0.0-10.255.255.255"
+    QString ports;          // e.g. "80; 443; 8000-9000"
+};
+
+// Which connections to capture: a list of rules plus how to apply them. A
+// connection "matches the list" when any enabled rule matches it.
+struct CaptureFilter {
+    enum Mode { All, Only, Except };   // All: everything; Only: whitelist; Except: blacklist
+    Mode mode = All;
+    QList<CaptureRule> rules;
+};
+
+// One run of bytes in one direction, with the time it was seen.
+struct CaptureSegment {
+    CaptureDir dir = CaptureDir::Up;
+    qint64 tsMs = 0;
+    QByteArray data;
+};
+
+// Everything the capture knows about one connection, minus the payload.
+struct CaptureMeta {
+    quint64 id = 0;
+    quint32 pid = 0;
+    QString appName;
+    QString appPath;
+    QString target;        // "host:port" for display
+    QString ruleName;
+    QString actionText;    // "Direct", "1.2.3.4:1080 SOCKS5", "Chain Office"
+    QHostAddress srcAddr;  // application-side endpoint (real)
+    quint16 srcPort = 0;
+    QHostAddress dstAddr;  // original destination (may be empty for a fake-DNS IP)
+    quint16 dstPort = 0;
+    QString hostname;      // target host name when known
+    bool v6 = false;
+    qint64 startMs = 0;
+};
+
+struct CaptureEntry {
+    CaptureMeta meta;
+    QList<CaptureSegment> segs;
+    qint64 up = 0;         // total bytes client -> server
+    qint64 down = 0;       // total bytes server -> client
+    qint64 endMs = 0;
+    bool open = true;
+    bool truncated = false;  // hit the per-connection cap; some payload was dropped
+    bool decrypted = false;  // bytes are decrypted TLS plaintext (Phase 2)
+    QString proto;           // "HTTP", "TLS", "TCP" (guessed from the first bytes)
+};
+
+// Compact row for the list view; no payload copy.
+struct CaptureSummary {
+    CaptureMeta meta;
+    qint64 up = 0, down = 0;
+    qint64 endMs = 0;
+    bool open = true;
+    bool truncated = false;
+    bool decrypted = false;
+    QString proto;
+};
+
+class Capture : public QObject {
+    Q_OBJECT
+public:
+    explicit Capture(QObject *parent = nullptr);
+
+    // Thread-safe. Toggling off keeps what was already captured.
+    void setEnabled(bool on);
+    bool isEnabled() const;
+
+    // Per-connection and total byte caps (thread-safe). 0 = unlimited.
+    void setLimits(qint64 perConn, qint64 total);
+
+    // Which connections to capture (thread-safe).
+    void setFilter(const CaptureFilter &filter);
+    CaptureFilter filter() const;
+    // Whether a connection passes the filter. Called from the relay thread.
+    bool shouldCapture(const QString &appName, const QString &appPath, const QString &host,
+                       const QHostAddress &ip, quint16 port) const;
+
+    // Fed from the relay thread.
+    void note(const CaptureMeta &meta);
+    void append(quint64 id, CaptureDir dir, const QByteArray &bytes, qint64 tsMs, bool decrypted = false);
+    void finish(quint64 id, qint64 tsMs);
+
+    // Reads for the UI (thread-safe snapshots).
+    QList<CaptureSummary> summaries() const;
+    CaptureEntry entry(quint64 id) const;
+    bool hasEntry(quint64 id) const;
+    int count() const;
+    void clear();
+
+    // Exports. Pure functions over a copied entry, so they are easy to test.
+    static QByteArray toPcapng(const QList<CaptureEntry> &entries);
+    static QByteArray toHar(const QList<CaptureEntry> &entries);
+
+signals:
+    void changed();   // a connection was added or finished, or the store was cleared
+
+private:
+    void evictLocked();   // drop oldest entries while over the total cap
+
+    mutable QMutex m_mutex;
+    std::atomic<bool> m_enabled{false};   // read without the lock for a cheap off-path
+    qint64 m_perConn = 8LL * 1024 * 1024;
+    qint64 m_total = 256LL * 1024 * 1024;
+    qint64 m_bytes = 0;
+    QHash<quint64, CaptureEntry> m_entries;
+    QList<quint64> m_order;   // insertion order, oldest first (for eviction)
+    CaptureFilter m_filter;   // which connections to capture
+};

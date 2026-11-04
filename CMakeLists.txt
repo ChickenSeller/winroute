@@ -36,6 +36,8 @@ set(CORE_SOURCES
     src/core/ProxyConnector.h     src/core/ProxyConnector.cpp
     src/core/ProxyGateway.h       src/core/ProxyGateway.cpp
     src/core/Relay.h              src/core/Relay.cpp
+    src/core/Capture.h            src/core/Capture.cpp
+    src/core/HttpParse.h          src/core/HttpParse.cpp
     src/core/UdpRelaySession.h    src/core/UdpRelaySession.cpp
     src/core/Interceptor.h
     src/core/NetFilterApi.h       src/core/NetFilterApi.cpp
@@ -52,6 +54,8 @@ set(CORE_SOURCES
 set(UI_SOURCES
     src/ui/MainWindow.h           src/ui/MainWindow.cpp          src/ui/MainWindow.ui
     src/ui/ConnectionsModel.h     src/ui/ConnectionsModel.cpp
+    src/ui/CaptureModel.h         src/ui/CaptureModel.cpp
+    src/ui/CaptureTab.h           src/ui/CaptureTab.cpp
     src/ui/TrafficWidget.h        src/ui/TrafficWidget.cpp
     src/ui/StatisticsWidget.h     src/ui/StatisticsWidget.cpp
     src/ui/ProxyServersDialog.h   src/ui/ProxyServersDialog.cpp  src/ui/ProxyServersDialog.ui

@@ -13,6 +13,7 @@
 #include <functional>
 
 class QTcpServer;
+class Capture;
 class DnsClient;
 class RelaySession;
 class UdpRelaySession;
@@ -102,6 +103,10 @@ public:
 
     DnsClient *dns() const { return m_dns; }
 
+    // Optional packet capture. Set once from the relay thread before connections
+    // arrive; nullptr means no capture is wired. Sessions feed it in pump().
+    void setCapture(Capture *capture) { m_capture = capture; }
+
     // Redundancy chains remember failed proxies until the recheck time.
     bool proxyFailed(int proxyId) const;
     void markProxyFailed(int proxyId, int recheckSec);
@@ -122,6 +127,7 @@ private:
     void emitTraffic();
 
     FlowTable *m_flows;
+    Capture *m_capture = nullptr;
     QTcpServer *m_server4 = nullptr;
     QTcpServer *m_server6 = nullptr;
     DnsClient *m_dns = nullptr;

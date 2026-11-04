@@ -1,6 +1,206 @@
 <?xml version='1.0' encoding='utf-8'?>
 <TS version="2.1" language="zh_CN">
   <context>
+    <name>CaptureModel</name>
+    <message>
+      <source>Truncated</source>
+      <translation>已截断</translation>
+    </message>
+    <message>
+      <source>Open</source>
+      <translation>进行中</translation>
+    </message>
+    <message>
+      <source>Closed</source>
+      <translation>已关闭</translation>
+    </message>
+    <message>
+      <source>Application</source>
+      <translation>应用程序</translation>
+    </message>
+    <message>
+      <source>Target</source>
+      <translation>目标</translation>
+    </message>
+    <message>
+      <source>Protocol</source>
+      <translation>协议</translation>
+    </message>
+    <message>
+      <source>Sent</source>
+      <translation>发送</translation>
+    </message>
+    <message>
+      <source>Received</source>
+      <translation>接收</translation>
+    </message>
+    <message>
+      <source>Time</source>
+      <translation>时间</translation>
+    </message>
+    <message>
+      <source>Status</source>
+      <translation>状态</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaptureTab</name>
+    <message>
+      <source>
+[%1 bytes of binary body]
+</source>
+      <translation>
+[%1 字节二进制内容]
+</translation>
+    </message>
+    <message>
+      <source>... (%1 more bytes)
+</source>
+      <translation>... (还有 %1 字节)
+</translation>
+    </message>
+    <message>
+      <source>Capture Rule</source>
+      <translation>抓包规则</translation>
+    </message>
+    <message>
+      <source>Enabled</source>
+      <translation>启用</translation>
+    </message>
+    <message>
+      <source>The rule matches when every field you fill in matches; leave a field blank to ignore it. Uses the same syntax as rules.</source>
+      <translation>当你填写的每个字段都匹配时,该规则才算命中;留空的字段不作限制。语法与规则相同。</translation>
+    </message>
+    <message>
+      <source>Clear</source>
+      <translation>清除</translation>
+    </message>
+    <message>
+      <source>Export...</source>
+      <translation>导出...</translation>
+    </message>
+    <message>
+      <source>Filter...</source>
+      <translation>过滤...</translation>
+    </message>
+    <message>
+      <source>Pause</source>
+      <translation>暂停</translation>
+    </message>
+    <message>
+      <source>Start</source>
+      <translation>开始</translation>
+    </message>
+    <message>
+      <source>%1  %2  (%3 sent, %4 received)%5
+</source>
+      <translation>%1  %2  (发送 %3，接收 %4)%5
+</translation>
+    </message>
+    <message>
+      <source>  [decrypted]</source>
+      <translation>  [已解密]</translation>
+    </message>
+    <message>
+      <source>--&gt; client to server
+</source>
+      <translation>--&gt; 客户端到服务器
+</translation>
+    </message>
+    <message>
+      <source>&lt;-- server to client
+</source>
+      <translation>&lt;-- 服务器到客户端
+</translation>
+    </message>
+    <message>
+      <source>Packet Capture</source>
+      <translation>抓包</translation>
+    </message>
+    <message>
+      <source>Capturing records the traffic going through WinRoute, and with HTTPS decryption on it can include plaintext such as passwords. It all stays on this computer; take care when exporting or sharing a capture.</source>
+      <translation>抓包会记录经过 WinRoute 的流量，开启 HTTPS 解密后还可能包含密码等明文。所有内容只保存在本机；导出或分享抓包时请注意。</translation>
+    </message>
+    <message>
+      <source>Export Capture</source>
+      <translation>导出抓包</translation>
+    </message>
+    <message>
+      <source>There is nothing captured to export.</source>
+      <translation>没有可导出的抓包内容。</translation>
+    </message>
+    <message>
+      <source>PCAPNG, for Wireshark (*.pcapng);;HAR, HTTP exchanges (*.har)</source>
+      <translation>PCAPNG，供 Wireshark (*.pcapng);;HAR，HTTP 交互 (*.har)</translation>
+    </message>
+    <message>
+      <source>Could not write the file:
+%1</source>
+      <translation>无法写入文件：
+%1</translation>
+    </message>
+    <message>
+      <source>Capture Filter</source>
+      <translation>抓包过滤</translation>
+    </message>
+    <message>
+      <source>Capture:</source>
+      <translation>抓取:</translation>
+    </message>
+    <message>
+      <source>Everything</source>
+      <translation>全部</translation>
+    </message>
+    <message>
+      <source>Only connections matching a rule (whitelist)</source>
+      <translation>仅匹配规则的连接(白名单)</translation>
+    </message>
+    <message>
+      <source>All except connections matching a rule (blacklist)</source>
+      <translation>匹配规则之外的全部(黑名单)</translation>
+    </message>
+    <message>
+      <source>On</source>
+      <translation>启用</translation>
+    </message>
+    <message>
+      <source>Applications</source>
+      <translation>应用程序</translation>
+    </message>
+    <message>
+      <source>Target hosts</source>
+      <translation>目标主机</translation>
+    </message>
+    <message>
+      <source>Ports</source>
+      <translation>端口</translation>
+    </message>
+    <message>
+      <source>Add...</source>
+      <translation>添加...</translation>
+    </message>
+    <message>
+      <source>Edit...</source>
+      <translation>编辑...</translation>
+    </message>
+    <message>
+      <source>Remove</source>
+      <translation>删除</translation>
+    </message>
+    <message>
+      <source>Applications:</source>
+      <translation>应用程序:</translation>
+    </message>
+    <message>
+      <source>Target hosts:</source>
+      <translation>目标主机:</translation>
+    </message>
+    <message>
+      <source>Ports:</source>
+      <translation>端口:</translation>
+    </message>
+  </context>
+  <context>
     <name>ChainTypeDialog</name>
     <message>
       <source>Chain Type</source>
@@ -79,11 +279,11 @@
     </message>
     <message>
       <source>Sent</source>
-      <translation>已发送</translation>
+      <translation>发送</translation>
     </message>
     <message>
       <source>Received</source>
-      <translation>已接收</translation>
+      <translation>接收</translation>
     </message>
   </context>
   <context>
@@ -718,6 +918,14 @@
       <translation>测试代理服务器</translation>
     </message>
     <message>
+      <source>Packet &amp;Capture</source>
+      <translation>抓包(&amp;C)</translation>
+    </message>
+    <message>
+      <source>Capture and inspect the traffic going through WinRoute</source>
+      <translation>抓取并查看经过 WinRoute 的流量</translation>
+    </message>
+    <message>
       <source>&amp;Network Driver...</source>
       <translation>网络驱动(&amp;N)...</translation>
     </message>
@@ -898,6 +1106,14 @@
       <translation>测试代理服务器是否可连接、响应有多快。</translation>
     </message>
     <message>
+      <source>Packet Capture</source>
+      <translation>抓包</translation>
+    </message>
+    <message>
+      <source>Capture the traffic going through WinRoute and inspect it, with optional HTTPS decryption.</source>
+      <translation>抓取经过 WinRoute 的流量并查看，可选对 HTTPS 解密。</translation>
+    </message>
+    <message>
       <source>Proxy Gateway</source>
       <translation>代理网关</translation>
     </message>
@@ -920,6 +1136,10 @@
     <message>
       <source>Statistics</source>
       <translation>统计</translation>
+    </message>
+    <message>
+      <source>Capture</source>
+      <translation>抓包</translation>
     </message>
     <message>
       <source>0 active connections</source>
@@ -2564,11 +2784,11 @@ Use check boxes to enable/disable a rule.</source>
     </message>
     <message>
       <source>Sent</source>
-      <translation>已发送</translation>
+      <translation>发送</translation>
     </message>
     <message>
       <source>Received</source>
-      <translation>已接收</translation>
+      <translation>接收</translation>
     </message>
     <message>
       <source>Last Activity</source>

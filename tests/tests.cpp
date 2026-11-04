@@ -1,9 +1,11 @@
 // Self-contained tests for the core library: profile IO, rule matching,
 // DNS messages and the proxy protocol handshakes (against in-process proxies).
 
+#include "core/Capture.h"
 #include "core/DnsMessage.h"
 #include "core/FakeDns.h"
 #include "core/FlowTable.h"
+#include "core/HttpParse.h"
 #include "core/Profile.h"
 #include "core/ProxyConnector.h"
 #include "core/Relay.h"
@@ -14,6 +16,9 @@
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QUdpSocket>
@@ -804,6 +809,201 @@ static void testWinDivertPacket()
     CHECK(std::memcmp(uep.src, us6, 16) == 0 && std::memcmp(uep.dst, ud6, 16) == 0);
 }
 
+// ---- capture, HTTP parsing and exports -------------------------------------
+
+static CaptureSegment seg(CaptureDir dir, const char *data, qint64 ts = 0)
+{
+    return CaptureSegment{dir, ts, QByteArray(data)};
+}
+
+static void testCapture()
+{
+    // HTTP with Content-Length.
+    {
+        CaptureEntry e;
+        e.proto = "HTTP";
+        e.meta.srcAddr = QHostAddress("192.168.1.5");
+        e.meta.srcPort = 50000;
+        e.meta.dstAddr = QHostAddress("93.184.216.34");
+        e.meta.dstPort = 80;
+        e.meta.hostname = "example.com";
+        e.meta.startMs = 1700000000000LL;
+        e.segs << seg(CaptureDir::Up, "GET /x HTTP/1.1\r\nHost: example.com\r\n\r\n", 10)
+               << seg(CaptureDir::Down, "HTTP/1.1 200 OK\r\nContent-Length: 5\r\nContent-Type: text/plain\r\n\r\nhello", 20);
+
+        const QList<HttpExchange> xs = parseHttp(e);
+        CHECK(xs.size() == 1);
+        CHECK(xs[0].request.method == "GET");
+        CHECK(xs[0].request.uri == "/x");
+        CHECK(xs[0].response.statusCode == 200);
+        CHECK(xs[0].response.body == "hello");
+        CHECK(xs[0].response.complete);
+
+        // HAR round-trips through JSON with the request/response preserved.
+        const QByteArray har = Capture::toHar({e});
+        const QJsonObject log = QJsonDocument::fromJson(har).object()["log"].toObject();
+        const QJsonArray entries = log["entries"].toArray();
+        CHECK(entries.size() == 1);
+        const QJsonObject en = entries[0].toObject();
+        CHECK(en["request"].toObject()["method"].toString() == "GET");
+        CHECK(en["request"].toObject()["url"].toString() == "http://example.com/x");
+        CHECK(en["response"].toObject()["status"].toInt() == 200);
+    }
+
+    // Chunked response body.
+    {
+        CaptureEntry e;
+        e.segs << seg(CaptureDir::Up, "GET / HTTP/1.1\r\nHost: h\r\n\r\n")
+               << seg(CaptureDir::Down, "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n");
+        const QList<HttpExchange> xs = parseHttp(e);
+        CHECK(xs.size() == 1);
+        CHECK(xs[0].response.body == "hello world");
+        CHECK(xs[0].response.complete);
+    }
+
+    // A non-HTTP stream yields no exchanges.
+    {
+        CaptureEntry e;
+        e.segs << seg(CaptureDir::Up, "\x16\x03\x01\x00\x05hello");
+        CHECK(parseHttp(e).isEmpty());
+    }
+
+    // PCAPNG export: Section Header Block magic and a plausible size.
+    {
+        CaptureEntry e;
+        e.proto = "HTTP";
+        e.meta.srcAddr = QHostAddress("192.168.1.5");
+        e.meta.srcPort = 50000;
+        e.meta.dstAddr = QHostAddress("93.184.216.34");
+        e.meta.dstPort = 80;
+        e.meta.startMs = 1700000000000LL;
+        e.segs << seg(CaptureDir::Up, "GET / HTTP/1.1\r\n\r\n", 10)
+               << seg(CaptureDir::Down, "HTTP/1.1 200 OK\r\n\r\n", 20);
+        const QByteArray pcap = Capture::toPcapng({e});
+        CHECK(pcap.size() > 100);
+        // SHB block type 0x0A0D0D0A, written little-endian.
+        CHECK(quint8(pcap[0]) == 0x0A && quint8(pcap[1]) == 0x0D
+              && quint8(pcap[2]) == 0x0D && quint8(pcap[3]) == 0x0A);
+        // Byte-order magic 0x1A2B3C4D at offset 8 (little-endian).
+        CHECK(quint8(pcap[8]) == 0x4D && quint8(pcap[9]) == 0x3C
+              && quint8(pcap[10]) == 0x2B && quint8(pcap[11]) == 0x1A);
+    }
+
+    // PCAPNG with unknown endpoints (src 0.0.0.0 at connect time, fake-DNS dst):
+    // the placeholders must not leak through as 0.0.0.0 / a shared fallback, and
+    // a Name Resolution Block must be present.
+    {
+        CaptureEntry e;
+        e.proto = "HTTP";
+        e.meta.appName = "curl.exe";
+        e.meta.srcAddr = QHostAddress(QHostAddress::AnyIPv4);   // 0.0.0.0
+        e.meta.srcPort = 37205;
+        e.meta.dstAddr = QHostAddress();                        // unknown (fake DNS)
+        e.meta.dstPort = 80;
+        e.meta.hostname = "example.com";
+        e.meta.startMs = 1700000000000LL;
+        e.segs << seg(CaptureDir::Up, "GET / HTTP/1.1\r\n\r\n", 10);
+        const QByteArray pcap = Capture::toPcapng({e});
+
+        // Walk the blocks to the first Enhanced Packet Block, and note the NRB.
+        bool sawNrb = false;
+        int off = 0, firstEpb = -1;
+        while (off + 8 <= pcap.size()) {
+            const quint32 type = quint8(pcap[off]) | (quint8(pcap[off + 1]) << 8)
+                                 | (quint8(pcap[off + 2]) << 16) | (quint32(quint8(pcap[off + 3])) << 24);
+            const quint32 len = quint8(pcap[off + 4]) | (quint8(pcap[off + 5]) << 8)
+                                | (quint8(pcap[off + 6]) << 16) | (quint32(quint8(pcap[off + 7])) << 24);
+            if (type == 0x00000004u)
+                sawNrb = true;
+            if (type == 0x00000006u) { firstEpb = off; break; }
+            if (len < 12)
+                break;
+            off += len;
+        }
+        CHECK(sawNrb);
+        CHECK(firstEpb >= 0);
+        if (firstEpb >= 0) {
+            const int ip = firstEpb + 28 + 14;   // EPB header + Ethernet
+            CHECK(quint8(pcap[ip + 12]) == 10);   // client placeholder 10.x.x.x
+            CHECK(quint8(pcap[ip + 16]) == 198);  // server placeholder 198.18.x.x
+        }
+    }
+
+    // Per-connection cap truncates and flags the entry.
+    {
+        Capture cap;
+        cap.setEnabled(true);
+        cap.setLimits(10, 0);
+        CaptureMeta m;
+        m.id = 1;
+        cap.note(m);
+        cap.append(1, CaptureDir::Up, QByteArray(100, 'a'), 0);
+        const CaptureEntry e = cap.entry(1);
+        CHECK(e.up == 10);
+        CHECK(e.truncated);
+    }
+
+    // Capture filter: a list of rules applied as global / whitelist / blacklist.
+    {
+        Capture cap;
+        const QHostAddress ip("93.184.216.34");
+
+        CaptureFilter all;   // All: everything, rules ignored
+        cap.setFilter(all);
+        CHECK(cap.shouldCapture("chrome.exe", "", "example.com", ip, 443));
+
+        CaptureFilter white;
+        white.mode = CaptureFilter::Only;
+        white.rules.append(CaptureRule{true, "chrome.exe", "", ""});
+        cap.setFilter(white);
+        CHECK(cap.shouldCapture("chrome.exe", "", "example.com", ip, 443));    // matches -> captured
+        CHECK(!cap.shouldCapture("firefox.exe", "", "example.com", ip, 443));  // no match -> skipped
+
+        CaptureFilter black;
+        black.mode = CaptureFilter::Except;
+        black.rules.append(CaptureRule{true, "", "", "443"});
+        cap.setFilter(black);
+        CHECK(!cap.shouldCapture("chrome.exe", "", "example.com", ip, 443));   // matches -> excluded
+        CHECK(cap.shouldCapture("chrome.exe", "", "example.com", ip, 80));     // no match -> captured
+
+        // A rule's fields are ANDed: target + port must both match.
+        CaptureFilter hostPort;
+        hostPort.mode = CaptureFilter::Only;
+        hostPort.rules.append(CaptureRule{true, "", "*.example.com", "443"});
+        cap.setFilter(hostPort);
+        CHECK(cap.shouldCapture("x", "", "www.example.com", QHostAddress(), 443));
+        CHECK(!cap.shouldCapture("x", "", "www.example.com", QHostAddress(), 80));   // port differs
+        CHECK(!cap.shouldCapture("x", "", "other.org", QHostAddress(), 443));        // host differs
+
+        // Multiple rules are ORed: a connection matching any rule is captured.
+        CaptureFilter two;
+        two.mode = CaptureFilter::Only;
+        two.rules.append(CaptureRule{true, "chrome.exe", "", ""});
+        two.rules.append(CaptureRule{true, "", "", "22"});
+        cap.setFilter(two);
+        CHECK(cap.shouldCapture("chrome.exe", "", "a.com", ip, 443));   // rule 1
+        CHECK(cap.shouldCapture("ssh.exe", "", "a.com", ip, 22));       // rule 2
+        CHECK(!cap.shouldCapture("ssh.exe", "", "a.com", ip, 443));     // neither
+
+        // A disabled rule is ignored.
+        CaptureFilter disabled;
+        disabled.mode = CaptureFilter::Only;
+        disabled.rules.append(CaptureRule{false, "chrome.exe", "", ""});
+        cap.setFilter(disabled);
+        CHECK(!cap.shouldCapture("chrome.exe", "", "a.com", ip, 443));
+
+        // Empty whitelist captures nothing; empty blacklist captures everything.
+        CaptureFilter emptyWhite;
+        emptyWhite.mode = CaptureFilter::Only;
+        cap.setFilter(emptyWhite);
+        CHECK(!cap.shouldCapture("chrome.exe", "", "example.com", ip, 443));
+        CaptureFilter emptyBlack;
+        emptyBlack.mode = CaptureFilter::Except;
+        cap.setFilter(emptyBlack);
+        CHECK(cap.shouldCapture("chrome.exe", "", "example.com", ip, 443));
+    }
+}
+
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
@@ -813,6 +1013,7 @@ int main(int argc, char **argv)
     testProxies();
     testUdpProxy();
     testWinDivertPacket();
+    testCapture();
     std::printf("%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
 }
