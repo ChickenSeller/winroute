@@ -5,11 +5,15 @@
 
 #include <QHash>
 #include <QHostAddress>
+#include <QList>
 #include <QMutex>
+#include <QPair>
 #include <QSet>
 #include <QString>
 
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <thread>
 
 #include <windows.h>
@@ -55,6 +59,7 @@ private:
     void networkLoop();
     void dnsLoop();          // learns IP -> host names, and fake-resolves queries
     void udpLoop();          // captures outbound UDP and tunnels proxied flows
+    void proxyResolveLoop(); // resolves host-name proxies to IPs for loop detection
     RuleEnginePtr rules() const;
 
     // "Resolve hostnames through proxy" state, mirroring the NetFilter backend.
@@ -109,8 +114,18 @@ private:
 
     mutable QMutex m_rulesMutex;
     RuleEnginePtr m_rules;
-    QSet<QString> m_proxyEndpoints;   // "ip:port" of proxies, for loop detection
+    QSet<QString> m_proxyEndpoints;   // "ip:port" of proxies, literal + resolved (loop detection)
     QSet<QString> m_proxyHosts;       // proxy host names, never fake-resolved
+    QSet<QString> m_literalEndpoints; // "ip:port" of proxies configured by literal IP
+    QList<QPair<QString, quint16>> m_proxyHostPorts;   // proxies configured by host name, to resolve
+    bool m_loopResolve = true;        // ProfileOptions.loopDetectionResolve
+
+    // Background resolver for host-name proxies (loop detection).
+    std::thread m_proxyResolver;
+    std::mutex m_proxyResolveMutex;
+    std::condition_variable m_proxyResolveCv;
+    bool m_proxyResolveWake = false;
+    std::atomic<bool> m_proxyResolveStop{false};
 
     mutable QMutex m_connMutex;
     QHash<quint16, Conn> m_conns;     // keyed by the application's local TCP port

@@ -13,8 +13,11 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QHostInfo>
 #include <QSettings>
 #include <QStringList>
+
+#include <chrono>
 
 #include <cstring>
 
@@ -108,11 +111,57 @@ NetFilterInterceptor::NetFilterInterceptor()
 {
     m_selfPid = GetCurrentProcessId();
     m_selfSession = procinfo::currentSessionId();
+    m_proxyResolver = std::thread(&NetFilterInterceptor::proxyResolveLoop, this);
 }
 
 NetFilterInterceptor::~NetFilterInterceptor()
 {
     stop();
+    m_proxyResolveStop.store(true);
+    {
+        std::lock_guard<std::mutex> lk(m_proxyResolveMutex);
+        m_proxyResolveWake = true;
+    }
+    m_proxyResolveCv.notify_all();
+    if (m_proxyResolver.joinable())
+        m_proxyResolver.join();
+}
+
+// Resolves host-name proxies to IPs so loop detection recognises a connection
+// to a proxy's address even when the proxy is configured by name. Literal-IP
+// proxies are matched immediately in setRules; this merges in the resolved
+// addresses and refreshes them so an address change is picked up. Runs off the
+// caller's thread so applying a profile never blocks on DNS.
+void NetFilterInterceptor::proxyResolveLoop()
+{
+    while (!m_proxyResolveStop.load()) {
+        QList<QPair<QString, quint16>> hosts;
+        QSet<QString> eps;
+        bool resolve;
+        {
+            QMutexLocker lock(&m_rulesMutex);
+            hosts = m_proxyHostPorts;
+            eps = m_literalEndpoints;
+            resolve = m_loopResolve;
+        }
+        if (resolve) {
+            for (const auto &hp : hosts) {
+                if (m_proxyResolveStop.load())
+                    break;
+                const QHostInfo info = QHostInfo::fromName(hp.first);
+                for (const QHostAddress &a : info.addresses())
+                    eps.insert(endpointKey(util::normalize(a), hp.second));
+            }
+        }
+        {
+            QMutexLocker lock(&m_rulesMutex);
+            m_proxyEndpoints = eps;
+        }
+        std::unique_lock<std::mutex> lk(m_proxyResolveMutex);
+        m_proxyResolveCv.wait_for(lk, std::chrono::seconds(60),
+                                  [this] { return m_proxyResolveWake || m_proxyResolveStop.load(); });
+        m_proxyResolveWake = false;
+    }
 }
 
 static QString driverInstallPath()
@@ -557,16 +606,21 @@ void NetFilterInterceptor::stop()
 
 void NetFilterInterceptor::setRules(RuleEnginePtr rules)
 {
-    QSet<QString> hosts, endpoints;
+    QSet<QString> hosts, literalEndpoints;
+    QList<QPair<QString, quint16>> hostPorts;
     bool udpProxy = false;
+    bool loopResolve = true;
     if (rules) {
         udpProxy = rules->profile().options.udpMode == QLatin1String("mode_proxy");
+        loopResolve = rules->profile().options.loopDetectionResolve;
         for (const ProxyServer &p : rules->profile().proxies) {
             const QHostAddress literal(p.address);
-            if (literal.isNull())
+            if (literal.isNull()) {
                 hosts.insert(p.address.toLower());
-            else
-                endpoints.insert(endpointKey(util::normalize(literal), p.port));
+                hostPorts.append({p.address, p.port});   // resolved for loop detection in the background
+            } else {
+                literalEndpoints.insert(endpointKey(util::normalize(literal), p.port));
+            }
         }
     }
     bool modeChanged;
@@ -575,9 +629,20 @@ void NetFilterInterceptor::setRules(RuleEnginePtr rules)
         modeChanged = udpProxy != m_udpProxyMode;
         m_rules = std::move(rules);
         m_proxyHosts = hosts;
-        m_proxyEndpoints = endpoints;
+        m_literalEndpoints = literalEndpoints;
+        m_proxyHostPorts = hostPorts;
+        m_loopResolve = loopResolve;
+        // Literal-IP proxies match immediately; host-name proxies are merged in
+        // by the background resolver, woken below. Until then, at least the
+        // literal endpoints are in effect.
+        m_proxyEndpoints = literalEndpoints;
         m_udpProxyMode = udpProxy;
     }
+    {
+        std::lock_guard<std::mutex> lk(m_proxyResolveMutex);
+        m_proxyResolveWake = true;
+    }
+    m_proxyResolveCv.notify_one();
     // The set of filtered UDP depends on the mode, so re-apply the driver rules.
     if (modeChanged && m_running && m_api) {
         m_api->deleteRules();

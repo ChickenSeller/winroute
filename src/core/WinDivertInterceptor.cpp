@@ -16,8 +16,10 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QFileInfo>
+#include <QHostInfo>
 #include <QStringList>
 
+#include <chrono>
 #include <cstring>
 #include <vector>
 
@@ -122,11 +124,56 @@ WinDivertInterceptor::WinDivertInterceptor()
 {
     m_selfPid = GetCurrentProcessId();
     m_selfSession = procinfo::currentSessionId();
+    m_proxyResolver = std::thread(&WinDivertInterceptor::proxyResolveLoop, this);
 }
 
 WinDivertInterceptor::~WinDivertInterceptor()
 {
     stop();
+    m_proxyResolveStop.store(true);
+    {
+        std::lock_guard<std::mutex> lk(m_proxyResolveMutex);
+        m_proxyResolveWake = true;
+    }
+    m_proxyResolveCv.notify_all();
+    if (m_proxyResolver.joinable())
+        m_proxyResolver.join();
+}
+
+// Resolves host-name proxies to IPs so loop detection recognises a connection
+// to a proxy's address even when the proxy is configured by name. Mirrors the
+// NetFilter backend; runs off the caller's thread so applying a profile never
+// blocks on DNS, and refreshes every 60 seconds to pick up an address change.
+void WinDivertInterceptor::proxyResolveLoop()
+{
+    while (!m_proxyResolveStop.load()) {
+        QList<QPair<QString, quint16>> hosts;
+        QSet<QString> eps;
+        bool resolve;
+        {
+            QMutexLocker lock(&m_rulesMutex);
+            hosts = m_proxyHostPorts;
+            eps = m_literalEndpoints;
+            resolve = m_loopResolve;
+        }
+        if (resolve) {
+            for (const auto &hp : hosts) {
+                if (m_proxyResolveStop.load())
+                    break;
+                const QHostInfo info = QHostInfo::fromName(hp.first);
+                for (const QHostAddress &a : info.addresses())
+                    eps.insert(util::formatEndpoint(util::normalize(a), hp.second));
+            }
+        }
+        {
+            QMutexLocker lock(&m_rulesMutex);
+            m_proxyEndpoints = eps;
+        }
+        std::unique_lock<std::mutex> lk(m_proxyResolveMutex);
+        m_proxyResolveCv.wait_for(lk, std::chrono::seconds(60),
+                                  [this] { return m_proxyResolveWake || m_proxyResolveStop.load(); });
+        m_proxyResolveWake = false;
+    }
 }
 
 bool WinDivertInterceptor::available()
@@ -321,23 +368,40 @@ void WinDivertInterceptor::stop()
 
 void WinDivertInterceptor::setRules(RuleEnginePtr rules)
 {
-    QSet<QString> endpoints, hosts;
+    QSet<QString> literalEndpoints, hosts;
+    QList<QPair<QString, quint16>> hostPorts;
     bool udpProxy = false;
+    bool loopResolve = true;
     if (rules) {
         udpProxy = rules->profile().options.udpMode == QLatin1String("mode_proxy");
+        loopResolve = rules->profile().options.loopDetectionResolve;
         for (const ProxyServer &p : rules->profile().proxies) {
             const QHostAddress literal(p.address);
-            if (literal.isNull())
-                hosts.insert(p.address.toLower());   // a host name, never fake-resolved
-            else
-                endpoints.insert(util::formatEndpoint(util::normalize(literal), p.port));
+            if (literal.isNull()) {
+                hosts.insert(p.address.toLower());         // a host name, never fake-resolved
+                hostPorts.append({p.address, p.port});     // resolved for loop detection in the background
+            } else {
+                literalEndpoints.insert(util::formatEndpoint(util::normalize(literal), p.port));
+            }
         }
     }
-    QMutexLocker lock(&m_rulesMutex);
-    m_rules = std::move(rules);
-    m_proxyEndpoints = endpoints;
-    m_proxyHosts = hosts;
-    m_udpProxyMode = udpProxy;   // whether to tunnel UDP; read by start()
+    {
+        QMutexLocker lock(&m_rulesMutex);
+        m_rules = std::move(rules);
+        m_proxyHosts = hosts;
+        m_literalEndpoints = literalEndpoints;
+        m_proxyHostPorts = hostPorts;
+        m_loopResolve = loopResolve;
+        // Literal-IP proxies match immediately; host-name proxies are merged in
+        // by the background resolver, woken below.
+        m_proxyEndpoints = literalEndpoints;
+        m_udpProxyMode = udpProxy;   // whether to tunnel UDP; read by start()
+    }
+    {
+        std::lock_guard<std::mutex> lk(m_proxyResolveMutex);
+        m_proxyResolveWake = true;
+    }
+    m_proxyResolveCv.notify_one();
 }
 
 RuleEnginePtr WinDivertInterceptor::rules() const

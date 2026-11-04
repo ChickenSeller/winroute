@@ -4,11 +4,15 @@
 #include "NetFilterApi.h"
 
 #include <QHash>
+#include <QList>
 #include <QMutex>
 #include <QPair>
 #include <QSet>
 #include <QString>
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 
 // Interceptor backed by the NetFilter SDK WFP driver (netfilter2.sys).
 // Outgoing TCP connect requests are indicated to tcpConnectRequest(), where
@@ -85,6 +89,9 @@ private:
     bool resolveViaProxy(const ProfileOptions &opt) const;
     bool shouldFakeResolve(const RuleEngine &rules, const QString &name) const;
     QString processPath(quint32 pid, const QString &fallback) const;
+    // Resolves host-name proxies to IPs for loop detection, in the background so
+    // the caller never blocks on DNS. Re-runs when woken and every 60 seconds.
+    void proxyResolveLoop();
     QString dnsClient(ENDPOINT_ID id) const;   // display name of a UDP socket's process, for the DNS log
     void handleUdpProxy(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len, PNF_UDP_OPTIONS opt,
                         const RuleEnginePtr &engine, const QHostAddress &dst, quint16 dport);
@@ -112,8 +119,18 @@ private:
     mutable QMutex m_rulesMutex;
     RuleEnginePtr m_rules;
     QSet<QString> m_proxyHosts;        // proxy host names (never faked)
-    QSet<QString> m_proxyEndpoints;    // "ip:port" of proxies (loop detection)
+    QSet<QString> m_proxyEndpoints;    // "ip:port" of proxies, literal + resolved (loop detection)
+    QSet<QString> m_literalEndpoints;  // "ip:port" of proxies configured by literal IP
+    QList<QPair<QString, quint16>> m_proxyHostPorts;   // proxies configured by host name, to resolve
+    bool m_loopResolve = true;         // ProfileOptions.loopDetectionResolve (all guarded by m_rulesMutex)
     bool m_udpProxyMode = false;       // ProfileOptions.udpMode == "mode_proxy" (guarded by m_rulesMutex)
+
+    // Background resolver for host-name proxies (loop detection).
+    std::thread m_proxyResolver;
+    std::mutex m_proxyResolveMutex;
+    std::condition_variable m_proxyResolveCv;
+    bool m_proxyResolveWake = false;
+    std::atomic<bool> m_proxyResolveStop{false};
 
     mutable QMutex m_udpMutex;
     QHash<quint64, UdpSock> m_udpSocks;   // keyed by ENDPOINT_ID
