@@ -980,6 +980,39 @@ static void testCapture()
         CHECK(firstTcpDstPort(Capture::toPcapng({raw})) == 443);
     }
 
+    // Exported PDU: no block may exceed Wireshark's 262144-byte packet limit, so
+    // a large run is split across several PDUs.
+    {
+        CaptureEntry big;
+        big.proto = "HTTP";
+        big.decrypted = true;
+        big.meta.srcAddr = QHostAddress("10.0.0.2");
+        big.meta.srcPort = 50000;
+        big.meta.dstAddr = QHostAddress("93.184.216.34");
+        big.meta.dstPort = 443;
+        big.segs << seg(CaptureDir::Up, "GET / HTTP/1.1\r\n\r\n", 10)
+                 << seg(CaptureDir::Down, QByteArray(1024 * 1024, 'x'), 20);   // 1 MB body
+        const QByteArray pdu = Capture::toExportedPdu({big});
+        int off = 0, maxCap = 0, epbs = 0;
+        while (off + 8 <= pdu.size()) {
+            const quint32 type = quint8(pdu[off]) | (quint8(pdu[off + 1]) << 8)
+                                 | (quint8(pdu[off + 2]) << 16) | (quint32(quint8(pdu[off + 3])) << 24);
+            const quint32 len = quint8(pdu[off + 4]) | (quint8(pdu[off + 5]) << 8)
+                                | (quint8(pdu[off + 6]) << 16) | (quint32(quint8(pdu[off + 7])) << 24);
+            if (type == 0x00000006u) {
+                ++epbs;
+                const int cap = quint8(pdu[off + 20]) | (quint8(pdu[off + 21]) << 8)
+                                | (quint8(pdu[off + 22]) << 16) | (int(quint8(pdu[off + 23])) << 24);
+                maxCap = qMax(maxCap, cap);
+            }
+            if (len < 12)
+                break;
+            off += len;
+        }
+        CHECK(epbs >= 6);               // 1 MB split into several PDUs
+        CHECK(maxCap <= 262144);        // every one within Wireshark's limit
+    }
+
     // Per-connection cap truncates and flags the entry.
     {
         Capture cap;
@@ -1184,6 +1217,13 @@ static void testCertAuthority()
         cfg.validityDays = 365;
         CHECK(ca.createCa(cfg, nullptr));
         CHECK(ca.caCertPem() != caPem);   // a new certificate
+
+        const CertAuthority::CertDetails d = ca.caDetails();
+        CHECK(d.valid);
+        CHECK(d.commonName == QStringLiteral("My Custom CA"));
+        CHECK(d.organization == QStringLiteral("Acme Ltd"));
+        CHECK(d.notBefore.isValid() && d.notAfter.isValid() && d.notAfter > d.notBefore);
+        CHECK(!d.sha256.isEmpty() && d.sha256.contains(u':'));
         X509 *c = parse(ca.caCertPem());
         CHECK(c != nullptr);
         if (c) {

@@ -18,16 +18,15 @@
 #include <QFontDatabase>
 #include <QFormLayout>
 #include <QFrame>
-#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
-#include <QSslCertificate>
 #include <QTableWidget>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QRadioButton>
 #include <QSaveFile>
 #include <QSettings>
 #include <QSpinBox>
@@ -369,29 +368,50 @@ void CaptureTab::onToggled(bool on)
 
 void CaptureTab::onDecryptToggled(bool on)
 {
+    auto revert = [this] {
+        m_decrypt->blockSignals(true);
+        m_decrypt->setChecked(false);
+        m_decrypt->blockSignals(false);
+    };
     if (on) {
-        QString err;
-        if (!m_ca->ensureCa(&err)) {
-            QMessageBox::warning(this, tr("Decrypt HTTPS"),
-                                 tr("Could not prepare the root certificate:\n%1").arg(err));
-            m_decrypt->blockSignals(true);
-            m_decrypt->setChecked(false);
-            m_decrypt->blockSignals(false);
-            return;
-        }
-        if (!m_ca->isInstalled()) {
+        if (!m_ca->exists()) {
+            // No certificate yet: on Yes, let the user fill in its details, then
+            // create that certificate and install it (never a silent default).
             const auto btn = QMessageBox::question(
                 this, tr("Decrypt HTTPS"),
                 tr("To decrypt HTTPS, this computer must trust WinRoute's root certificate. "
                    "Without it, browsers will warn about every decrypted site.\n\n"
-                   "Install the root certificate now?"),
+                   "Create and install the root certificate now?"),
                 QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, QMessageBox::Yes);
             if (btn == QMessageBox::Cancel) {
-                m_decrypt->blockSignals(true);
-                m_decrypt->setChecked(false);
-                m_decrypt->blockSignals(false);
+                revert();
                 return;
             }
+            if (btn == QMessageBox::Yes) {
+                CertAuthority::CaInfo info = CertAuthority::defaultInfo();
+                if (!promptCaInfo(this, &info)) {
+                    revert();
+                    return;
+                }
+                QString err;
+                if (!m_ca->createCa(info, &err)) {
+                    QMessageBox::warning(this, tr("Decrypt HTTPS"),
+                                         tr("Could not prepare the root certificate:\n%1").arg(err));
+                    revert();
+                    return;
+                }
+                QString ierr;
+                if (!m_ca->install(&ierr))
+                    QMessageBox::warning(this, tr("Decrypt HTTPS"),
+                                         tr("Could not install the root certificate:\n%1").arg(ierr));
+            }
+            // "No": the certificate is created on first use and left untrusted.
+        } else if (!m_ca->isInstalled()) {
+            const auto btn = QMessageBox::question(
+                this, tr("Decrypt HTTPS"),
+                tr("WinRoute's root certificate is not trusted by this computer, so browsers will warn "
+                   "about every decrypted site.\n\nInstall it now?"),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
             if (btn == QMessageBox::Yes) {
                 QString ierr;
                 if (!m_ca->install(&ierr))
@@ -443,20 +463,23 @@ void CaptureTab::onCertificate()
     lay->addWidget(buttons);
 
     auto updateStatus = [&] {
-        const bool exists = m_ca->exists();
+        const CertAuthority::CertDetails d = m_ca->caDetails();
+        const bool exists = d.valid;
         const bool installed = exists && m_ca->isInstalled();
-        QString expiry;
-        if (exists) {
-            const auto certs = QSslCertificate::fromData(m_ca->caCertPem(), QSsl::Pem);
-            if (!certs.isEmpty())
-                expiry = certs.first().expiryDate().toLocalTime().toString(QStringLiteral("yyyy-MM-dd"));
-        }
         QString text = tr("Status: %1").arg(
             !exists ? tr("not created yet")
                     : installed ? tr("created and trusted by this computer")
                                 : tr("created, but not trusted by this computer"));
-        if (!expiry.isEmpty())
-            text += tr("\nValid until: %1").arg(expiry);
+        if (exists) {
+            text += tr("\nCommon name: %1").arg(d.commonName);
+            if (!d.organization.isEmpty())
+                text += tr("\nOrganization: %1").arg(d.organization);
+            if (d.notBefore.isValid() && d.notAfter.isValid())
+                text += tr("\nValid: %1 to %2").arg(d.notBefore.toLocalTime().toString("yyyy-MM-dd"),
+                                                    d.notAfter.toLocalTime().toString("yyyy-MM-dd"));
+            if (!d.sha256.isEmpty())
+                text += tr("\nSHA-256: %1").arg(d.sha256);
+        }
         text += tr("\nLocation: %1").arg(QDir::toNativeSeparators(CertAuthority::caDir()));
         status->setText(text);
         genBtn->setText(exists ? tr("Regenerate...") : tr("Generate..."));
@@ -525,34 +548,63 @@ void CaptureTab::onExport()
         return;
     }
 
-    const QString stamp = QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss");
-    // A non-native save dialog so a "keep real ports" option can ride along.
-    QFileDialog fd(this, tr("Export Capture"), QStringLiteral("winroute-capture-%1").arg(stamp),
-                   tr("PCAPNG, for Wireshark (*.pcapng);;HAR, HTTP exchanges (*.har)"));
-    fd.setAcceptMode(QFileDialog::AcceptSave);
-    fd.setOption(QFileDialog::DontUseNativeDialog, true);
-    auto *keepPorts = new QCheckBox(
-        tr("Keep real ports (decrypted HTTPS stays on 443; use Wireshark's \"Decode As\" to read it as HTTP)"), &fd);
-    keepPorts->setChecked(util::appSettings().value("capture/exportRealPorts", true).toBool());
-    if (auto *grid = qobject_cast<QGridLayout *>(fd.layout()))
-        grid->addWidget(keepPorts, grid->rowCount(), 0, 1, grid->columnCount());
-    if (fd.exec() != QDialog::Accepted || fd.selectedFiles().isEmpty())
-        return;
-    const QString selected = fd.selectedNameFilter();
-    const bool har = selected.contains("HAR");
-    const bool keepRealPorts = keepPorts->isChecked();
-    util::appSettings().setValue("capture/exportRealPorts", keepRealPorts);
-
-    QString path = fd.selectedFiles().first();
-    // The non-native dialog does not append the filter's extension.
-    const QString ext = har ? QStringLiteral(".har") : QStringLiteral(".pcapng");
-    if (!path.endsWith(ext, Qt::CaseInsensitive))
-        path += ext;
-
-    // Export the selected connections, or all of them when none is selected.
-    QList<CaptureEntry> entries;
     const QModelIndexList sel = m_view->selectionModel()->selectedRows();
+
+    // Options go in a small dialog of their own so the file chooser can stay the
+    // native Windows "Save As" dialog.
+    QDialog opt(this);
+    opt.setWindowTitle(tr("Export Capture"));
+    auto *lay = new QVBoxLayout(&opt);
+
+    QCheckBox *selOnly = nullptr;
     if (!sel.isEmpty()) {
+        // Export everything by default; a stray row selection should not quietly
+        // shrink the export.
+        selOnly = new QCheckBox(tr("Only the %1 selected connection(s) (otherwise all %2)")
+                                    .arg(sel.size()).arg(m_capture->count()));
+        lay->addWidget(selOnly);
+    }
+
+    auto *portLabel = new QLabel(tr("Decrypted HTTPS in Wireshark (PCAPNG):"));
+    lay->addWidget(portLabel);
+    auto *realPort = new QRadioButton(tr("Keep real ports (443); use Wireshark's \"Decode As\" to read it as HTTP"));
+    auto *http80 = new QRadioButton(tr("Use port 80 so Wireshark shows HTTP automatically"));
+    auto *pduMode = new QRadioButton(
+        tr("Keep real ports (443) and show HTTP automatically (Exported PDU; no TCP-stream view)"));
+    const QString mode = util::appSettings().value("capture/exportMode", QStringLiteral("real")).toString();
+    http80->setChecked(mode == QLatin1String("http80"));
+    pduMode->setChecked(mode == QLatin1String("pdu"));
+    realPort->setChecked(!http80->isChecked() && !pduMode->isChecked());
+    lay->addWidget(realPort);
+    lay->addWidget(http80);
+    lay->addWidget(pduMode);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    connect(buttons, &QDialogButtonBox::accepted, &opt, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &opt, &QDialog::reject);
+    lay->addWidget(buttons);
+    if (opt.exec() != QDialog::Accepted)
+        return;
+
+    const bool keepRealPorts = realPort->isChecked();
+    const bool exportedPdu = pduMode->isChecked();
+    const bool selectedOnly = selOnly && selOnly->isChecked();
+    util::appSettings().setValue("capture/exportMode",
+                                 http80->isChecked() ? QStringLiteral("http80")
+                                                     : exportedPdu ? QStringLiteral("pdu") : QStringLiteral("real"));
+
+    const QString stamp = QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss");
+    QString selectedFilter;
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Export Capture"), QStringLiteral("winroute-capture-%1").arg(stamp),
+        tr("PCAPNG, for Wireshark (*.pcapng);;HAR, HTTP exchanges (*.har)"), &selectedFilter);
+    if (path.isEmpty())
+        return;
+    const bool har = selectedFilter.contains("HAR") || path.endsWith(".har", Qt::CaseInsensitive);
+
+    // All connections, or only the selected ones when that was chosen.
+    QList<CaptureEntry> entries;
+    if (selectedOnly) {
         for (const QModelIndex &idx : sel)
             if (const quint64 id = m_model->idAt(idx.row()))
                 entries.append(m_capture->entry(id));
@@ -561,7 +613,13 @@ void CaptureTab::onExport()
             entries.append(m_capture->entry(s.meta.id));
     }
 
-    const QByteArray data = har ? Capture::toHar(entries) : Capture::toPcapng(entries, keepRealPorts);
+    QByteArray data;
+    if (har)
+        data = Capture::toHar(entries);
+    else if (exportedPdu)
+        data = Capture::toExportedPdu(entries);
+    else
+        data = Capture::toPcapng(entries, keepRealPorts);
 
     QSaveFile f(path);
     if (!f.open(QIODevice::WriteOnly) || f.write(data) != data.size() || !f.commit()) {

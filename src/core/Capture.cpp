@@ -541,6 +541,171 @@ QByteArray Capture::toPcapng(const QList<CaptureEntry> &entries, bool keepRealPo
     return out;
 }
 
+// ---- Exported PDU export ---------------------------------------------------
+// Wireshark's "Exported PDU" link type (252): each run of bytes becomes a PDU
+// tagged with the dissector to use (http/tls/data) and the real addresses and
+// ports, so Wireshark shows HTTP while still displaying the true port.
+
+QByteArray Capture::toExportedPdu(const QList<CaptureEntry> &entries)
+{
+    // Exported PDU tag types (Wireshark epan/exported_pdu.h) and port type.
+    constexpr quint16 TAG_END = 0, TAG_PROTO = 12, TAG_IPV4_SRC = 20, TAG_IPV4_DST = 21,
+                      TAG_IPV6_SRC = 22, TAG_IPV6_DST = 23, TAG_PORT_TYPE = 24, TAG_SRC_PORT = 25,
+                      TAG_DST_PORT = 26;
+    constexpr quint32 PT_TCP = 2;
+
+    struct Resolved {
+        bool v6 = false;
+        QByteArray cAddr, sAddr;
+        quint16 cPort = 0, sPort = 0;
+        qint64 t0 = 0;
+        QString proto;
+    };
+    QList<Resolved> resolved;
+    resolved.reserve(entries.size());
+    struct NrbRec { bool v6; QByteArray ip; QString name; };
+    QList<NrbRec> nrb;
+    auto addName = [&nrb](bool v6, const QByteArray &ip, const QString &name) {
+        if (name.isEmpty())
+            return;
+        for (const NrbRec &r : nrb)
+            if (r.v6 == v6 && r.ip == ip)
+                return;
+        nrb.append({v6, ip, name});
+    };
+
+    for (const CaptureEntry &e : entries) {
+        const bool v6 = e.meta.srcAddr.protocol() == QAbstractSocket::IPv6Protocol
+                        || e.meta.dstAddr.protocol() == QAbstractSocket::IPv6Protocol || e.meta.v6;
+        auto pick = [&](const QHostAddress &a, const QString &seed, bool server) {
+            if (isSpecific(a) && (a.protocol() == QAbstractSocket::IPv6Protocol) == v6)
+                return ipBytesOf(a, v6);
+            return synthIp(seed, v6, server);
+        };
+        Resolved r;
+        r.v6 = v6;
+        r.cAddr = pick(e.meta.srcAddr, e.meta.appName.isEmpty() ? QStringLiteral("client") : e.meta.appName, false);
+        r.sAddr = pick(e.meta.dstAddr, e.meta.hostname.isEmpty() ? e.meta.target : e.meta.hostname, true);
+        r.cPort = e.meta.srcPort ? e.meta.srcPort : 40000;
+        r.sPort = e.meta.dstPort ? e.meta.dstPort : (e.proto == "TLS" ? 443 : 80);
+        r.t0 = e.meta.startMs ? e.meta.startMs : QDateTime::currentMSecsSinceEpoch();
+        r.proto = e.proto == "HTTP" ? QStringLiteral("http")
+                                    : e.proto == "TLS" ? QStringLiteral("tls") : QStringLiteral("data");
+        resolved.append(r);
+        addName(v6, r.cAddr, e.meta.appName);
+        const QString host = e.meta.hostname.isEmpty() ? e.meta.target.section(':', 0, -2) : e.meta.hostname;
+        addName(v6, r.sAddr, host);
+    }
+
+    QByteArray out;
+    // Section Header Block.
+    {
+        QByteArray body;
+        putLE32(body, 0x1A2B3C4Du);
+        putLE16(body, 1);
+        putLE16(body, 0);
+        putLE64(body, 0xffffffffffffffffULL);
+        const quint32 total = 12 + quint32(body.size());
+        putLE32(out, 0x0A0D0D0Au);
+        putLE32(out, total);
+        out.append(body);
+        putLE32(out, total);
+    }
+    // Interface Description Block: LINKTYPE_WIRESHARK_UPPER_PDU (252).
+    {
+        QByteArray body;
+        putLE16(body, 252);
+        putLE16(body, 0);
+        putLE32(body, 0);
+        const quint32 total = 12 + quint32(body.size());
+        putLE32(out, 0x00000001u);
+        putLE32(out, total);
+        out.append(body);
+        putLE32(out, total);
+    }
+    // Name Resolution Block for the (possibly synthetic) addresses.
+    if (!nrb.isEmpty()) {
+        QByteArray body;
+        for (const NrbRec &r : nrb)
+            writeNrbRecord(body, r.v6, r.ip, r.name);
+        putLE16(body, 0);
+        putLE16(body, 0);
+        const quint32 total = 12 + quint32(body.size());
+        putLE32(out, 0x00000004u);
+        putLE32(out, total);
+        out.append(body);
+        putLE32(out, total);
+    }
+
+    auto putTag = [](QByteArray &b, quint16 type, const QByteArray &val) {
+        putBE16(b, type);
+        putBE16(b, quint16(val.size()));
+        b.append(val);
+        while (b.size() % 4)   // pad each tag to a 32-bit boundary
+            b.append(char(0));
+    };
+    auto u32be = [](quint32 v) {
+        QByteArray b;
+        putBE32(b, v);
+        return b;
+    };
+
+    for (int ei = 0; ei < entries.size(); ++ei) {
+        const CaptureEntry &e = entries[ei];
+        const Resolved &r = resolved[ei];
+        auto emitRun = [&](CaptureDir dir, const QByteArray &data, qint64 ts) {
+            if (data.isEmpty())
+                return;
+            const bool toServer = dir == CaptureDir::Up;
+            const QByteArray &srcIp = toServer ? r.cAddr : r.sAddr;
+            const QByteArray &dstIp = toServer ? r.sAddr : r.cAddr;
+            const quint16 srcPort = toServer ? r.cPort : r.sPort;
+            const quint16 dstPort = toServer ? r.sPort : r.cPort;
+            // Wireshark rejects any packet whose captured length exceeds 262144
+            // bytes, so split a long run into several PDUs (a large HTTP body is
+            // shown across continuation PDUs).
+            constexpr int kMaxPdu = 256 * 1024 - 1024;
+            for (int pos = 0; pos < data.size(); pos += kMaxPdu) {
+                const QByteArray slice = data.mid(pos, kMaxPdu);
+                QByteArray pdu;
+                putTag(pdu, TAG_PROTO, r.proto.toUtf8());
+                putTag(pdu, r.v6 ? TAG_IPV6_SRC : TAG_IPV4_SRC, srcIp);
+                putTag(pdu, r.v6 ? TAG_IPV6_DST : TAG_IPV4_DST, dstIp);
+                putTag(pdu, TAG_PORT_TYPE, u32be(PT_TCP));
+                putTag(pdu, TAG_SRC_PORT, u32be(srcPort));
+                putTag(pdu, TAG_DST_PORT, u32be(dstPort));
+                putBE16(pdu, TAG_END);
+                putBE16(pdu, 0);
+                pdu.append(slice);
+                writeEpb(out, pdu, ts);
+            }
+        };
+        // Merge consecutive same-direction segments into one PDU each.
+        CaptureDir last = CaptureDir::Up;
+        qint64 runTs = r.t0;
+        QByteArray run;
+        bool have = false;
+        for (const CaptureSegment &seg : e.segs) {
+            if (seg.data.isEmpty())
+                continue;
+            if (have && seg.dir != last) {
+                emitRun(last, run, runTs);
+                run.clear();
+                have = false;
+            }
+            if (!have) {
+                last = seg.dir;
+                runTs = seg.tsMs ? seg.tsMs : r.t0;
+                have = true;
+            }
+            run.append(seg.data);
+        }
+        if (have)
+            emitRun(last, run, runTs);
+    }
+    return out;
+}
+
 // ---- HAR export ------------------------------------------------------------
 
 namespace {

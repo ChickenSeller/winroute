@@ -286,6 +286,18 @@ T = {
         ("PCAPNG，供 Wireshark (*.pcapng);;HAR，HTTP 交互 (*.har)",
          "PCAPNG、Wireshark 用 (*.pcapng);;HAR、HTTP のやり取り (*.har)"),
     "Could not write the file:\n%1": ("无法写入文件：\n%1", "ファイルを書き込めませんでした：\n%1"),
+    "Only the %1 selected connection(s) (otherwise all %2)":
+        ("仅导出选中的 %1 条连接(否则导出全部 %2 条)", "選択した %1 件の接続のみ(それ以外は全 %2 件)"),
+    "Decrypted HTTPS in Wireshark (PCAPNG):":
+        ("解密的 HTTPS 在 Wireshark 中(PCAPNG)：", "復号した HTTPS の Wireshark 表示（PCAPNG）："),
+    "Keep real ports (443); use Wireshark's \"Decode As\" to read it as HTTP":
+        ("保留真实端口(443);在 Wireshark 用“Decode As”按 HTTP 读取",
+         "実際のポート(443)を保持。Wireshark の「Decode As」で HTTP として読む"),
+    "Use port 80 so Wireshark shows HTTP automatically":
+        ("改用 80 端口,Wireshark 自动按 HTTP 显示", "ポート 80 を使い、Wireshark が自動で HTTP 表示"),
+    "Keep real ports (443) and show HTTP automatically (Exported PDU; no TCP-stream view)":
+        ("保留真实端口(443)且自动按 HTTP 显示(Exported PDU;无 TCP 流视图)",
+         "実際のポート(443)を保持し自動で HTTP 表示（Exported PDU。TCP ストリーム表示なし）"),
     "Keep real ports (decrypted HTTPS stays on 443; use Wireshark's \"Decode As\" to read it as HTTP)":
         ("保留真实端口(解密的 HTTPS 仍为 443;在 Wireshark 用“Decode As”按 HTTP 解析)",
          "実際のポートを保持(復号した HTTPS は 443 のまま。Wireshark の「Decode As」で HTTP として解析)"),
@@ -297,10 +309,17 @@ T = {
          "WinRoute のルート証明書でキャプチャした HTTPS(ポート 443)接続を復号します。キャプチャも開始する必要があります。"),
     "Root Certificate...": ("根证书...", "ルート証明書..."),
     "Could not prepare the root certificate:\n%1": ("无法准备根证书：\n%1", "ルート証明書を準備できませんでした：\n%1"),
-    "To decrypt HTTPS, this computer must trust WinRoute's root certificate. Without it, browsers will warn about every decrypted site.\n\nInstall the root certificate now?":
-        ("要解密 HTTPS，本机必须信任 WinRoute 的根证书。否则浏览器会对每个被解密的站点发出警告。\n\n现在安装根证书吗？",
-         "HTTPS を復号するには、この PC が WinRoute のルート証明書を信頼する必要があります。信頼しないと、復号したサイトごとにブラウザーが警告します。\n\n今すぐルート証明書をインストールしますか？"),
+    "To decrypt HTTPS, this computer must trust WinRoute's root certificate. Without it, browsers will warn about every decrypted site.\n\nCreate and install the root certificate now?":
+        ("要解密 HTTPS，本机必须信任 WinRoute 的根证书。否则浏览器会对每个被解密的站点发出警告。\n\n现在创建并安装根证书吗？",
+         "HTTPS を復号するには、この PC が WinRoute のルート証明書を信頼する必要があります。信頼しないと、復号したサイトごとにブラウザーが警告します。\n\n今すぐルート証明書を作成してインストールしますか？"),
+    "WinRoute's root certificate is not trusted by this computer, so browsers will warn about every decrypted site.\n\nInstall it now?":
+        ("本机尚未信任 WinRoute 的根证书，浏览器会对每个被解密的站点发出警告。\n\n现在安装吗？",
+         "この PC は WinRoute のルート証明書を信頼していないため、復号したサイトごとにブラウザーが警告します。\n\n今すぐインストールしますか？"),
     "Could not install the root certificate:\n%1": ("无法安装根证书：\n%1", "ルート証明書をインストールできませんでした：\n%1"),
+    "\nCommon name: %1": ("\n通用名称：%1", "\nコモンネーム：%1"),
+    "\nOrganization: %1": ("\n组织：%1", "\n組織：%1"),
+    "\nValid: %1 to %2": ("\n有效期：%1 至 %2", "\n有効期間：%1 ～ %2"),
+    "\nSHA-256: %1": ("\nSHA-256：%1", "\nSHA-256：%1"),
     "WinRoute Root Certificate": ("WinRoute 根证书", "WinRoute ルート証明書"),
     "WinRoute uses this certificate to sign the per-site certificates it presents when decrypting HTTPS. Installing it marks it trusted on this computer, which covers browsers that use the Windows certificate store (Chrome, Edge). Firefox has its own store: import the exported certificate there manually.":
         ("WinRoute 用此证书为解密 HTTPS 时出示的各站点证书签名。安装它会在本机标记为受信任，适用于使用 Windows 证书存储的浏览器(Chrome、Edge)。Firefox 有自己的证书存储：请将导出的证书手动导入其中。",

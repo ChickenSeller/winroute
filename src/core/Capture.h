@@ -129,6 +129,13 @@ public:
     static QByteArray toPcapng(const QList<CaptureEntry> &entries, bool keepRealPorts = false);
     static QByteArray toHar(const QList<CaptureEntry> &entries);
 
+    // A PCAPNG in Wireshark's "Exported PDU" link type: each direction's bytes
+    // become a PDU tagged with its dissector (http/tls/data) and the real
+    // addresses and ports. Wireshark then shows the payload as HTTP while still
+    // displaying the true port (443), with no "Decode As" needed. There is no
+    // TCP-stream/handshake view in this format.
+    static QByteArray toExportedPdu(const QList<CaptureEntry> &entries);
+
 signals:
     void changed();   // a connection was added or finished, or the store was cleared
 

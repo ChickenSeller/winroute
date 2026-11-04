@@ -162,24 +162,56 @@
       <translation>抓包会记录经过 WinRoute 的流量，开启 HTTPS 解密后还可能包含密码等明文。所有内容只保存在本机；导出或分享抓包时请注意。</translation>
     </message>
     <message>
+      <source>To decrypt HTTPS, this computer must trust WinRoute's root certificate. Without it, browsers will warn about every decrypted site.
+
+Create and install the root certificate now?</source>
+      <translation>要解密 HTTPS，本机必须信任 WinRoute 的根证书。否则浏览器会对每个被解密的站点发出警告。
+
+现在创建并安装根证书吗？</translation>
+    </message>
+    <message>
       <source>Could not prepare the root certificate:
 %1</source>
       <translation>无法准备根证书：
 %1</translation>
     </message>
     <message>
-      <source>To decrypt HTTPS, this computer must trust WinRoute's root certificate. Without it, browsers will warn about every decrypted site.
-
-Install the root certificate now?</source>
-      <translation>要解密 HTTPS，本机必须信任 WinRoute 的根证书。否则浏览器会对每个被解密的站点发出警告。
-
-现在安装根证书吗？</translation>
+      <source>
+Common name: %1</source>
+      <translation>
+通用名称：%1</translation>
+    </message>
+    <message>
+      <source>
+Organization: %1</source>
+      <translation>
+组织：%1</translation>
+    </message>
+    <message>
+      <source>
+Valid: %1 to %2</source>
+      <translation>
+有效期：%1 至 %2</translation>
+    </message>
+    <message>
+      <source>
+SHA-256: %1</source>
+      <translation>
+SHA-256：%1</translation>
     </message>
     <message>
       <source>Could not install the root certificate:
 %1</source>
       <translation>无法安装根证书：
 %1</translation>
+    </message>
+    <message>
+      <source>WinRoute's root certificate is not trusted by this computer, so browsers will warn about every decrypted site.
+
+Install it now?</source>
+      <translation>本机尚未信任 WinRoute 的根证书，浏览器会对每个被解密的站点发出警告。
+
+现在安装吗？</translation>
     </message>
     <message>
       <source>WinRoute Root Certificate</source>
@@ -212,12 +244,6 @@ Install the root certificate now?</source>
     <message>
       <source>created, but not trusted by this computer</source>
       <translation>已创建，但本机尚未信任</translation>
-    </message>
-    <message>
-      <source>
-Valid until: %1</source>
-      <translation>
-有效期至：%1</translation>
     </message>
     <message>
       <source>
@@ -286,12 +312,28 @@ Continue?</source>
       <translation>没有可导出的抓包内容。</translation>
     </message>
     <message>
+      <source>Decrypted HTTPS in Wireshark (PCAPNG):</source>
+      <translation>解密的 HTTPS 在 Wireshark 中(PCAPNG)：</translation>
+    </message>
+    <message>
+      <source>Keep real ports (443); use Wireshark's "Decode As" to read it as HTTP</source>
+      <translation>保留真实端口(443);在 Wireshark 用“Decode As”按 HTTP 读取</translation>
+    </message>
+    <message>
+      <source>Use port 80 so Wireshark shows HTTP automatically</source>
+      <translation>改用 80 端口,Wireshark 自动按 HTTP 显示</translation>
+    </message>
+    <message>
+      <source>Keep real ports (443) and show HTTP automatically (Exported PDU; no TCP-stream view)</source>
+      <translation>保留真实端口(443)且自动按 HTTP 显示(Exported PDU;无 TCP 流视图)</translation>
+    </message>
+    <message>
       <source>PCAPNG, for Wireshark (*.pcapng);;HAR, HTTP exchanges (*.har)</source>
       <translation>PCAPNG，供 Wireshark (*.pcapng);;HAR，HTTP 交互 (*.har)</translation>
     </message>
     <message>
-      <source>Keep real ports (decrypted HTTPS stays on 443; use Wireshark's "Decode As" to read it as HTTP)</source>
-      <translation>保留真实端口(解密的 HTTPS 仍为 443;在 Wireshark 用“Decode As”按 HTTP 解析)</translation>
+      <source>Only the %1 selected connection(s) (otherwise all %2)</source>
+      <translation>仅导出选中的 %1 条连接(否则导出全部 %2 条)</translation>
     </message>
     <message>
       <source>Could not write the file:

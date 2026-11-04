@@ -162,24 +162,56 @@
       <translation>キャプチャは WinRoute を通る通信を記録し、HTTPS 復号を有効にするとパスワードなどの平文を含むことがあります。すべてこの PC 内にのみ保存されます。エクスポートや共有の際はご注意ください。</translation>
     </message>
     <message>
+      <source>To decrypt HTTPS, this computer must trust WinRoute's root certificate. Without it, browsers will warn about every decrypted site.
+
+Create and install the root certificate now?</source>
+      <translation>HTTPS を復号するには、この PC が WinRoute のルート証明書を信頼する必要があります。信頼しないと、復号したサイトごとにブラウザーが警告します。
+
+今すぐルート証明書を作成してインストールしますか？</translation>
+    </message>
+    <message>
       <source>Could not prepare the root certificate:
 %1</source>
       <translation>ルート証明書を準備できませんでした：
 %1</translation>
     </message>
     <message>
-      <source>To decrypt HTTPS, this computer must trust WinRoute's root certificate. Without it, browsers will warn about every decrypted site.
-
-Install the root certificate now?</source>
-      <translation>HTTPS を復号するには、この PC が WinRoute のルート証明書を信頼する必要があります。信頼しないと、復号したサイトごとにブラウザーが警告します。
-
-今すぐルート証明書をインストールしますか？</translation>
+      <source>
+Common name: %1</source>
+      <translation>
+コモンネーム：%1</translation>
+    </message>
+    <message>
+      <source>
+Organization: %1</source>
+      <translation>
+組織：%1</translation>
+    </message>
+    <message>
+      <source>
+Valid: %1 to %2</source>
+      <translation>
+有効期間：%1 ～ %2</translation>
+    </message>
+    <message>
+      <source>
+SHA-256: %1</source>
+      <translation>
+SHA-256：%1</translation>
     </message>
     <message>
       <source>Could not install the root certificate:
 %1</source>
       <translation>ルート証明書をインストールできませんでした：
 %1</translation>
+    </message>
+    <message>
+      <source>WinRoute's root certificate is not trusted by this computer, so browsers will warn about every decrypted site.
+
+Install it now?</source>
+      <translation>この PC は WinRoute のルート証明書を信頼していないため、復号したサイトごとにブラウザーが警告します。
+
+今すぐインストールしますか？</translation>
     </message>
     <message>
       <source>WinRoute Root Certificate</source>
@@ -212,12 +244,6 @@ Install the root certificate now?</source>
     <message>
       <source>created, but not trusted by this computer</source>
       <translation>作成済み・この PC は未信頼</translation>
-    </message>
-    <message>
-      <source>
-Valid until: %1</source>
-      <translation>
-有効期限：%1</translation>
     </message>
     <message>
       <source>
@@ -286,12 +312,28 @@ Continue?</source>
       <translation>エクスポートできるキャプチャがありません。</translation>
     </message>
     <message>
+      <source>Decrypted HTTPS in Wireshark (PCAPNG):</source>
+      <translation>復号した HTTPS の Wireshark 表示（PCAPNG）：</translation>
+    </message>
+    <message>
+      <source>Keep real ports (443); use Wireshark's "Decode As" to read it as HTTP</source>
+      <translation>実際のポート(443)を保持。Wireshark の「Decode As」で HTTP として読む</translation>
+    </message>
+    <message>
+      <source>Use port 80 so Wireshark shows HTTP automatically</source>
+      <translation>ポート 80 を使い、Wireshark が自動で HTTP 表示</translation>
+    </message>
+    <message>
+      <source>Keep real ports (443) and show HTTP automatically (Exported PDU; no TCP-stream view)</source>
+      <translation>実際のポート(443)を保持し自動で HTTP 表示（Exported PDU。TCP ストリーム表示なし）</translation>
+    </message>
+    <message>
       <source>PCAPNG, for Wireshark (*.pcapng);;HAR, HTTP exchanges (*.har)</source>
       <translation>PCAPNG、Wireshark 用 (*.pcapng);;HAR、HTTP のやり取り (*.har)</translation>
     </message>
     <message>
-      <source>Keep real ports (decrypted HTTPS stays on 443; use Wireshark's "Decode As" to read it as HTTP)</source>
-      <translation>実際のポートを保持(復号した HTTPS は 443 のまま。Wireshark の「Decode As」で HTTP として解析)</translation>
+      <source>Only the %1 selected connection(s) (otherwise all %2)</source>
+      <translation>選択した %1 件の接続のみ(それ以外は全 %2 件)</translation>
     </message>
     <message>
       <source>Could not write the file:
