@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QByteArray>
+#include <QDateTime>
 #include <QHash>
 #include <QMutex>
 #include <QString>
@@ -53,6 +54,20 @@ public:
 
     // The root certificate in PEM, for display or export. Empty until ensureCa.
     QByteArray caCertPem() const;
+
+    // The root certificate's details, for display. `valid` is false when no CA
+    // exists. Loads an existing CA on demand (never generates one).
+    struct CertDetails {
+        bool valid = false;
+        QString commonName;
+        QString organization;
+        QDateTime notBefore;   // UTC
+        QDateTime notAfter;    // UTC
+        QString serial;        // hex
+        QString sha256;        // fingerprint, colon-separated hex
+    };
+    CertDetails caDetails() const;
+
     // Where the CA files live on disk.
     static QString caDir();
 

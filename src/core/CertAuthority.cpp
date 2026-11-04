@@ -6,6 +6,8 @@
 #include <QFile>
 #include <QHostAddress>
 #include <QSaveFile>
+#include <QStringList>
+#include <QTimeZone>
 
 #include <functional>
 
@@ -141,6 +143,25 @@ void setSubject(X509_NAME *name, const QByteArray &org, const QByteArray &cn)
         X509_NAME_add_entry_by_txt(name, "O", MBSTRING_UTF8, reinterpret_cast<const unsigned char *>(org.constData()), -1, -1, 0);
     if (!cn.isEmpty())
         X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_UTF8, reinterpret_cast<const unsigned char *>(cn.constData()), -1, -1, 0);
+}
+
+QDateTime asn1ToDateTime(const ASN1_TIME *t)
+{
+    struct tm tm = {};
+    if (!t || ASN1_TIME_to_tm(t, &tm) != 1)
+        return {};
+    const QDate date(tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+    const QTime time(tm.tm_hour, tm.tm_min, tm.tm_sec);
+    return QDateTime(date, time, QTimeZone::utc());
+}
+
+QString hexColons(const unsigned char *d, int n)
+{
+    QStringList parts;
+    parts.reserve(n);
+    for (int i = 0; i < n; ++i)
+        parts << QStringLiteral("%1").arg(d[i], 2, 16, QChar('0')).toUpper();
+    return parts.join(u':');
 }
 
 // Builds a Windows cert context from DER; caller frees with CertFreeCertificateContext.
@@ -353,6 +374,39 @@ QByteArray CertAuthority::caCertPem() const
     if (!m_caCert)
         return {};
     return certToPem(static_cast<X509 *>(m_caCert));
+}
+
+CertAuthority::CertDetails CertAuthority::caDetails() const
+{
+    QMutexLocker lock(&m_mutex);
+    if (!m_caCert && QFile::exists(caKeyPath()) && QFile::exists(caCertPath()))
+        const_cast<CertAuthority *>(this)->loadOrCreateLocked(CaInfo{}, nullptr);
+    CertDetails d;
+    auto *x = static_cast<X509 *>(m_caCert);
+    if (!x)
+        return d;
+    d.valid = true;
+    X509_NAME *subj = X509_get_subject_name(x);
+    char buf[256] = {0};
+    if (X509_NAME_get_text_by_NID(subj, NID_commonName, buf, sizeof(buf)) > 0)
+        d.commonName = QString::fromUtf8(buf);
+    buf[0] = 0;
+    if (X509_NAME_get_text_by_NID(subj, NID_organizationName, buf, sizeof(buf)) > 0)
+        d.organization = QString::fromUtf8(buf);
+    d.notBefore = asn1ToDateTime(X509_get0_notBefore(x));
+    d.notAfter = asn1ToDateTime(X509_get0_notAfter(x));
+    if (BIGNUM *bn = ASN1_INTEGER_to_BN(X509_get_serialNumber(x), nullptr)) {
+        if (char *hex = BN_bn2hex(bn)) {
+            d.serial = QString::fromLatin1(hex);
+            OPENSSL_free(hex);
+        }
+        BN_free(bn);
+    }
+    unsigned char md[EVP_MAX_MD_SIZE];
+    unsigned int mdlen = 0;
+    if (X509_digest(x, EVP_sha256(), md, &mdlen))
+        d.sha256 = hexColons(md, int(mdlen));
+    return d;
 }
 
 QByteArray CertAuthority::caCertDerLocked() const
