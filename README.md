@@ -34,7 +34,13 @@ Relay (独立线程, 0.0.0.0/:: 随机端口)
 
 “工具 > 抓包”可选开一个抓包开关（默认关，状态存 `QSettings` 的 `capture/enabled`）：开启后，经本地中继的每条连接的应用层字节被 `Capture`（`src/core/Capture.*`）记录，“抓包”标签页按连接查看——HTTP/1.x 解析成请求/响应（`src/core/HttpParse.*`），其余按十六进制显示；可导出 **PCAPNG**（合成握手与分段，供 Wireshark 重组）或 **HAR**。抓取内容只在本机，不上报。
 
-**解密 HTTPS（MITM）**：抓包标签页的“解密 HTTPS”复选框（默认关，状态存 `capture/decrypt`）开启后，WinRoute 对经中继且命中抓包过滤的 443 端口连接做中间人——用自建根 CA（`src/core/CertAuthority.*`，基于 OpenSSL，密钥存 `%APPDATA%\WinRoute\ca`，不入 git）按主机名临时签发叶证书，在 client 侧做 TLS 服务端、对真实服务器做 TLS 客户端（校验其证书，校验失败则断开），于是抓包里看到明文。“根证书…”按钮可生成、安装到 Windows 受信任根（供 Chrome/Edge；Firefox 需手动导入导出的证书）、移除和导出根证书。界面需走 Qt 的 OpenSSL 后端（启动时 `QSslSocket::setActiveBackend("openssl")`），安装包随附 `libcrypto`/`libssl` 运行期 DLL。已知限制：仅解密 TCP 443；v1 把 ALPN 降到 http/1.1，不解密 HTTP/2 与 QUIC（UDP）；证书固定的应用需用抓包过滤排除。导出 PCAPNG 时有“保留真实端口”选项（默认开）：保留真实端口（如 443）时，Wireshark 需对该端口“Decode As → HTTP”才会按明文解析（否则按 TLS 解析明文会乱码）；关掉该选项则把解密的 HTTP 流写到 80 端口，Wireshark 直接按 HTTP 解析。
+**解密 HTTPS（MITM）**：抓包标签页的“解密 HTTPS”复选框（默认关，状态存 `capture/decrypt`）开启后，WinRoute 对经中继且命中抓包过滤的 443 端口连接做中间人——用自建根 CA（`src/core/CertAuthority.*`，基于 OpenSSL，密钥存 `%APPDATA%\WinRoute\ca`，不入 git）按主机名临时签发叶证书，在 client 侧做 TLS 服务端、对真实服务器做 TLS 客户端（校验其证书，校验失败则断开），于是抓包里看到明文。首次开启解密且还没有根证书时，会先让你填写证书主题（通用名称、组织、有效期），按此生成并安装，不会静默套用默认值。“根证书…”按钮显示当前证书的详情（主题、有效期、序列号、SHA-256 指纹），并可重新生成、安装到 Windows 受信任根（供 Chrome/Edge；Firefox 需手动导入导出的证书）、移除和导出根证书；安装、检测和移除都按证书本身匹配，自定义名称也能正确识别。界面需走 Qt 的 OpenSSL 后端（启动时 `QSslSocket::setActiveBackend("openssl")`），安装包随附 `libcrypto`/`libssl` 运行期 DLL。已知限制：仅解密 TCP 443；v1 把 ALPN 降到 http/1.1，不解密 HTTP/2 与 QUIC（UDP）；证书固定的应用需用抓包过滤排除。
+
+**导出**：导出用 Windows 原生保存对话框，之前先弹一个选项框——默认导出全部连接（只导出选中的连接需显式勾选，表格里选了行不会悄悄缩小导出范围），并选择解密后的 HTTPS 在 Wireshark（PCAPNG）里如何呈现：
+
+- **保留真实端口（443）**（默认）：Wireshark 需对该端口“Decode As → HTTP”才会按明文解析（否则按 TLS 解析明文会乱码）。
+- **改用 80 端口**：解密的 HTTP 流写到 80 端口，Wireshark 直接按 HTTP 解析。
+- **保留真实端口并自动显示 HTTP**：以 Wireshark 的 “Exported PDU”（链路类型 252）写入，端口保持 443，无需 Decode As 即按 HTTP 解析；代价是没有 TCP 流视图，每个 PDU 上限 256 KB（Wireshark 单包大小限制）。
 
 ## 目录
 
