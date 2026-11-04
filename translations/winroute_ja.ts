@@ -290,6 +290,10 @@ Continue?</source>
       <translation>PCAPNG、Wireshark 用 (*.pcapng);;HAR、HTTP のやり取り (*.har)</translation>
     </message>
     <message>
+      <source>Keep real ports (decrypted HTTPS stays on 443; use Wireshark's "Decode As" to read it as HTTP)</source>
+      <translation>実際のポートを保持(復号した HTTPS は 443 のまま。Wireshark の「Decode As」で HTTP として解析)</translation>
+    </message>
+    <message>
       <source>Could not write the file:
 %1</source>
       <translation>ファイルを書き込めませんでした：

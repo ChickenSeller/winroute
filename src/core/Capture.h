@@ -122,7 +122,11 @@ public:
     void clear();
 
     // Exports. Pure functions over a copied entry, so they are easy to test.
-    static QByteArray toPcapng(const QList<CaptureEntry> &entries);
+    // keepRealPorts: when false (default), a decrypted connection is written on
+    // an HTTP-friendly port (80) so Wireshark dissects the plaintext as HTTP
+    // rather than mis-reading it as TLS on 443. When true, the real ports are
+    // kept and the reader must map the port to HTTP ("Decode As" in Wireshark).
+    static QByteArray toPcapng(const QList<CaptureEntry> &entries, bool keepRealPorts = false);
     static QByteArray toHar(const QList<CaptureEntry> &entries);
 
 signals:

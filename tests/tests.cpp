@@ -971,6 +971,8 @@ static void testCapture()
         dec.segs << seg(CaptureDir::Up, "GET / HTTP/1.1\r\nHost: x\r\n\r\n", 10)
                  << seg(CaptureDir::Down, "HTTP/1.1 200 OK\r\n\r\n", 20);
         CHECK(firstTcpDstPort(Capture::toPcapng({dec})) == 80);
+        // Keeping real ports leaves the decrypted stream on its true port.
+        CHECK(firstTcpDstPort(Capture::toPcapng({dec}, true)) == 443);
 
         CaptureEntry raw = dec;
         raw.proto = "TLS";

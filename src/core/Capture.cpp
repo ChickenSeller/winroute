@@ -414,7 +414,7 @@ void writeEpb(QByteArray &out, const QByteArray &frame, qint64 tsMs)
 
 } // namespace
 
-QByteArray Capture::toPcapng(const QList<CaptureEntry> &entries)
+QByteArray Capture::toPcapng(const QList<CaptureEntry> &entries, bool keepRealPorts)
 {
     // First pass: resolve the two endpoints of every connection and collect the
     // IP -> name pairs for the Name Resolution Block.
@@ -453,10 +453,11 @@ QByteArray Capture::toPcapng(const QList<CaptureEntry> &entries)
         r.sPort = e.meta.dstPort ? e.meta.dstPort : (e.proto == "TLS" ? 443 : 80);
         // For a decrypted connection the payload is plaintext, so writing it on
         // port 443 would make Wireshark run its TLS dissector over cleartext and
-        // show a garbled, "incomplete" stream. Move it to a port whose default
-        // dissector matches the plaintext: 80 for HTTP, otherwise a neutral port
-        // with no dissector (Follow TCP Stream still shows the bytes).
-        if (e.decrypted)
+        // show a garbled, "incomplete" stream. Unless the real ports are kept,
+        // move it to a port whose default dissector matches the plaintext: 80
+        // for HTTP, otherwise a neutral port with no dissector (Follow TCP
+        // Stream still shows the bytes).
+        if (e.decrypted && !keepRealPorts)
             r.sPort = (e.proto == "HTTP") ? 80 : (r.sPort != 443 ? r.sPort : 8000);
         r.t0 = e.meta.startMs ? e.meta.startMs : QDateTime::currentMSecsSinceEpoch();
         resolved.append(r);

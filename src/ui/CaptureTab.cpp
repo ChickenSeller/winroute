@@ -18,6 +18,7 @@
 #include <QFontDatabase>
 #include <QFormLayout>
 #include <QFrame>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
@@ -525,12 +526,28 @@ void CaptureTab::onExport()
     }
 
     const QString stamp = QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss");
-    QString selected;
-    const QString path = QFileDialog::getSaveFileName(
-        this, tr("Export Capture"), QStringLiteral("winroute-capture-%1").arg(stamp),
-        tr("PCAPNG, for Wireshark (*.pcapng);;HAR, HTTP exchanges (*.har)"), &selected);
-    if (path.isEmpty())
+    // A non-native save dialog so a "keep real ports" option can ride along.
+    QFileDialog fd(this, tr("Export Capture"), QStringLiteral("winroute-capture-%1").arg(stamp),
+                   tr("PCAPNG, for Wireshark (*.pcapng);;HAR, HTTP exchanges (*.har)"));
+    fd.setAcceptMode(QFileDialog::AcceptSave);
+    fd.setOption(QFileDialog::DontUseNativeDialog, true);
+    auto *keepPorts = new QCheckBox(
+        tr("Keep real ports (decrypted HTTPS stays on 443; use Wireshark's \"Decode As\" to read it as HTTP)"), &fd);
+    keepPorts->setChecked(util::appSettings().value("capture/exportRealPorts", true).toBool());
+    if (auto *grid = qobject_cast<QGridLayout *>(fd.layout()))
+        grid->addWidget(keepPorts, grid->rowCount(), 0, 1, grid->columnCount());
+    if (fd.exec() != QDialog::Accepted || fd.selectedFiles().isEmpty())
         return;
+    const QString selected = fd.selectedNameFilter();
+    const bool har = selected.contains("HAR");
+    const bool keepRealPorts = keepPorts->isChecked();
+    util::appSettings().setValue("capture/exportRealPorts", keepRealPorts);
+
+    QString path = fd.selectedFiles().first();
+    // The non-native dialog does not append the filter's extension.
+    const QString ext = har ? QStringLiteral(".har") : QStringLiteral(".pcapng");
+    if (!path.endsWith(ext, Qt::CaseInsensitive))
+        path += ext;
 
     // Export the selected connections, or all of them when none is selected.
     QList<CaptureEntry> entries;
@@ -544,8 +561,7 @@ void CaptureTab::onExport()
             entries.append(m_capture->entry(s.meta.id));
     }
 
-    const bool har = selected.contains("HAR") || path.endsWith(".har", Qt::CaseInsensitive);
-    const QByteArray data = har ? Capture::toHar(entries) : Capture::toPcapng(entries);
+    const QByteArray data = har ? Capture::toHar(entries) : Capture::toPcapng(entries, keepRealPorts);
 
     QSaveFile f(path);
     if (!f.open(QIODevice::WriteOnly) || f.write(data) != data.size() || !f.commit()) {

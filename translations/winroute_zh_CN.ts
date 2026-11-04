@@ -290,6 +290,10 @@ Continue?</source>
       <translation>PCAPNG，供 Wireshark (*.pcapng);;HAR，HTTP 交互 (*.har)</translation>
     </message>
     <message>
+      <source>Keep real ports (decrypted HTTPS stays on 443; use Wireshark's "Decode As" to read it as HTTP)</source>
+      <translation>保留真实端口(解密的 HTTPS 仍为 443;在 Wireshark 用“Decode As”按 HTTP 解析)</translation>
+    </message>
+    <message>
       <source>Could not write the file:
 %1</source>
       <translation>无法写入文件：
