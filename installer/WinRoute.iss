@@ -3,7 +3,7 @@
 ;   ISCC /DAppVersion=x.y.z /DStageDir=<dir> /DOutputDir=<dir> WinRoute.iss
 
 #ifndef AppVersion
-  #define AppVersion "0.6.4"
+  #define AppVersion "0.7.0"
 #endif
 #ifndef StageDir
   #define StageDir "..\build\stage"
