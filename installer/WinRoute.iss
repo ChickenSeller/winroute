@@ -8,6 +8,9 @@
 #ifndef StageDir
   #define StageDir "..\build\stage"
 #endif
+#ifndef OutputSuffix
+  #define OutputSuffix ""
+#endif
 #ifndef OutputDir
   #define OutputDir "..\build"
 #endif
@@ -29,7 +32,7 @@ ArchitecturesInstallIn64BitMode=x64os
 ; Qt 6 needs Windows 10 1809 or later.
 MinVersion=10.0.17763
 OutputDir={#OutputDir}
-OutputBaseFilename=WinRoute-{#AppVersion}-setup
+OutputBaseFilename=WinRoute-{#AppVersion}{#OutputSuffix}-setup
 SetupIconFile=..\resources\app.ico
 UninstallDisplayIcon={app}\WinRoute.exe
 UninstallDisplayName=WinRoute

@@ -113,6 +113,13 @@ void setEnabled(bool enabled)
         settings.remove(kIdKey);
 }
 
+void setDefaultEnabled(bool enabled)
+{
+    QSettings settings = util::appSettings();
+    if (!settings.contains(kEnabledKey))
+        settings.setValue(kEnabledKey, enabled);
+}
+
 void reportStart(const QString &updateMode, const QString &backend)
 {
     const QString version = QStringLiteral(WINROUTE_VERSION);

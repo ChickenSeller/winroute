@@ -53,6 +53,13 @@ void Updater::setMode(Mode mode)
     util::appSettings().setValue(kModeKey, int(mode));
 }
 
+void Updater::setDefaultMode(Mode mode)
+{
+    QSettings settings = util::appSettings();
+    if (!settings.contains(kModeKey))
+        settings.setValue(kModeKey, int(mode));
+}
+
 void Updater::checkAtStartup()
 {
     if (mode() != Mode::Never)

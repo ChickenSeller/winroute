@@ -90,6 +90,22 @@ cmake --build build --target installer    # 生成 build/WinRoute-<版本>-setup
 - **代码签名**：在 `WinRoute.iss` 中启用 `SignTool` 和 `SignedUninstaller` 两行，并给 ISCC 配置签名工具。
 - `installer/ChineseSimplified.isl` 是 Inno Setup 6.7.3 的简体中文非官方翻译，取自 jrsoftware/issrc。
 
+### 论坛版（吾爱破解）
+
+吾爱破解论坛的版规不允许程序弹出更新提示，也不允许程序里出现论坛以外的网址。为此有一个单独的构建开关，用独立的构建目录生成：
+
+```sh
+cmake -S . -B build-forum -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINROUTE_FORUM_BUILD=ON ...
+cmake --build build-forum --target installer   # 生成 build-forum/WinRoute-<版本>-52pojie-setup.exe
+```
+
+和正常版的区别：
+
+- **更新**：启动时不检查，“帮助”里没有“自动更新”子菜单；只保留“检查更新”和“通过代理检查更新”，用户点了才联网，确认后安装的是正常版。
+- **统计**：不含统计地址，不发送任何使用统计，菜单里也没有这一项。
+- **链接**：“关于”里只有 `https://www.52pojie.cn/`，没有源码和项目主页链接。
+- **设置默认值**：论坛版启动时把自动更新设为“从不检查”、统计设为关闭，但只在这两项**还没有设置过**时写入（`Updater::setDefaultMode`、`UsageStats::setDefaultEnabled`），已有的选择不改。手动更新到正常版后，正常版读到的是这两个值，所以仍然关闭，之后只有用户自己在菜单里改才会变。
+
 ## 多语言
 
 支持简体中文、日语和英语。默认跟随系统界面语言，可在“视图 > 语言”中切换，切换后需要重启程序。

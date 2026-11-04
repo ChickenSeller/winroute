@@ -243,7 +243,16 @@ void MainWindow::createActions()
         m_quitting = true;
         close();
     });
+#ifdef WINROUTE_FORUM_BUILD
+    // The forum build only checks when asked to (Help > Check for Updates),
+    // and sends no statistics. Record both as the defaults, so the regular
+    // build a manual update installs keeps them off too. Only settings not
+    // chosen yet are written: a choice the user made is never changed.
+    Updater::setDefaultMode(Updater::Mode::Never);
+    UsageStats::setDefaultEnabled(false);
+#else
     QTimer::singleShot(5000, m_updater, &Updater::checkAtStartup);
+#endif
 }
 
 void MainWindow::createMenus()
@@ -352,6 +361,7 @@ void MainWindow::createMenus()
     QMenu *help = menuBar()->addMenu(tr("&Help"));
     help->addAction(m_actCheckUpdates);
     help->addAction(m_actCheckUpdatesProxy);
+#ifndef WINROUTE_FORUM_BUILD
     QMenu *updates = help->addMenu(tr("Automatic U&pdates"));
     auto *updateGroup = new QActionGroup(this);
     const QList<QPair<QString, Updater::Mode>> updateModes = {
@@ -367,6 +377,7 @@ void MainWindow::createMenus()
         updateGroup->addAction(a);
         connect(a, &QAction::triggered, this, [mode] { Updater::setMode(mode); });
     }
+#endif
     if (UsageStats::isAvailable()) {
         QAction *stats = help->addAction(tr("Send Anonymous Usage &Statistics"));
         stats->setStatusTip(tr("Send anonymous usage statistics to help improve WinRoute (no personal data)."));
@@ -1021,10 +1032,14 @@ void MainWindow::showAbout()
         const QString u = QString::fromLatin1(url);
         return QStringLiteral("<a href=\"%1\">%1</a>").arg(u);
     };
-    const QString links =
-        QStringLiteral("<p>%1<br>%2</p>")
-            .arg(tr("Source code: %1").arg(link(WINROUTE_SOURCE_URL)),
-                 tr("Homepage: %1").arg(link(WINROUTE_HOMEPAGE_URL)));
+    // A build may leave the source link out (the forum build does).
+    QStringList lines;
+    if (*WINROUTE_SOURCE_URL)
+        lines << tr("Source code: %1").arg(link(WINROUTE_SOURCE_URL));
+    if (*WINROUTE_HOMEPAGE_URL)
+        lines << tr("Homepage: %1").arg(link(WINROUTE_HOMEPAGE_URL));
+    const QString links = lines.isEmpty() ? QString()
+                                          : QStringLiteral("<p>%1</p>").arg(lines.join(QStringLiteral("<br>")));
     const QString footer =
         QStringLiteral("<p>%1</p><p>Qt %2</p>")   // both backends, Qt on its own line
             .arg(tr("Interception: %1").arg(QStringLiteral("NetFilter SDK WFP driver / WinDivert")),

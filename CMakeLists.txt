@@ -99,6 +99,21 @@ set(WINROUTE_UPDATE_URL "${WINROUTE_HOMEPAGE_URL}update.json" CACHE STRING "WinR
 set(WINROUTE_MATOMO_URL "https://tj.yanlei.org/matomo.php" CACHE STRING "Matomo tracking endpoint for usage statistics")
 set(WINROUTE_MATOMO_SITE_ID "4" CACHE STRING "Matomo site id for usage statistics")
 
+# Forum build, for the release on the 52pojie forum, whose rules forbid
+# update prompts and web addresses other than the forum's in an app: no
+# automatic update checks (only Help > Check for Updates, which installs the
+# regular build), no usage statistics, and the forum as the only link in the
+# About box. The installer is named WinRoute-<version>-52pojie-setup.exe.
+option(WINROUTE_FORUM_BUILD "Build without automatic updates, statistics or links other than the 52pojie forum" OFF)
+set(WINROUTE_INSTALLER_SUFFIX "")
+if(WINROUTE_FORUM_BUILD)
+    set(WINROUTE_HOMEPAGE_URL "https://www.52pojie.cn/")
+    set(WINROUTE_SOURCE_URL "")
+    set(WINROUTE_MATOMO_URL "")
+    set(WINROUTE_MATOMO_SITE_ID "")
+    set(WINROUTE_INSTALLER_SUFFIX "-52pojie")
+endif()
+
 set(TS_FILES
     translations/winroute_zh_CN.ts
     translations/winroute_ja.ts
@@ -126,6 +141,9 @@ target_compile_definitions(WinRoute PRIVATE WINROUTE_VERSION="${PROJECT_VERSION}
 qt_add_resources(WinRoute "update" PREFIX "/" BASE resources FILES resources/update.ps1)
 if(WINROUTE_REQUIRE_ADMIN)
     target_compile_definitions(WinRoute PRIVATE WINROUTE_REQUIRE_ADMIN)
+endif()
+if(WINROUTE_FORUM_BUILD)
+    target_compile_definitions(WinRoute PRIVATE WINROUTE_FORUM_BUILD)
 endif()
 
 # Translations: "cmake --build build --target update_translations" refreshes the .ts files
@@ -195,6 +213,7 @@ if(WINDEPLOYQT_EXECUTABLE AND ISCC_EXECUTABLE)
                 ${INSTALLER_STAGE}/WinRoute.exe
         COMMAND ${ISCC_EXECUTABLE} /Q /DAppVersion=${PROJECT_VERSION}
                 /DStageDir=${INSTALLER_STAGE} /DOutputDir=${CMAKE_BINARY_DIR}
+                /DOutputSuffix=${WINROUTE_INSTALLER_SUFFIX}
                 ${CMAKE_SOURCE_DIR}/installer/WinRoute.iss
         DEPENDS WinRoute
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/installer

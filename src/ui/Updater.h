@@ -41,6 +41,9 @@ public:
 
     static Mode mode();
     static void setMode(Mode mode);
+    // Stores `mode` only when no mode has been chosen yet; a choice already
+    // made is never overwritten.
+    static void setDefaultMode(Mode mode);
 
     // Checks once, as the settings say.
     void checkAtStartup();
