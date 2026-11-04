@@ -681,6 +681,8 @@ void MainWindow::showAndActivate()
     activateWindow();
 }
 
+// Minimizing keeps the window on the taskbar; only closing it (the X button)
+// hides it to the tray, when the tray icon is shown.
 void MainWindow::closeEvent(QCloseEvent *e)
 {
     QSettings s = util::appSettings();
@@ -695,13 +697,6 @@ void MainWindow::closeEvent(QCloseEvent *e)
     m_tray->hide();
     e->accept();
     QApplication::quit();
-}
-
-void MainWindow::changeEvent(QEvent *e)
-{
-    if (e->type() == QEvent::WindowStateChange && isMinimized() && m_tray->isVisible())
-        QTimer::singleShot(0, this, &QWidget::hide);
-    QMainWindow::changeEvent(e);
 }
 
 void MainWindow::updateTitle()

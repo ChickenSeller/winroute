@@ -42,7 +42,6 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *e) override;
-    void changeEvent(QEvent *e) override;
 
 private:
     // UI construction
