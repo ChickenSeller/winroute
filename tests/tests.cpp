@@ -724,6 +724,12 @@ static void testGateway()
     // Each connection is logged as the gateway's, with the client's plain IPv4 address.
     const QString opened = QString("[Gateway] 127.0.0.1 - 127.0.0.1:%1 via").arg(echo.serverPort());
     CHECK(logLines.filter(opened).size() == 2);
+    // ...with the adapter it actually left through (here, loopback).
+    QString loopName;
+    for (const netif::Adapter &a : netif::adapters())
+        if (a.loopback && a.up)
+            loopName = a.name;
+    CHECK(!loopName.isEmpty() && logLines.filter(opened).filter(", adapter " + loopName).size() == 2);
     CHECK(logLines.filter("[Gateway] 127.0.0.1 - ").filter("closed").size() == 2);
 }
 
@@ -741,6 +747,10 @@ static void testInterfaces()
     CHECK(!netif::isUp(absent));
     CHECK(netif::sourceAddress(absent, QAbstractSocket::IPv4Protocol).isNull());
     CHECK(netif::displayName(absent) == absent);
+    // A local address names its adapter, also as a v4-mapped address.
+    CHECK(netif::nameForAddress(QHostAddress(QHostAddress::LocalHost)) == netif::displayName(loopId));
+    CHECK(netif::nameForAddress(QHostAddress("::ffff:127.0.0.1")) == netif::displayName(loopId));
+    CHECK(netif::nameForAddress(QHostAddress("203.0.113.9")) == "203.0.113.9");
 
     // The profile keeps the adapter in Proxifier's attributes on <Rule>.
     {
@@ -865,12 +875,19 @@ static void testInterfaces()
         dg.id = 7;
         dg.proxyId = 0;
         dg.interfaceId = loopId;
+        dg.appName = "app.exe";
+        dg.ruleName = "LAN";
         dg.remote = makeSockaddr4(0x7F000001, server.localPort());
         dg.data = "hello";
         QByteArray gotRemote;
         bool bypassed = false;
+        QStringList logLines;
+        const auto logConn = QObject::connect(&Logger::instance(), &Logger::entryAdded, [&](int, const QString &line) { logLines << line; });
         CHECK(runUdp(&relay, ProxyServer{}, dg, &gotRemote, &bypassed) == "re:hello");
+        QObject::disconnect(logConn);
         CHECK(gotRemote == dg.remote && !bypassed);
+        // The log names the rule it matched and the adapter it went out through.
+        CHECK(logLines.filter("app.exe - ").filter("LAN").filter(netif::displayName(loopId)).size() == 1);
         // The adapter is gone: sent normally (the system's default adapter).
         dg.interfaceId = absent;
         bypassed = false;

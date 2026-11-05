@@ -246,15 +246,23 @@ private:
 
     void onUpstreamReady(const Attempt &a, const QByteArray &leftover)
     {
+        // The adapter the connection actually left through (to the target, or
+        // to the first proxy), found from the socket's local address.
+        const QString adapter = netif::nameForAddress(m_upstream->localAddress());
+        // The rule it matched is named here too, as the "matching" line is
+        // only written at the verbose level.
+        const QString &rule = m_info.match.ruleName;
         if (a.hops.isEmpty())
-            logNormal(QCoreApplication::translate("Relay", "%1 - %2 open directly").arg(m_info.appName, m_targetText));
+            logNormal(QCoreApplication::translate("Relay", "%1 - %2 matching %3 rule : open directly, adapter %4")
+                          .arg(m_info.appName, m_targetText, rule, adapter));
         else if (a.hops.size() == 1)
-            logNormal(QCoreApplication::translate("Relay", "%1 - %2 open through proxy %3:%4 %5")
-                          .arg(m_info.appName, m_targetText, a.hops[0].address)
+            logNormal(QCoreApplication::translate("Relay", "%1 - %2 matching %3 rule : open through proxy %4:%5 %6, adapter %7")
+                          .arg(m_info.appName, m_targetText, rule, a.hops[0].address)
                           .arg(a.hops[0].port)
-                          .arg(proxyTypeToString(a.hops[0].type)));
+                          .arg(proxyTypeToString(a.hops[0].type), adapter));
         else
-            logNormal(QCoreApplication::translate("Relay", "%1 - %2 open through %3").arg(m_info.appName, m_targetText, m_actionText));
+            logNormal(QCoreApplication::translate("Relay", "%1 - %2 matching %3 rule : open through %4, adapter %5")
+                          .arg(m_info.appName, m_targetText, rule, m_actionText, adapter));
         if (!a.hops.isEmpty() && a.hops.size() == 1 && m_attempts.size() > 1)
             m_actionText = QString("%1 (%2:%3)").arg(m_actionText, a.hops[0].address).arg(a.hops[0].port);
         m_open = true;

@@ -2222,10 +2222,6 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>チェーン #%1 が存在しません</translation>
     </message>
     <message>
-      <source>%1 via %2</source>
-      <translation>%1（%2 経由）</translation>
-    </message>
-    <message>
       <source>[Gateway] %1</source>
       <translation>[ゲートウェイ] %1</translation>
     </message>
@@ -2274,16 +2270,28 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>%1 - %2 をブロック(%3)</translation>
     </message>
     <message>
-      <source>%1 - %2 via %3</source>
-      <translation>%1 - %2 を %3 経由</translation>
+      <source>%1 - %2 matching %3 rule : blocked</source>
+      <translation>%1 - %2 ルール %3 に一致：ブロック</translation>
+    </message>
+    <message>
+      <source>%1 - %2 network adapter %3 is not available, connected through the system's default adapter</source>
+      <translation>%1 - %2 ネットワークアダプター %3 が使えないため、システムの既定のアダプターで接続しました</translation>
+    </message>
+    <message>
+      <source>%1 - %2 via %3, adapter %4</source>
+      <translation>%1 - %2 %3 経由、アダプター %4</translation>
+    </message>
+    <message>
+      <source>%1 - %2 matching %3 rule : via %4, adapter %5</source>
+      <translation>%1 - %2 ルール %3 に一致：%4 経由、アダプター %5</translation>
+    </message>
+    <message>
+      <source>%1 - %2 via %3 failed : %4</source>
+      <translation>%1 - %2 %3 経由で失敗：%4</translation>
     </message>
     <message>
       <source>%1 - %2 proxy unreachable, connecting directly : %3</source>
       <translation>%1 - %2 プロキシに接続できないため直接接続します：%3</translation>
-    </message>
-    <message>
-      <source>%1 - %2 failed : %3</source>
-      <translation>%1 - %2 失敗：%3</translation>
     </message>
     <message>
       <source>%1 - %2</source>
@@ -2733,16 +2741,16 @@ Default ルールが %1 を使用するように変更されます。
       <translation>%1 - %2 %3、チェーン内の次のプロキシを試します</translation>
     </message>
     <message>
-      <source>%1 - %2 open directly</source>
-      <translation>%1 - %2 直接接続を開始</translation>
+      <source>%1 - %2 matching %3 rule : open directly, adapter %4</source>
+      <translation>%1 - %2 ルール %3 に一致：直接接続、アダプター %4</translation>
     </message>
     <message>
-      <source>%1 - %2 open through proxy %3:%4 %5</source>
-      <translation>%1 - %2 プロキシ %3:%4 %5 経由で接続</translation>
+      <source>%1 - %2 matching %3 rule : open through proxy %4:%5 %6, adapter %7</source>
+      <translation>%1 - %2 ルール %3 に一致：プロキシ %4:%5 %6 経由で接続、アダプター %7</translation>
     </message>
     <message>
-      <source>%1 - %2 open through %3</source>
-      <translation>%1 - %2 %3 経由で接続</translation>
+      <source>%1 - %2 matching %3 rule : open through %4, adapter %5</source>
+      <translation>%1 - %2 ルール %3 に一致：%4 経由で接続、アダプター %5</translation>
     </message>
     <message>
       <source>HTTPS decryption is not available</source>
@@ -2829,16 +2837,16 @@ Default ルールが %1 を使用するように変更されます。
       <translation>ローカル UDP ソケットを開けません</translation>
     </message>
     <message>
-      <source>%1 - %2 open through proxy %3:%4 SOCKS5 (UDP)</source>
-      <translation>%1 - %2 をプロキシ %3:%4 SOCKS5 経由で接続（UDP）</translation>
+      <source>%1 - %2 matching %3 rule : open through proxy %4:%5 SOCKS5 (UDP), adapter %6</source>
+      <translation>%1 - %2 ルール %3 に一致：プロキシ %4:%5 SOCKS5 経由で接続（UDP）、アダプター %6</translation>
+    </message>
+    <message>
+      <source>%1 - %2 matching %3 rule : open directly (UDP), adapter %4</source>
+      <translation>%1 - %2 ルール %3 に一致：直接接続（UDP）、アダプター %4</translation>
     </message>
     <message>
       <source>network adapter %1 is not available</source>
       <translation>ネットワークアダプター %1 が使えません</translation>
-    </message>
-    <message>
-      <source>%1 - %2 open directly via %3 (UDP)</source>
-      <translation>%1 - %2 を %3 経由で直接開きました（UDP）</translation>
     </message>
     <message>
       <source>%1 - %2 UDP could not resolve the host - %3</source>

@@ -34,5 +34,9 @@ QHostAddress sourceAddress(const QString &id, QAbstractSocket::NetworkLayerProto
 bool hasProtocol(const QString &id, QAbstractSocket::NetworkLayerProtocol protocol);
 // "Ethernet 2" for display, or the id when the adapter is not present.
 QString displayName(const QString &id);
+// The name of the adapter that owns this local address: which adapter a
+// connected socket actually uses (its localAddress()). Falls back to the
+// address itself when no adapter has it.
+QString nameForAddress(const QHostAddress &local);
 
 } // namespace netif

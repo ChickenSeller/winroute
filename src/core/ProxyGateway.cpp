@@ -106,8 +106,6 @@ Route routeFor(const RuleEnginePtr &rules, const ProxyGateway::Config &cfg,
         }
         break;
     }
-    if (!r.interfaceId.isEmpty() && !r.blocked)
-        r.text = QCoreApplication::translate("ProxyGateway", "%1 via %2").arg(r.text, netif::displayName(r.interfaceId));
     return r;
 }
 
@@ -423,13 +421,17 @@ private:
         const Route route = routeFor(m_gw->rules(), m_gw->config(), m_target, &ruleName);
         if (route.blocked) {
             rejectClient();   // refuse per the ruleset
-            logNormal(QCoreApplication::translate("ProxyGateway", "%1 - %2 blocked (%3)").arg(m_peer, m_targetText, route.text));
+            if (ruleName.isEmpty())
+                logNormal(QCoreApplication::translate("ProxyGateway", "%1 - %2 blocked (%3)").arg(m_peer, m_targetText, route.text));
+            else
+                logNormal(QCoreApplication::translate("ProxyGateway", "%1 - %2 matching %3 rule : blocked").arg(m_peer, m_targetText, ruleName));
             m_failed = true;
             finish();
             return;
         }
+        // Logged once connected, with the adapter it went out through.
         m_actionText = route.text;
-        logNormal(QCoreApplication::translate("ProxyGateway", "%1 - %2 via %3").arg(m_peer, m_targetText, route.text));
+        m_ruleName = ruleName;
 
         // When the chosen proxy/chain cannot be connected, fall back to a direct
         // connection if the "when the selected proxy cannot connect" setting says
@@ -448,6 +450,16 @@ private:
         connector->setInterface(m_interfaceId);
         connect(connector, &ProxyConnector::connected, this, [this, connector](const QByteArray &leftover) {
             connector->deleteLater();
+            if (!m_interfaceId.isEmpty() && connector->boundInterface().isEmpty())
+                logNormal(QCoreApplication::translate("ProxyGateway", "%1 - %2 network adapter %3 is not available, connected through the system's default adapter")
+                              .arg(m_peer, m_targetText, netif::displayName(m_interfaceId)));
+            const QString adapter = netif::nameForAddress(m_upstream->localAddress());
+            // No rule name when the gateway sends everything directly.
+            if (m_ruleName.isEmpty())
+                logNormal(QCoreApplication::translate("ProxyGateway", "%1 - %2 via %3, adapter %4").arg(m_peer, m_targetText, m_actionText, adapter));
+            else
+                logNormal(QCoreApplication::translate("ProxyGateway", "%1 - %2 matching %3 rule : via %4, adapter %5")
+                              .arg(m_peer, m_targetText, m_ruleName, m_actionText, adapter));
             onUpstreamReady(leftover);
         });
         connect(connector, &ProxyConnector::failed, this, [this, connector](const QString &err) {
@@ -455,13 +467,14 @@ private:
             if (m_fallbackDirect) {   // proxy unreachable: try once more, directly
                 m_fallbackDirect = false;
                 logNormal(QCoreApplication::translate("ProxyGateway", "%1 - %2 proxy unreachable, connecting directly : %3").arg(m_peer, m_targetText, err));
+                m_actionText = QCoreApplication::translate("ProxyGateway", "Direct");
                 if (m_upstream)
                     m_upstream->deleteLater();
                 connectThrough({});
                 return;
             }
             failClient();
-            logError(QCoreApplication::translate("ProxyGateway", "%1 - %2 failed : %3").arg(m_peer, m_targetText, err));
+            logError(QCoreApplication::translate("ProxyGateway", "%1 - %2 via %3 failed : %4").arg(m_peer, m_targetText, m_actionText, err));
             m_failed = true;
             finish();
         });
@@ -623,6 +636,7 @@ private:
     QString m_peer;
     QString m_targetText;
     QString m_actionText;
+    QString m_ruleName;   // the rule the target matched, empty in direct mode
     QString m_interfaceId;            // network adapter of the matched rule, or empty
     QByteArray m_buf;
     QByteArray m_pendingToUpstream;   // bytes to send upstream once connected

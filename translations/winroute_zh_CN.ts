@@ -2222,10 +2222,6 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>代理链 #%1 不存在</translation>
     </message>
     <message>
-      <source>%1 via %2</source>
-      <translation>%1（经 %2）</translation>
-    </message>
-    <message>
       <source>[Gateway] %1</source>
       <translation>[代理网关] %1</translation>
     </message>
@@ -2274,16 +2270,28 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>%1 - %2 已阻止(%3)</translation>
     </message>
     <message>
-      <source>%1 - %2 via %3</source>
-      <translation>%1 - %2 经由 %3</translation>
+      <source>%1 - %2 matching %3 rule : blocked</source>
+      <translation>%1 - %2 匹配规则 %3：已阻止</translation>
+    </message>
+    <message>
+      <source>%1 - %2 network adapter %3 is not available, connected through the system's default adapter</source>
+      <translation>%1 - %2 网卡 %3 不可用，已通过系统默认网卡连接</translation>
+    </message>
+    <message>
+      <source>%1 - %2 via %3, adapter %4</source>
+      <translation>%1 - %2 经由 %3，网卡 %4</translation>
+    </message>
+    <message>
+      <source>%1 - %2 matching %3 rule : via %4, adapter %5</source>
+      <translation>%1 - %2 匹配规则 %3：经由 %4，网卡 %5</translation>
+    </message>
+    <message>
+      <source>%1 - %2 via %3 failed : %4</source>
+      <translation>%1 - %2 经由 %3 失败：%4</translation>
     </message>
     <message>
       <source>%1 - %2 proxy unreachable, connecting directly : %3</source>
       <translation>%1 - %2 代理无法连接，改为直连：%3</translation>
-    </message>
-    <message>
-      <source>%1 - %2 failed : %3</source>
-      <translation>%1 - %2 失败：%3</translation>
     </message>
     <message>
       <source>%1 - %2</source>
@@ -2733,16 +2741,16 @@ Default 规则将改为使用 %1。
       <translation>%1 - %2 %3，尝试链中的下一个代理</translation>
     </message>
     <message>
-      <source>%1 - %2 open directly</source>
-      <translation>%1 - %2 直接连接</translation>
+      <source>%1 - %2 matching %3 rule : open directly, adapter %4</source>
+      <translation>%1 - %2 匹配规则 %3：直接连接，网卡 %4</translation>
     </message>
     <message>
-      <source>%1 - %2 open through proxy %3:%4 %5</source>
-      <translation>%1 - %2 通过代理 %3:%4 %5 连接</translation>
+      <source>%1 - %2 matching %3 rule : open through proxy %4:%5 %6, adapter %7</source>
+      <translation>%1 - %2 匹配规则 %3：通过代理 %4:%5 %6 连接，网卡 %7</translation>
     </message>
     <message>
-      <source>%1 - %2 open through %3</source>
-      <translation>%1 - %2 通过 %3 连接</translation>
+      <source>%1 - %2 matching %3 rule : open through %4, adapter %5</source>
+      <translation>%1 - %2 匹配规则 %3：通过 %4 连接，网卡 %5</translation>
     </message>
     <message>
       <source>HTTPS decryption is not available</source>
@@ -2829,16 +2837,16 @@ Default 规则将改为使用 %1。
       <translation>无法打开本地 UDP 套接字</translation>
     </message>
     <message>
-      <source>%1 - %2 open through proxy %3:%4 SOCKS5 (UDP)</source>
-      <translation>%1 - %2 通过代理 %3:%4 SOCKS5 连接（UDP）</translation>
+      <source>%1 - %2 matching %3 rule : open through proxy %4:%5 SOCKS5 (UDP), adapter %6</source>
+      <translation>%1 - %2 匹配规则 %3：通过代理 %4:%5 SOCKS5 连接（UDP），网卡 %6</translation>
+    </message>
+    <message>
+      <source>%1 - %2 matching %3 rule : open directly (UDP), adapter %4</source>
+      <translation>%1 - %2 匹配规则 %3：直接连接（UDP），网卡 %4</translation>
     </message>
     <message>
       <source>network adapter %1 is not available</source>
       <translation>网卡 %1 不可用</translation>
-    </message>
-    <message>
-      <source>%1 - %2 open directly via %3 (UDP)</source>
-      <translation>%1 - %2 已经 %3 直接打开（UDP）</translation>
     </message>
     <message>
       <source>%1 - %2 UDP could not resolve the host - %3</source>

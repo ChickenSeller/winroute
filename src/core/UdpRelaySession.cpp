@@ -291,9 +291,11 @@ void UdpRelaySession::openUdp(const QHostAddress &relayAddr, quint16 relayPort)
     }
     connect(m_udp, &QUdpSocket::readyRead, this, &UdpRelaySession::onUdpReadyRead);
     m_stage = Stage::Ready;
-    logNormal(QCoreApplication::translate("Relay", "%1 - %2 open through proxy %3:%4 SOCKS5 (UDP)")
-                  .arg(m_appName, m_targetText, m_proxy.address)
-                  .arg(m_proxy.port));
+    // The datagrams follow the proxy control connection's adapter.
+    logNormal(QCoreApplication::translate("Relay", "%1 - %2 matching %3 rule : open through proxy %4:%5 SOCKS5 (UDP), adapter %6")
+                  .arg(m_appName, m_targetText, m_meta.ruleName, m_proxy.address)
+                  .arg(m_proxy.port)
+                  .arg(m_control ? netif::nameForAddress(m_control->localAddress()) : QString()));
     emit m_relay->statusChanged(m_id, "Open");
     flushPending();
 }
@@ -325,8 +327,8 @@ void UdpRelaySession::openDirect()
     }
     connect(m_udp, &QUdpSocket::readyRead, this, &UdpRelaySession::onUdpReadyRead);
     m_stage = Stage::Ready;
-    logNormal(QCoreApplication::translate("Relay", "%1 - %2 open directly via %3 (UDP)")
-                  .arg(m_appName, m_targetText, netif::displayName(m_iface)));
+    logNormal(QCoreApplication::translate("Relay", "%1 - %2 matching %3 rule : open directly (UDP), adapter %4")
+                  .arg(m_appName, m_targetText, m_meta.ruleName, netif::displayName(m_iface)));
     emit m_relay->statusChanged(m_id, "Open");
     flushPending();
 }

@@ -111,4 +111,24 @@ QString displayName(const QString &id)
     return a.id.isEmpty() ? id : a.name;
 }
 
+QString nameForAddress(const QHostAddress &local)
+{
+    QHostAddress want = local;
+    bool ok = false;
+    const QHostAddress v4(local.toIPv4Address(&ok));   // "::ffff:1.2.3.4" from a dual-stack socket
+    if (ok)
+        want = v4;
+    want.setScopeId(QString());
+    if (want.isNull())
+        return {};
+    const QList<Adapter> all = adapters();
+    for (const Adapter &a : all)
+        for (QHostAddress addr : a.addresses) {
+            addr.setScopeId(QString());
+            if (addr == want)
+                return a.name;
+        }
+    return want.toString();
+}
+
 } // namespace netif
