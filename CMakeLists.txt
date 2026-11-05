@@ -102,12 +102,12 @@ set(WINROUTE_MATOMO_SITE_ID "4" CACHE STRING "Matomo site id for usage statistic
 # Forum build, for the release on the 52pojie forum, whose rules forbid
 # update prompts and web addresses other than the forum's in an app: no
 # automatic update checks (only Help > Check for Updates, which installs the
-# regular build), no usage statistics, and the forum as the only link in the
-# About box. The installer is named WinRoute-<version>-52pojie-setup.exe.
-option(WINROUTE_FORUM_BUILD "Build without automatic updates, statistics or links other than the 52pojie forum" OFF)
+# regular build), no usage statistics, and no links at all in the About box.
+# The installer is named WinRoute-<version>-52pojie-setup.exe.
+option(WINROUTE_FORUM_BUILD "Build without automatic updates, statistics or links" OFF)
 set(WINROUTE_INSTALLER_SUFFIX "")
 if(WINROUTE_FORUM_BUILD)
-    set(WINROUTE_HOMEPAGE_URL "https://www.52pojie.cn/")
+    set(WINROUTE_HOMEPAGE_URL "")
     set(WINROUTE_SOURCE_URL "")
     set(WINROUTE_MATOMO_URL "")
     set(WINROUTE_MATOMO_SITE_ID "")
