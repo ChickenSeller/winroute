@@ -9,6 +9,7 @@
 #include "core/HttpParse.h"
 #include "core/Profile.h"
 #include "core/ProxyConnector.h"
+#include "core/ProxyGateway.h"
 #include "core/Relay.h"
 #include "core/RuleEngine.h"
 #include "core/UdpRelaySession.h"
@@ -647,6 +648,69 @@ static QByteArray runUdp(Relay *relay, const ProxyServer &proxy, const UdpDatagr
     s->close();
     QCoreApplication::processEvents();
     return payload;
+}
+
+// Reads from sock until it holds at least n bytes (or 5 s pass).
+static QByteArray readAtLeast(QTcpSocket &sock, int n, QByteArray *buf)
+{
+    QElapsedTimer t;
+    t.start();
+    while (buf->size() < n && t.elapsed() < 5000) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+        *buf += sock.readAll();
+    }
+    const QByteArray head = buf->left(n);
+    buf->remove(0, head.size());
+    return head;
+}
+
+// The proxy gateway: SOCKS5 and HTTP CONNECT tunnels to an echo server, with
+// data sent both together with the request and after the tunnel is open.
+static void testGateway()
+{
+    EchoServer echo;
+    ProxyGateway gw;
+    ProxyGateway::Config cfg;
+    cfg.enabled = true;
+    cfg.listenAddress = QHostAddress::LocalHost;
+    cfg.httpPort = 0;
+    cfg.socksPort = 0;
+    cfg.mode = ProxyGateway::Mode::Direct;
+    QString err;
+    CHECK(gw.start(cfg, &err));
+    CHECK(gw.httpPort() != 0 && gw.socksPort() != 0);
+
+    {   // SOCKS5
+        QTcpSocket c;
+        c.connectToHost(QHostAddress::LocalHost, gw.socksPort());
+        c.write(QByteArray("\x05\x01\x00", 3));
+        QByteArray buf;
+        CHECK(readAtLeast(c, 2, &buf) == QByteArray("\x05\x00", 2));
+        QByteArray req("\x05\x01\x00\x01\x7f\x00\x00\x01", 8);
+        req += char(echo.serverPort() >> 8);
+        req += char(echo.serverPort() & 0xff);
+        c.write(req + "early");   // data right behind the request
+        const QByteArray reply = readAtLeast(c, 10, &buf);
+        CHECK(reply.size() == 10 && reply.at(1) == 0);
+        CHECK(readAtLeast(c, 5, &buf) == "early");
+        c.write("after-open");    // data once the tunnel is open
+        CHECK(readAtLeast(c, 10, &buf) == "after-open");
+        c.write("again");
+        CHECK(readAtLeast(c, 5, &buf) == "again");
+    }
+    {   // HTTP CONNECT
+        QTcpSocket c;
+        c.connectToHost(QHostAddress::LocalHost, gw.httpPort());
+        c.write(QString("CONNECT 127.0.0.1:%1 HTTP/1.1\r\nHost: x\r\n\r\n").arg(echo.serverPort()).toLatin1());
+        const QByteArray ok("HTTP/1.1 200 Connection Established\r\n\r\n");
+        QByteArray buf;
+        CHECK(readAtLeast(c, ok.size(), &buf) == ok);
+        c.write("tls-hello");
+        CHECK(readAtLeast(c, 9, &buf) == "tls-hello");
+        c.write("more");
+        CHECK(readAtLeast(c, 4, &buf) == "more");
+    }
+    gw.stop();
 }
 
 static void testUdpProxy()
@@ -1418,6 +1482,7 @@ int main(int argc, char **argv)
     testDns();
     testProxies();
     testUdpProxy();
+    testGateway();
     testWinDivertPacket();
     testCapture();
     testCaptureDatagrams();

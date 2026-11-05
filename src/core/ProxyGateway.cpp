@@ -149,11 +149,16 @@ private:
     {
         if (!m_client)
             return;
-        m_buf += m_client->readAll();
+        // Once the handshake is done the client's bytes stay in its socket:
+        // pump() forwards them when the upstream is open (and it is called then
+        // for whatever arrived while connecting), so they must not be read here.
         if (m_stage == Stage::Open) {
             pump(m_client, m_upstream, &m_sent);
             return;
         }
+        if (m_stage == Stage::Connecting)
+            return;
+        m_buf += m_client->readAll();
         bool progressed = true;
         while (progressed) {
             progressed = false;
