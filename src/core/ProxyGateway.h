@@ -9,6 +9,7 @@
 
 #include <atomic>
 
+class Capture;
 class QTcpServer;
 class QTcpSocket;
 class DnsClient;
@@ -76,6 +77,9 @@ public:
     quint16 socksPort() const { return m_socksPort; }  // bound SOCKS5 port, 0 if off
 
     void setRules(RuleEnginePtr rules);   // thread-safe
+    // The packet capture the forwarded connections are recorded in (when it is
+    // on and its filter passes them). Set once, before connections arrive.
+    void setCapture(Capture *capture) { m_capture = capture; }
     RuleEnginePtr rules() const;
 
     Config config() const { return m_config; }
@@ -103,6 +107,7 @@ private:
     mutable QMutex m_mutex;
     RuleEnginePtr m_rules;
 
+    std::atomic<Capture *> m_capture{nullptr};
     std::atomic<bool> m_running{false};
     std::atomic<qint64> m_totalSent{0};
     std::atomic<qint64> m_totalReceived{0};

@@ -1,4 +1,5 @@
 #include "ProxyGateway.h"
+#include "Capture.h"
 #include "DnsClient.h"
 #include "Logger.h"
 #include "NetInterfaces.h"
@@ -444,6 +445,7 @@ private:
 
     void connectThrough(const QList<ProxyServer> &hops)
     {
+        m_directUpstream = hops.isEmpty();
         m_upstream = new QTcpSocket(this);
         m_upstream->setSocketOption(QAbstractSocket::LowDelayOption, 1);
         auto *connector = new ProxyConnector(m_upstream, hops, m_target, m_gw->dns(), kConnectTimeoutMs, this);
@@ -492,13 +494,14 @@ private:
         connect(m_upstream, &QTcpSocket::disconnected, this, [this] { onSideClosed(m_upstream); });
         connect(m_upstream, &QTcpSocket::errorOccurred, this, [this] { onSideClosed(m_upstream); });
 
+        noteCapture();
         if (!leftover.isEmpty() && m_client) {
             m_client->write(leftover);   // downstream bytes the last proxy already sent
-            count(&m_received, leftover.size());
+            count(&m_received, leftover);
         }
         if (!m_pendingToUpstream.isEmpty()) {
             m_upstream->write(m_pendingToUpstream);   // tunnelled data / rewritten request
-            count(&m_sent, m_pendingToUpstream.size());
+            count(&m_sent, m_pendingToUpstream);
             m_pendingToUpstream.clear();
         }
         pump(m_client, m_upstream, &m_sent);
@@ -570,15 +573,57 @@ private:
             if (chunk.isEmpty())
                 break;
             to->write(chunk);
-            count(counter, chunk.size());
+            count(counter, chunk);
         }
     }
 
-    // Adds forwarded bytes to this session's and the gateway's totals.
-    void count(qint64 *counter, qint64 n)
+    // Adds forwarded bytes to this session's and the gateway's totals, and to
+    // the packet capture when this connection is recorded.
+    void count(qint64 *counter, const QByteArray &data)
     {
+        const qint64 n = data.size();
         *counter += n;
         (counter == &m_sent ? m_gw->m_totalSent : m_gw->m_totalReceived) += n;
+        if (m_captured)
+            if (Capture *cap = m_gw->m_capture.load())
+                cap->append(captureId(), counter == &m_sent ? CaptureDir::Up : CaptureDir::Down, data,
+                            QDateTime::currentMSecsSinceEpoch());
+    }
+
+    // Capture ids of the gateway's connections are kept apart from the relay's
+    // (counted from 1) and the datagram flows' (top bit set).
+    quint64 captureId() const { return (quint64(1) << 62) | m_id; }
+
+    // Registers the connection with the packet capture, once it is open. The
+    // "application" is the gateway and the device using it, so its rows stand
+    // apart from this machine's programs; the capture filter sees that name.
+    void noteCapture()
+    {
+        Capture *cap = m_gw->m_capture.load();
+        if (!cap || !cap->isEnabled())
+            return;
+        const QString app = tagged(m_peer);
+        // The address actually connected to, when it is the target itself.
+        QHostAddress dst = m_target.ip;
+        if (dst.isNull() && m_upstream && m_directUpstream)
+            dst = util::normalize(m_upstream->peerAddress());
+        if (!cap->shouldCapture(app, QString(), m_target.host, dst, m_target.port))
+            return;
+        CaptureMeta cm;
+        cm.id = captureId();
+        cm.appName = app;
+        cm.target = m_targetText;
+        cm.ruleName = m_ruleName;
+        cm.actionText = m_actionText;
+        cm.srcAddr = util::normalize(m_client ? m_client->peerAddress() : QHostAddress());
+        cm.srcPort = m_client ? m_client->peerPort() : 0;
+        cm.dstAddr = dst;
+        cm.dstPort = m_target.port;
+        cm.hostname = m_target.host;
+        cm.v6 = cm.srcAddr.protocol() == QAbstractSocket::IPv6Protocol;
+        cm.startMs = m_start;
+        cap->note(cm);
+        m_captured = true;
     }
 
     void onSideClosed(QTcpSocket *side)
@@ -619,6 +664,9 @@ private:
         if (m_finished)
             return;
         m_finished = true;
+        if (m_captured)
+            if (Capture *cap = m_gw->m_capture.load())
+                cap->finish(captureId(), QDateTime::currentMSecsSinceEpoch());
         if (m_stage == Stage::Open) {
             const qint64 life = (QDateTime::currentMSecsSinceEpoch() - m_start) / 1000;
             logNormal(QCoreApplication::translate("ProxyGateway", "%1 - %2 closed, %3 sent, %4 received, lifetime %5")
@@ -649,6 +697,8 @@ private:
     bool m_replied = false;
     bool m_failed = false;
     bool m_finished = false;
+    bool m_captured = false;         // recorded in the packet capture
+    bool m_directUpstream = false;   // the upstream socket goes to the target itself
 };
 
 ProxyGateway::ProxyGateway(QObject *parent) : QObject(parent) {}

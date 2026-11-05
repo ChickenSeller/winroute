@@ -36,6 +36,7 @@ Engine::Engine(QObject *parent)
     // created there, so start()/stop() are invoked on that thread.
     m_gatewayThread.setObjectName("gateway");
     m_gateway = new ProxyGateway;
+    m_gateway->setCapture(&m_capture);
     m_gateway->moveToThread(&m_gatewayThread);
     connect(&m_gatewayThread, &QThread::finished, m_gateway, &QObject::deleteLater);
     m_gatewayThread.start();

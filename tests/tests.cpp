@@ -680,6 +680,10 @@ static void testGateway()
     const QMetaObject::Connection logConn =
         QObject::connect(&Logger::instance(), &Logger::entryAdded, [&](int, const QString &line) { logLines << line; });
     ProxyGateway gw;
+    // The forwarded connections are recorded in the packet capture.
+    Capture cap;
+    cap.setEnabled(true);
+    gw.setCapture(&cap);
     ProxyGateway::Config cfg;
     cfg.enabled = true;
     cfg.listenAddress = QHostAddress::LocalHost;
@@ -726,6 +730,24 @@ static void testGateway()
     gw.stop();
     CHECK(!gw.running());
     QObject::disconnect(logConn);
+    {
+        const QList<CaptureSummary> rows = cap.summaries();
+        CHECK(rows.size() == 2);
+        qint64 up = 0, down = 0;
+        for (const CaptureSummary &r : rows) {
+            CHECK(r.meta.appName == "[Gateway] 127.0.0.1" && !r.open);
+            CHECK(r.meta.target == QString("127.0.0.1:%1").arg(echo.serverPort()));
+            CHECK(r.meta.srcAddr == QHostAddress(QHostAddress::LocalHost) && r.meta.dstPort == echo.serverPort());
+            up += r.up;
+            down += r.down;
+        }
+        // Exactly the forwarded payload, not the proxy handshakes.
+        CHECK(up == 33 && down == 33);
+        if (!rows.isEmpty()) {
+            const CaptureEntry e = cap.entry(rows.first().meta.id);
+            CHECK(!e.segs.isEmpty() && e.segs.first().dir == CaptureDir::Up);
+        }
+    }
     // Each connection is logged as the gateway's, with the client's plain IPv4 address.
     const QString opened = QString("[Gateway] 127.0.0.1 - 127.0.0.1:%1 via").arg(echo.serverPort());
     CHECK(logLines.filter(opened).size() == 2);
