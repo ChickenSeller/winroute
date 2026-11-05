@@ -13,7 +13,7 @@ class DnsClient;
 class GatewaySession;
 
 // Inbound proxy server: lets other machines reach the network through this one.
-// It listens for HTTP/HTTPS(CONNECT) and SOCKS5 clients and forwards each
+// It listens for HTTP (including CONNECT tunnels) and SOCKS5 clients and forwards each
 // connection out either directly or through this machine's own proxy rules
 // (the same RuleEngine and ProxyConnector the relay uses). It does not need the
 // capture driver: it works purely at the TCP level.
@@ -64,7 +64,7 @@ public:
     bool start(const Config &config, QString *error);
     void stop();
     bool isRunning() const { return m_httpServer || m_socksServer; }
-    quint16 httpPort() const { return m_httpPort; }    // bound HTTP/HTTPS port, 0 if off
+    quint16 httpPort() const { return m_httpPort; }    // bound HTTP port, 0 if off
     quint16 socksPort() const { return m_socksPort; }  // bound SOCKS5 port, 0 if off
 
     void setRules(RuleEnginePtr rules);   // thread-safe

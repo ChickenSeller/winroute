@@ -11,7 +11,7 @@ class ProxyGatewayDialog;
 }
 
 // "Proxy Gateway" settings: let other machines reach the network through this
-// one (HTTP/HTTPS/SOCKS5), either following this machine's proxy rules, sending
+// one (HTTP/SOCKS5), either following this machine's proxy rules, sending
 // everything through a chosen proxy or chain, or connecting directly. The
 // layout lives in ProxyGatewayDialog.ui; the settings live in WinRoute.ini.
 class ProxyGatewayDialog : public QDialog {

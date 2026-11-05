@@ -647,7 +647,7 @@ bool ProxyGateway::start(const Config &config, QString *error)
         *portOut = server->serverPort();
         connect(server, &QTcpServer::newConnection, this, [this, server, proto] { onNewConnection(server, proto); });
         logNormal(QCoreApplication::translate("ProxyGateway", "Proxy gateway (%1) listening on %2:%3")
-                      .arg(proto == Proto::Http ? QStringLiteral("HTTP/HTTPS") : QStringLiteral("SOCKS5"),
+                      .arg(proto == Proto::Http ? QStringLiteral("HTTP") : QStringLiteral("SOCKS5"),
                            config.listenAddress.toString())
                       .arg(*portOut));
         return true;

@@ -1372,10 +1372,6 @@ Continue?</source>
       <translation>代理网关</translation>
     </message>
     <message>
-      <source>Let other machines use this computer as an HTTP/HTTPS or SOCKS5 proxy to reach the network.</source>
-      <translation>让其他机器把本机当作 HTTP/HTTPS 或 SOCKS5 代理，经本机访问网络。</translation>
-    </message>
-    <message>
       <source>Let other machines reach the network through this one</source>
       <translation>让其他机器通过本机访问网络</translation>
     </message>
@@ -1454,6 +1450,10 @@ Continue?</source>
     <message>
       <source>Signed by %1 — click for details</source>
       <translation>签名者：%1 — 点击查看详情</translation>
+    </message>
+    <message>
+      <source>Let other machines use this computer as an HTTP or SOCKS5 proxy to reach the network.</source>
+      <translation>让其他机器把本机当作 HTTP 或 SOCKS5 代理，经本机访问网络。</translation>
     </message>
     <message>
       <source>%1 signatures — click for details</source>
@@ -2329,10 +2329,6 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>地址：</translation>
     </message>
     <message>
-      <source>HTTP / HTTPS</source>
-      <translation>HTTP / HTTPS</translation>
-    </message>
-    <message>
       <source>Port:</source>
       <translation>端口：</translation>
     </message>
@@ -2359,6 +2355,10 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     <message>
       <source>Rules that match by application are skipped — a remote connection has no local process.</source>
       <translation>按进程(应用程序)区分的规则会被跳过——远程连接没有本地进程。</translation>
+    </message>
+    <message>
+      <source>HTTP</source>
+      <translation>HTTP</translation>
     </message>
     <message>
       <source>If the selected proxy cannot connect:</source>

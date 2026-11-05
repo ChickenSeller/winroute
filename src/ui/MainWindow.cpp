@@ -408,7 +408,7 @@ void MainWindow::createToolBar()
     capture->setToolTip(tr("Capture the traffic going through WinRoute and inspect it, with optional HTTPS decryption."));
     connect(capture, &QAction::triggered, this, &MainWindow::showCapture);
     auto *proxyServer = new QAction(icons::proxyService(), tr("Proxy Gateway"), this);
-    proxyServer->setToolTip(tr("Let other machines use this computer as an HTTP/HTTPS or SOCKS5 proxy to reach the network."));
+    proxyServer->setToolTip(tr("Let other machines use this computer as an HTTP or SOCKS5 proxy to reach the network."));
     proxyServer->setStatusTip(tr("Let other machines reach the network through this one"));
     connect(proxyServers, &QAction::triggered, this, &MainWindow::showProxyServers);
     connect(rules, &QAction::triggered, this, &MainWindow::showRules);

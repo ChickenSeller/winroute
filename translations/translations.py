@@ -211,9 +211,9 @@ T = {
     "Test whether proxy servers are reachable and how fast they respond.":
         ("测试代理服务器是否可连接、响应有多快。",
          "プロキシサーバーに接続できるか、応答がどれくらい速いかをテストします。"),
-    "Let other machines use this computer as an HTTP/HTTPS or SOCKS5 proxy to reach the network.":
-        ("让其他机器把本机当作 HTTP/HTTPS 或 SOCKS5 代理，经本机访问网络。",
-         "他のマシンがこのコンピューターを HTTP/HTTPS または SOCKS5 プロキシとして使い、ネットワークにアクセスできるようにします。"),
+    "Let other machines use this computer as an HTTP or SOCKS5 proxy to reach the network.":
+        ("让其他机器把本机当作 HTTP 或 SOCKS5 代理，经本机访问网络。",
+         "他のマシンがこのコンピューターを HTTP または SOCKS5 プロキシとして使い、ネットワークにアクセスできるようにします。"),
     "Proxification Rules": ("代理规则", "プロキシ化ルール"),
     "Name Resolution": ("域名解析", "名前解決"),
     "Proxy Checker": ("代理检测", "プロキシチェッカー"),
@@ -885,7 +885,6 @@ T = {
     "User name:": ("用户名:", "ユーザー名:"),
     "Leave the user name empty to allow clients without authentication.":
         ("用户名留空则允许客户端无需认证即可使用。", "ユーザー名を空にすると、認証なしでクライアントを許可します。"),
-    "HTTP / HTTPS": ("HTTP / HTTPS", "HTTP / HTTPS"),
     "SOCKS5": ("SOCKS5", "SOCKS5"),
     "No proxy protocol is enabled": ("未启用任何代理协议", "有効なプロキシプロトコルがありません"),
     "%1 - not a SOCKS5 client": ("%1 - 不是 SOCKS5 客户端", "%1 - SOCKS5 クライアントではありません"),

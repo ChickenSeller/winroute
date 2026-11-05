@@ -1372,10 +1372,6 @@ Continue?</source>
       <translation>プロキシゲートウェイ</translation>
     </message>
     <message>
-      <source>Let other machines use this computer as an HTTP/HTTPS or SOCKS5 proxy to reach the network.</source>
-      <translation>他のマシンがこのコンピューターを HTTP/HTTPS または SOCKS5 プロキシとして使い、ネットワークにアクセスできるようにします。</translation>
-    </message>
-    <message>
       <source>Let other machines reach the network through this one</source>
       <translation>他のマシンがこのマシン経由でネットワークにアクセスできるようにします</translation>
     </message>
@@ -1454,6 +1450,10 @@ Continue?</source>
     <message>
       <source>Signed by %1 — click for details</source>
       <translation>署名者：%1 — クリックで詳細</translation>
+    </message>
+    <message>
+      <source>Let other machines use this computer as an HTTP or SOCKS5 proxy to reach the network.</source>
+      <translation>他のマシンがこのコンピューターを HTTP または SOCKS5 プロキシとして使い、ネットワークにアクセスできるようにします。</translation>
     </message>
     <message>
       <source>%1 signatures — click for details</source>
@@ -2329,10 +2329,6 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>アドレス：</translation>
     </message>
     <message>
-      <source>HTTP / HTTPS</source>
-      <translation>HTTP / HTTPS</translation>
-    </message>
-    <message>
       <source>Port:</source>
       <translation>ポート：</translation>
     </message>
@@ -2359,6 +2355,10 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     <message>
       <source>Rules that match by application are skipped — a remote connection has no local process.</source>
       <translation>アプリケーションで振り分けるルールはスキップされます（リモート接続にローカルプロセスがないため）。</translation>
+    </message>
+    <message>
+      <source>HTTP</source>
+      <translation>HTTP</translation>
     </message>
     <message>
       <source>If the selected proxy cannot connect:</source>
