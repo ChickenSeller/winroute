@@ -259,9 +259,16 @@ CaptureTab::CaptureTab(Capture *capture, CertAuthority *ca, QWidget *parent)
     auto *filterBtn = new QPushButton(tr("Filter..."));
     connect(filterBtn, &QPushButton::clicked, this, &CaptureTab::onFilter);
 
-    auto *sep = new QFrame;
-    sep->setFrameShape(QFrame::VLine);
-    sep->setFrameShadow(QFrame::Sunken);
+    // A thin toolbar separator: a 1px line over the middle of the row, with
+    // the same space on both sides.
+    const auto addSeparator = [](QHBoxLayout *layout) {
+        auto *line = new QFrame;
+        line->setFixedSize(1, 18);
+        line->setStyleSheet(QStringLiteral("background-color: palette(mid);"));
+        layout->addSpacing(8);
+        layout->addWidget(line, 0, Qt::AlignVCenter);
+        layout->addSpacing(8);
+    };
 
     // Whose traffic is captured; remembered, both on by default.
     auto *captureLabel = new QLabel(tr("Capture:"));
@@ -284,9 +291,6 @@ CaptureTab::CaptureTab(Capture *capture, CertAuthority *ca, QWidget *parent)
             util::appSettings().setValue(key, checked);
         });
     }
-    auto *sep2 = new QFrame;
-    sep2->setFrameShape(QFrame::VLine);
-    sep2->setFrameShadow(QFrame::Sunken);
 
     // HTTPS decryption, for each source apart.
     auto *decryptLabel = new QLabel(tr("Decrypt HTTPS:"));
@@ -309,14 +313,15 @@ CaptureTab::CaptureTab(Capture *capture, CertAuthority *ca, QWidget *parent)
     bar->addWidget(clearBtn);
     bar->addWidget(exportBtn);
     bar->addWidget(filterBtn);
-    bar->addWidget(sep);
+    addSeparator(bar);
     bar->addWidget(captureLabel);
     bar->addWidget(m_local);
     bar->addWidget(m_gateway);
-    bar->addWidget(sep2);
+    addSeparator(bar);
     bar->addWidget(decryptLabel);
     bar->addWidget(m_decryptLocal);
     bar->addWidget(m_decryptGateway);
+    bar->addSpacing(8);
     bar->addWidget(certBtn);
     bar->addStretch();
     root->addLayout(bar);
