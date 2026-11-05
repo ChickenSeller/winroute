@@ -29,8 +29,11 @@ sync-github:
   extends: .github
   stage: sync
   rules:
+    # A manual job from rules blocks the later stages until it runs, unless it
+    # may fail: without allow_failure the pages job below never starts.
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: manual
+      allow_failure: true
   script:
     # Not a force push: if GitHub has commits GitLab lacks, this fails rather
     # than discarding them.
@@ -117,6 +120,7 @@ pages:
         - site/**/*
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: manual
+      allow_failure: true
   script:
     - mkdir public
     - cp -r site/. public/
