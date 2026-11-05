@@ -26,7 +26,7 @@ StatisticsWidget::StatisticsWidget(IconFn iconFn, QWidget *parent)
         QMenu menu;
         menu.addAction(tr("&Copy"), this, &StatisticsWidget::copyAll);
         menu.addSeparator();
-        menu.addAction(tr("&Reset Statistics"), this, &StatisticsWidget::reset);
+        menu.addAction(tr("&Reset Statistics"), this, &StatisticsWidget::resetStatistics);
         menu.exec(viewport()->mapToGlobal(pos));
     });
 }
@@ -124,7 +124,7 @@ void StatisticsWidget::closed(quint64 id, qint64 sent, qint64 received)
     m_conns.erase(it);
 }
 
-void StatisticsWidget::reset()
+void StatisticsWidget::resetStatistics()
 {
     clear();
     m_apps.clear();

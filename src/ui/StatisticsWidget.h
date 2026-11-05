@@ -17,7 +17,7 @@ public:
     void opened(const ConnectionEvent &ev);
     void closed(quint64 id, qint64 sent, qint64 received);
     void traffic(const QList<TrafficSample> &samples);
-    void reset();
+    void resetStatistics();
     void copyAll();
 
 private:
