@@ -28,6 +28,16 @@ bool Capture::isEnabled() const
     return m_enabled.load(std::memory_order_relaxed);
 }
 
+void Capture::setSourceEnabled(Source source, bool on)
+{
+    (source == Source::Local ? m_local : m_gateway).store(on, std::memory_order_relaxed);
+}
+
+bool Capture::sourceEnabled(Source source) const
+{
+    return (source == Source::Local ? m_local : m_gateway).load(std::memory_order_relaxed);
+}
+
 void Capture::setDecrypt(bool on)
 {
     m_decrypt.store(on, std::memory_order_relaxed);
@@ -168,7 +178,7 @@ void Capture::finish(quint64 id, qint64 tsMs)
 void Capture::datagram(const CaptureMeta &meta, const QString &proto, CaptureDir dir, const QByteArray &bytes,
                        qint64 tsMs, bool synthesized, const QString &filterHost)
 {
-    if (!isEnabled() || bytes.isEmpty())
+    if (!capturing(Source::Local) || bytes.isEmpty())
         return;
     const QString key = proto + QLatin1Char('|') + QString::number(meta.pid) + QLatin1Char('|')
                         + meta.srcAddr.toString() + QLatin1Char(':') + QString::number(meta.srcPort)
@@ -227,7 +237,7 @@ void Capture::datagram(const CaptureMeta &meta, const QString &proto, CaptureDir
 void Capture::dnsMessage(const CaptureMeta &base, CaptureDir dir, const QByteArray &msg, qint64 tsMs,
                          bool synthesized)
 {
-    if (!isEnabled() || msg.isEmpty())
+    if (!capturing(Source::Local) || msg.isEmpty())
         return;
     CaptureMeta m = base;
     dns::Question q;

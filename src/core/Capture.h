@@ -99,6 +99,15 @@ public:
     void setEnabled(bool on);
     bool isEnabled() const;
 
+    // Whose traffic is captured: this computer's own connections (the relay,
+    // UDP and DNS), and those forwarded by the proxy gateway for other
+    // devices. Both on by default; thread-safe.
+    enum class Source { Local, Gateway };
+    void setSourceEnabled(Source source, bool on);
+    bool sourceEnabled(Source source) const;
+    // Capture is on and takes this source.
+    bool capturing(Source source) const { return isEnabled() && sourceEnabled(source); }
+
     // HTTPS decryption (MITM). When on, the relay terminates TLS for the
     // connections it captures and feeds this store the plaintext. Off by
     // default; read without the lock on the relay's fast path.
@@ -168,6 +177,8 @@ private:
     mutable QMutex m_mutex;
     std::atomic<bool> m_enabled{false};   // read without the lock for a cheap off-path
     std::atomic<bool> m_decrypt{false};   // HTTPS decryption (MITM)
+    std::atomic<bool> m_local{true};      // Source::Local
+    std::atomic<bool> m_gateway{true};    // Source::Gateway
     qint64 m_perConn = 8LL * 1024 * 1024;
     qint64 m_total = 256LL * 1024 * 1024;
     qint64 m_bytes = 0;

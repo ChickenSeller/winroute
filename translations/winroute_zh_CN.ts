@@ -126,6 +126,22 @@
       <translation>过滤...</translation>
     </message>
     <message>
+      <source>This computer</source>
+      <translation>本机</translation>
+    </message>
+    <message>
+      <source>Capture the connections of this computer's programs</source>
+      <translation>抓取本机程序的连接</translation>
+    </message>
+    <message>
+      <source>Proxy gateway</source>
+      <translation>代理网关</translation>
+    </message>
+    <message>
+      <source>Capture the connections other devices make through the proxy gateway</source>
+      <translation>抓取其他设备通过代理网关建立的连接</translation>
+    </message>
+    <message>
       <source>Decrypt HTTPS</source>
       <translation>解密 HTTPS</translation>
     </message>

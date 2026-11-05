@@ -323,6 +323,10 @@ T = {
 
     # ---- HTTPS decryption (MITM) ----
     "Decrypt HTTPS": ("解密 HTTPS", "HTTPS を復号"),
+    "This computer": ("本机", "このコンピューター"),
+    "Capture the connections of this computer's programs": ("抓取本机程序的连接", "このコンピューターのプログラムの接続をキャプチャします"),
+    "Proxy gateway": ("代理网关", "プロキシゲートウェイ"),
+    "Capture the connections other devices make through the proxy gateway": ("抓取其他设备通过代理网关建立的连接", "他の端末がプロキシゲートウェイ経由で行う接続をキャプチャします"),
     "Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. Capture must be started as well.":
         ("用 WinRoute 的根证书解密抓取到的 HTTPS(443 端口)连接。还需先开始抓包。",
          "WinRoute のルート証明書でキャプチャした HTTPS(ポート 443)接続を復号します。キャプチャも開始する必要があります。"),

@@ -588,7 +588,7 @@ void UdpRelaySession::onControlClosed()
 void UdpRelaySession::capture(const QByteArray &remote, CaptureDir dir, const QByteArray &payload)
 {
     Capture *cap = m_relay ? m_relay->capture() : nullptr;
-    if (!cap || !cap->isEnabled())
+    if (!cap || !cap->capturing(Capture::Source::Local))
         return;
     CaptureMeta m;
     m.pid = m_meta.pid;

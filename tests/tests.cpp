@@ -748,6 +748,27 @@ static void testGateway()
             CHECK(!e.segs.isEmpty() && e.segs.first().dir == CaptureDir::Up);
         }
     }
+    {
+        // Whose traffic is captured can be chosen: this computer's, the gateway's.
+        Capture c;
+        c.setEnabled(true);
+        CHECK(c.capturing(Capture::Source::Local) && c.capturing(Capture::Source::Gateway));
+        c.setSourceEnabled(Capture::Source::Local, false);
+        CHECK(!c.capturing(Capture::Source::Local) && c.capturing(Capture::Source::Gateway));
+        CaptureMeta m;
+        m.appName = "app.exe";
+        m.srcAddr = QHostAddress::LocalHost;
+        m.srcPort = 5000;
+        m.dstAddr = QHostAddress("192.0.2.1");
+        m.dstPort = 53;
+        c.datagram(m, "UDP", CaptureDir::Up, "x", 1);
+        CHECK(c.summaries().isEmpty());
+        c.setSourceEnabled(Capture::Source::Local, true);
+        c.datagram(m, "UDP", CaptureDir::Up, "x", 1);
+        CHECK(c.summaries().size() == 1);
+        c.setEnabled(false);
+        CHECK(!c.capturing(Capture::Source::Gateway));
+    }
     // Each connection is logged as the gateway's, with the client's plain IPv4 address.
     const QString opened = QString("[Gateway] 127.0.0.1 - 127.0.0.1:%1 via").arg(echo.serverPort());
     CHECK(logLines.filter(opened).size() == 2);

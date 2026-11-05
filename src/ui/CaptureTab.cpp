@@ -263,6 +263,30 @@ CaptureTab::CaptureTab(Capture *capture, CertAuthority *ca, QWidget *parent)
     sep->setFrameShape(QFrame::VLine);
     sep->setFrameShadow(QFrame::Sunken);
 
+    // Whose traffic is captured; remembered, both on by default.
+    m_local = new QCheckBox(tr("This computer"));
+    m_local->setToolTip(tr("Capture the connections of this computer's programs"));
+    m_gateway = new QCheckBox(tr("Proxy gateway"));
+    m_gateway->setToolTip(tr("Capture the connections other devices make through the proxy gateway"));
+    const struct { QCheckBox *box; Capture::Source source; const char *key; } sources[] = {
+        {m_local, Capture::Source::Local, "capture/local"},
+        {m_gateway, Capture::Source::Gateway, "capture/gateway"},
+    };
+    for (const auto &src : sources) {
+        const bool srcOn = util::appSettings().value(src.key, true).toBool();
+        src.box->setChecked(srcOn);
+        m_capture->setSourceEnabled(src.source, srcOn);
+        const Capture::Source source = src.source;
+        const QString key = QString::fromLatin1(src.key);
+        connect(src.box, &QCheckBox::toggled, this, [this, source, key](bool checked) {
+            m_capture->setSourceEnabled(source, checked);
+            util::appSettings().setValue(key, checked);
+        });
+    }
+    auto *sep2 = new QFrame;
+    sep2->setFrameShape(QFrame::VLine);
+    sep2->setFrameShadow(QFrame::Sunken);
+
     m_decrypt = new QCheckBox(tr("Decrypt HTTPS"));
     m_decrypt->setToolTip(tr("Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. "
                              "Capture must be started as well."));
@@ -275,6 +299,9 @@ CaptureTab::CaptureTab(Capture *capture, CertAuthority *ca, QWidget *parent)
     bar->addWidget(exportBtn);
     bar->addWidget(filterBtn);
     bar->addWidget(sep);
+    bar->addWidget(m_local);
+    bar->addWidget(m_gateway);
+    bar->addWidget(sep2);
     bar->addWidget(m_decrypt);
     bar->addWidget(certBtn);
     bar->addStretch();

@@ -40,6 +40,8 @@ private:
     QPlainTextEdit *m_detail;
     QToolButton *m_toggle;
     QCheckBox *m_decrypt;
+    QCheckBox *m_local;     // capture this computer's connections
+    QCheckBox *m_gateway;   // capture the proxy gateway's connections
     QTimer *m_timer;
     quint64 m_selectedId = 0;
 };

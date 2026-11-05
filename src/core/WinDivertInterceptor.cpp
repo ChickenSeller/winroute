@@ -97,7 +97,7 @@ void captureDns(Capture *cap, quint32 selfPid, quint32 owner, const QHostAddress
                 const QHostAddress &server, quint16 serverPort, CaptureDir dir, const QByteArray &msg,
                 bool synthesized = false)
 {
-    if (!cap || !cap->isEnabled())
+    if (!cap || !cap->capturing(Capture::Source::Local))
         return;
     if (owner == 0)
         owner = procinfo::udpOwnerPid(local, localPort);

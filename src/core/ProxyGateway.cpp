@@ -600,7 +600,7 @@ private:
     void noteCapture()
     {
         Capture *cap = m_gw->m_capture.load();
-        if (!cap || !cap->isEnabled())
+        if (!cap || !cap->capturing(Capture::Source::Gateway))
             return;
         const QString app = tagged(m_peer);
         // The address actually connected to, when it is the target itself.

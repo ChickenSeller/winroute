@@ -126,6 +126,22 @@
       <translation>フィルター...</translation>
     </message>
     <message>
+      <source>This computer</source>
+      <translation>このコンピューター</translation>
+    </message>
+    <message>
+      <source>Capture the connections of this computer's programs</source>
+      <translation>このコンピューターのプログラムの接続をキャプチャします</translation>
+    </message>
+    <message>
+      <source>Proxy gateway</source>
+      <translation>プロキシゲートウェイ</translation>
+    </message>
+    <message>
+      <source>Capture the connections other devices make through the proxy gateway</source>
+      <translation>他の端末がプロキシゲートウェイ経由で行う接続をキャプチャします</translation>
+    </message>
+    <message>
       <source>Decrypt HTTPS</source>
       <translation>HTTPS を復号</translation>
     </message>

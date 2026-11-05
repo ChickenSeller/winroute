@@ -704,7 +704,7 @@ void NetFilterInterceptor::captureDns(ENDPOINT_ID id, const QHostAddress &server
                                       const QByteArray &msg, bool synthesized)
 {
     Capture *cap = m_ctx.capture;
-    if (!cap || !cap->isEnabled())
+    if (!cap || !cap->capturing(Capture::Source::Local))
         return;
     CaptureMeta m;
     bool haveProc = false;
