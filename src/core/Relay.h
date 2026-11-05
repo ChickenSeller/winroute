@@ -38,7 +38,8 @@ struct ConnectionEvent {
 // relay thread, to be tunnelled through a SOCKS5 proxy (UDP ASSOCIATE).
 struct UdpDatagram {
     quint64 id = 0;        // driver endpoint id (one UDP socket)
-    int proxyId = 0;       // SOCKS5 proxy the matched rule selected
+    int proxyId = 0;       // SOCKS5 proxy the matched rule selected; 0 = direct from interfaceId
+    QString interfaceId;   // network adapter the rule is bound to (netif id), or empty
     quint32 pid = 0;
     QString appName;
     QString appPath;

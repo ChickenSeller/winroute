@@ -2,6 +2,7 @@
 #include "ui_RulesDialog.h"
 
 #include "Icons.h"
+#include "core/NetInterfaces.h"
 #include "RuleDialog.h"
 
 #include <QComboBox>
@@ -98,10 +99,23 @@ void RulesDialog::rebuild(int select)
         }
         combo->setCurrentIndex(sel);
         combo->setToolTip(options.value(sel).text);
+        if (!r.action.interfaceId.isEmpty() && r.action.type != ActionType::Block) {
+            // The adapter is set in the rule's "Advanced" dialog; show it here.
+            const QString via = tr("%1 via %2").arg(options.value(sel).text, netif::displayName(r.action.interfaceId));
+            combo->setItemText(sel, via);
+            combo->setToolTip(via);
+        }
         m_list->setItemWidget(item, ColAction, combo);
         connect(combo, &QComboBox::activated, this, [this, i, options, combo](int idx) {
             if (idx >= 0 && idx < options.size() && i >= 0 && i < m_profile.rules.size()) {
-                m_profile.rules[i].action = options[idx].action;
+                // The rule keeps its network adapter (none for Block).
+                RuleAction &a = m_profile.rules[i].action;
+                const RuleAction old = a;
+                a = options[idx].action;
+                if (a.type != ActionType::Block) {
+                    a.interfaceId = old.interfaceId;
+                    a.skipIfInterfaceDown = old.skipIfInterfaceDown;
+                }
                 combo->setToolTip(options[idx].text);
             }
         });

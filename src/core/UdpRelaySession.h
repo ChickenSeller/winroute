@@ -42,6 +42,10 @@ public:
     void send(const UdpDatagram &dg);
     void close();
 
+    // What the session sends through, for the connection list and the capture:
+    // the proxy, or "Direct via <adapter>".
+    QString actionText() const { return m_actionText; }
+
     // "host:port" (or "ip:port") for a datagram's target, for the connection list.
     static QString targetText(const QByteArray &remote, const QString &hostname);
 
@@ -72,6 +76,11 @@ private:
     void onUdpReadyRead();
     void flushPending();
     void sendThrough(const UdpDatagram &dg);     // wrap + send to the relay
+    void openDirect();                           // direct mode: bind to the adapter
+    void sendDirect(const UdpDatagram &dg);      // direct mode: send the payload itself
+    // The source address for a socket of this protocol: the rule's adapter's,
+    // or the wildcard when there is no adapter (or it has no such address).
+    QHostAddress bindAddress(QAbstractSocket::NetworkLayerProtocol protocol) const;
     void bypass(const UdpDatagram &dg);          // nf_udpPostSend, direct
     void toBypass(const QString &reason);        // switch the whole session to bypass
     void deliver(const QHostAddress &origin, quint16 oport, const QByteArray &payload);
@@ -85,6 +94,11 @@ private:
     const NetFilterApi *m_api;
     quint64 m_id;
     ProxyServer m_proxy;
+    bool m_direct = false;             // no proxy: send directly from m_iface
+    QString m_iface;                   // network adapter the rule is bound to, or empty
+    QString m_actionText;
+    QHash<QString, QHostAddress> m_resolved;          // direct mode: host name -> address
+    QHash<QString, QList<UdpDatagram>> m_resolving;   // direct mode: datagrams awaiting a name
     QString m_appName;
     QString m_targetText;
     UdpDatagram m_meta;                // the first datagram's process/rule fields (no payload), for the capture

@@ -1,5 +1,6 @@
 #include "ProxyConnector.h"
 #include "DnsClient.h"
+#include "NetInterfaces.h"
 #include "Utils.h"
 
 #include <QCoreApplication>
@@ -91,7 +92,18 @@ void ProxyConnector::resolveNext(int index)
                 self->fail(QCoreApplication::translate("ProxyConnector", "Could not resolve %1 - %2").arg(host, err));
                 return;
             }
-            self->m_endpoints[index].ip = addrs.first();
+            QHostAddress pick = addrs.first();
+            // The first connection leaves through a chosen adapter: use an
+            // address of a protocol that adapter has, when there is one.
+            if (index == 0 && !self->m_iface.isEmpty()) {
+                for (const QHostAddress &a : addrs) {
+                    if (netif::hasProtocol(self->m_iface, a.protocol())) {
+                        pick = a;
+                        break;
+                    }
+                }
+            }
+            self->m_endpoints[index].ip = pick;
             self->resolveNext(index + 1);
         });
         return;
@@ -109,6 +121,13 @@ void ProxyConnector::connectFirst()
     connect(m_socket, &QTcpSocket::connected, this, &ProxyConnector::onConnected);
     connect(m_socket, &QTcpSocket::readyRead, this, &ProxyConnector::onReadyRead);
     connect(m_socket, &QTcpSocket::errorOccurred, this, &ProxyConnector::onError);
+    if (!m_iface.isEmpty()) {
+        // Binding the source address makes Windows send through that adapter
+        // (strong host model): the route is looked up on it alone.
+        const QHostAddress src = netif::sourceAddress(m_iface, util::normalize(m_endpoints[0].ip).protocol());
+        if (!src.isNull() && m_socket->bind(src, 0))
+            m_boundIface = m_iface;
+    }
     m_socket->connectToHost(m_endpoints[0].ip, m_endpoints[0].port);
 }
 

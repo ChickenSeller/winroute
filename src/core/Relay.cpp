@@ -1,4 +1,5 @@
 #include "Relay.h"
+#include "NetInterfaces.h"
 #include "Capture.h"
 #include "CertAuthority.h"
 #include "DnsClient.h"
@@ -167,6 +168,9 @@ public:
         }
         }
 
+        if (!action.interfaceId.isEmpty() && action.type != ActionType::Block)
+            m_actionText = QCoreApplication::translate("Relay", "%1 via %2").arg(m_actionText, netif::displayName(action.interfaceId));
+
         ConnectionEvent ev;
         ev.id = m_id;
         ev.pid = m_info.pid;
@@ -215,8 +219,13 @@ private:
         m_upstream = m_mitm ? new QSslSocket(this) : new QTcpSocket(this);
         m_upstream->setSocketOption(QAbstractSocket::LowDelayOption, 1);
         auto *connector = new ProxyConnector(m_upstream, a.hops, m_target, m_relay->dns(), a.timeoutMs, this);
+        connector->setInterface(m_info.match.action.interfaceId);
         QObject::connect(connector, &ProxyConnector::connected, this, [this, connector, a](const QByteArray &leftover) {
             connector->deleteLater();
+            const QString &iface = m_info.match.action.interfaceId;
+            if (!iface.isEmpty() && connector->boundInterface().isEmpty())
+                logNormal(QCoreApplication::translate("Relay", "%1 - %2 network adapter %3 is not available, connected through the system's default adapter")
+                              .arg(m_info.appName, m_targetText, netif::displayName(iface)));
             onUpstreamReady(a, leftover);
         });
         QObject::connect(connector, &ProxyConnector::failed, this, [this, connector, a](const QString &err) {
@@ -585,15 +594,17 @@ void Relay::udpOut(const UdpDatagram &dg)
         s->send(dg);
         return;
     }
+    // proxyId 0: a direct rule bound to a network adapter, sent from there.
+    const bool direct = dg.proxyId == 0;
     RuleEnginePtr rules = this->rules();
-    const ProxyServer *p = rules ? rules->profile().proxyById(dg.proxyId) : nullptr;
-    if (!p) {
+    const ProxyServer *p = rules && !direct ? rules->profile().proxyById(dg.proxyId) : nullptr;
+    if (!direct && !p) {
         logError(QCoreApplication::translate("Relay", "%1 - UDP proxy #%2 used by rule %3 does not exist")
                      .arg(dg.appName).arg(dg.proxyId).arg(dg.ruleName));
         return;
     }
     // The constructor takes the first datagram, so do not send it again here.
-    auto *s = new UdpRelaySession(this, dg, *p, this);
+    auto *s = new UdpRelaySession(this, dg, direct ? ProxyServer{} : *p, this);
     // With a backend injector (WinDivert), the session delivers replies and
     // bypassed datagrams through it instead of the NetFilter driver API.
     if (m_udpInjector.deliver) {
@@ -612,8 +623,8 @@ void Relay::udpOut(const UdpDatagram &dg)
     ev.appPath = dg.appPath;
     ev.target = UdpRelaySession::targetText(dg.remote, dg.hostname);
     ev.ruleName = dg.ruleName;
-    ev.actionText = QString("%1:%2 %3").arg(p->address).arg(p->port).arg(proxyTypeToString(p->type));
-    ev.actionType = ActionType::Proxy;
+    ev.actionText = s->actionText();
+    ev.actionType = direct ? ActionType::Direct : ActionType::Proxy;
     ev.udp = true;
     ev.v6 = dg.v6;
     ev.startMs = QDateTime::currentMSecsSinceEpoch();

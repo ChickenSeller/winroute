@@ -102,10 +102,17 @@ private:
                         const RuleEnginePtr &engine, const QHostAddress &dst, quint16 dport);
     int decideUdp(const RuleMatch &match, bool skip, const Profile &profile, const ProfileOptions &opt,
                   const QHostAddress &dst, quint16 dport, bool fake, const QString &appName, const QString &target,
-                  int *proxyId) const;
+                  int *proxyId, QString *interfaceId) const;
 
     // Per UDP socket state, for the SOCKS5 UDP tunnelling decision.
     enum UdpDecision { UdpBypass, UdpProxy, UdpDrop };
+    // A cached decision for one target of a UDP socket. UdpProxy with
+    // proxyId 0 sends it directly from interfaceId (a rule bound to an adapter).
+    struct UdpChoice {
+        int decision = UdpBypass;
+        int proxyId = 0;
+        QString interfaceId;
+    };
     struct UdpSock {
         quint32 pid = 0;
         bool haveProc = false;
@@ -113,7 +120,7 @@ private:
         QString appPath;
         QHostAddress localAddr;   // the socket's local endpoint, for the capture
         quint16 localPort = 0;
-        QHash<QString, QPair<int, int>> decisions;   // remoteKey -> (UdpDecision, proxyId)
+        QHash<QString, UdpChoice> decisions;   // remoteKey -> what to do with that target
     };
 
     const NetFilterApi *m_api = nullptr;

@@ -922,6 +922,28 @@ T = {
     "Cannot start the proxy server on %1:%2 : %3":
         ("无法在 %1:%2 上启动代理服务器：%3", "%1:%2 でプロキシサーバーを起動できません：%3"),
     "Proxy server listening on %1:%2 (%3)": ("代理服务器正在监听 %1:%2(%3)", "プロキシサーバーが %1:%2 で待ち受け中(%3)"),
+    # Rules bound to a network adapter (the rule's "Advanced" dialog).
+    "%1 via %2": ("%1（经 %2）", "%1（%2 経由）"),
+    "%1 - %2 network adapter %3 is not available, connected through the system's default adapter":
+        ("%1 - %2 网卡 %3 不可用，已通过系统默认网卡连接",
+         "%1 - %2 ネットワークアダプター %3 が使えないため、システムの既定のアダプターで接続しました"),
+    "network adapter %1 is not available": ("网卡 %1 不可用", "ネットワークアダプター %1 が使えません"),
+    "%1 - %2 open directly via %3 (UDP)": ("%1 - %2 已经 %3 直接打开（UDP）", "%1 - %2 を %3 経由で直接開きました（UDP）"),
+    "%1 - %2 UDP could not resolve the host - %3": ("%1 - %2 UDP 无法解析主机 - %3", "%1 - %2 UDP でホストを解決できません - %3"),
+    "Network interface: System Default": ("网卡：系统默认", "ネットワークインターフェイス：システムの既定"),
+    "Interface: %1...": ("网卡：%1...", "インターフェイス：%1..."),
+    "Network interface: %1": ("网卡：%1", "ネットワークインターフェイス：%1"),
+    "Rule Network Interface": ("规则网卡", "ルールのネットワークインターフェイス"),
+    "Connections matching this rule leave through this network interface: direct connections to their target, proxied ones to the first proxy.":
+        ("匹配此规则的连接从这个网卡发出：直连时连接目标，走代理时连接第一个代理。",
+         "このルールに一致する接続は、このネットワークインターフェイスから出ます。直接接続は接続先へ、プロキシ経由は最初のプロキシへ接続します。"),
+    "System Default (chosen by the routing table)": ("系统默认（由路由表决定）", "システムの既定（ルーティングテーブルで決定）"),
+    "(disconnected)": ("（未连接）", "（未接続）"),
+    "%1 (not present)": ("%1（不存在）", "%1（見つかりません）"),
+    "Interface:": ("网卡：", "インターフェイス："),
+    "When the interface is down (disconnected):": ("网卡断开（未连接）时：", "インターフェイスが切断されているとき："),
+    "Use the system default interface": ("使用系统默认网卡", "システムの既定のインターフェイスを使う"),
+    "Ignore this rule (the next matching rule applies)": ("忽略此规则（由下一条匹配的规则处理）", "このルールを無視する（次に一致するルールを適用）"),
 }
 
 

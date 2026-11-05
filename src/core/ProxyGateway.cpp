@@ -1,6 +1,7 @@
 #include "ProxyGateway.h"
 #include "DnsClient.h"
 #include "Logger.h"
+#include "NetInterfaces.h"
 #include "ProxyConnector.h"
 #include "Utils.h"
 
@@ -24,6 +25,7 @@ namespace {
 struct Route {
     bool blocked = false;
     QList<ProxyServer> hops;   // empty = direct
+    QString interfaceId;       // network adapter to leave through, or empty
     QString text;              // for the log
 };
 
@@ -57,6 +59,7 @@ Route routeFor(const RuleEnginePtr &rules, const ProxyGateway::Config &cfg,
         if (ruleName)
             *ruleName = match.ruleName;
         action = match.action;
+        r.interfaceId = action.type == ActionType::Block ? QString() : action.interfaceId;
     } else if (action.type != ActionType::Proxy && action.type != ActionType::Chain) {
         // Fixed-exit mode but nothing valid is chosen.
         missing(QCoreApplication::translate("ProxyGateway", "no exit proxy is selected"));
@@ -103,6 +106,8 @@ Route routeFor(const RuleEnginePtr &rules, const ProxyGateway::Config &cfg,
         }
         break;
     }
+    if (!r.interfaceId.isEmpty() && !r.blocked)
+        r.text = QCoreApplication::translate("ProxyGateway", "%1 via %2").arg(r.text, netif::displayName(r.interfaceId));
     return r;
 }
 
@@ -421,6 +426,7 @@ private:
         // When the chosen proxy/chain cannot be connected, fall back to a direct
         // connection if the "when the selected proxy cannot connect" setting says
         // so (a direct route, with no hops, has nothing to fall back from).
+        m_interfaceId = route.interfaceId;
         m_fallbackDirect = !route.hops.isEmpty()
                            && m_gw->config().onMissing == ProxyGateway::OnMissing::Direct;
         connectThrough(route.hops);
@@ -431,6 +437,7 @@ private:
         m_upstream = new QTcpSocket(this);
         m_upstream->setSocketOption(QAbstractSocket::LowDelayOption, 1);
         auto *connector = new ProxyConnector(m_upstream, hops, m_target, m_gw->dns(), kConnectTimeoutMs, this);
+        connector->setInterface(m_interfaceId);
         connect(connector, &ProxyConnector::connected, this, [this, connector](const QByteArray &leftover) {
             connector->deleteLater();
             onUpstreamReady(leftover);
@@ -601,6 +608,7 @@ private:
     QString m_peer;
     QString m_targetText;
     QString m_actionText;
+    QString m_interfaceId;            // network adapter of the matched rule, or empty
     QByteArray m_buf;
     QByteArray m_pendingToUpstream;   // bytes to send upstream once connected
     Proto m_proto = Proto::Unknown;

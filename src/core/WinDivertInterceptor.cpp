@@ -509,7 +509,9 @@ void WinDivertInterceptor::decide(Conn &c, const QHostAddress &dst, quint16 dpor
         logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : blocked").arg(c.appName, target, match.ruleName));
         return;
     case ActionType::Direct:
-        if (!fake && !opt.handleDirectConnections) {
+        // A direct rule bound to a network adapter goes through the relay,
+        // which makes the connection from that adapter.
+        if (!fake && !opt.handleDirectConnections && match.action.interfaceId.isEmpty()) {
             c.state = State::Passthrough;
             logVerbose(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : direct connection").arg(c.appName, target, match.ruleName));
             return;
@@ -809,9 +811,10 @@ void WinDivertInterceptor::dnsLoop()
 
 int WinDivertInterceptor::decideUdp(const RuleMatch &match, bool skip, const Profile &profile,
                                     const ProfileOptions &opt, const QHostAddress &dst, quint16 dport,
-                                    const QString &appName, const QString &target, int *proxyId) const
+                                    const QString &appName, const QString &target, int *proxyId, QString *interfaceId) const
 {
     *proxyId = 0;
+    *interfaceId = match.action.interfaceId;
     if (skip)
         return UdpBypass;
     switch (match.action.type) {
@@ -819,7 +822,8 @@ int WinDivertInterceptor::decideUdp(const RuleMatch &match, bool skip, const Pro
         logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : blocked (UDP)").arg(appName, target, match.ruleName));
         return UdpDrop;
     case ActionType::Direct:
-        return UdpBypass;
+        // Bound to an adapter: the relay sends it from there.
+        return match.action.interfaceId.isEmpty() ? UdpBypass : UdpProxy;
     case ActionType::Proxy: {
         if (opt.loopDetection) {
             QMutexLocker lock(&m_rulesMutex);
@@ -873,6 +877,7 @@ void WinDivertInterceptor::udpLoop()
         quint32 pid = 0;
         QString appName, appPath;
         int decision = -1, proxyId = 0;
+        QString iface;
         {
             QMutexLocker lock(&m_udpMutex);
             UdpConn &c = m_udpConns[ep.srcPort];
@@ -886,8 +891,9 @@ void WinDivertInterceptor::udpLoop()
             } else if (!c.skip) {
                 auto it = c.decisions.constFind(targetKey);
                 if (it != c.decisions.constEnd()) {
-                    decision = it->first;
-                    proxyId = it->second;
+                    decision = it->decision;
+                    proxyId = it->proxyId;
+                    iface = it->interfaceId;
                 }
             }
             sessId = c.id;
@@ -945,11 +951,11 @@ void WinDivertInterceptor::udpLoop()
                 req.port = ep.dstPort;
                 const RuleMatch match = engine->match(req);
                 const QString target = host.isEmpty() ? targetKey : QString("%1:%2").arg(host).arg(ep.dstPort);
-                decision = decideUdp(match, false, engine->profile(), engine->profile().options, dst, ep.dstPort, appName, target, &proxyId);
+                decision = decideUdp(match, false, engine->profile(), engine->profile().options, dst, ep.dstPort, appName, target, &proxyId, &iface);
                 QMutexLocker lock(&m_udpMutex);
                 auto it = m_udpConns.find(ep.srcPort);
                 if (it != m_udpConns.end())
-                    it->decisions.insert(targetKey, {decision, proxyId});
+                    it->decisions.insert(targetKey, {decision, proxyId, iface});
             }
         }
         if (skip)
@@ -961,6 +967,7 @@ void WinDivertInterceptor::udpLoop()
             UdpDatagram dg;
             dg.id = sessId;
             dg.proxyId = proxyId;
+            dg.interfaceId = iface;
             dg.pid = pid;
             dg.appName = appName;
             dg.appPath = appPath;
@@ -969,6 +976,7 @@ void WinDivertInterceptor::udpLoop()
             dg.v6 = ep.v6;
             dg.hostname = fakeDst ? m_ctx.fakeDns->hostnameFor(dst)
                                   : (m_ctx.dnsCache ? m_ctx.dnsCache->lookup(dst) : QString());
+            dg.fakeIp = fakeDst;
             dg.data = QByteArray(reinterpret_cast<const char *>(payload), int(plen));
             Relay *relay = m_ctx.relay;
             QMetaObject::invokeMethod(relay, [relay, dg] { relay->udpOut(dg); }, Qt::QueuedConnection);

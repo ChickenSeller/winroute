@@ -2222,6 +2222,10 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>代理链 #%1 不存在</translation>
     </message>
     <message>
+      <source>%1 via %2</source>
+      <translation>%1（经 %2）</translation>
+    </message>
+    <message>
       <source>%1 - not a SOCKS5 client</source>
       <translation>%1 - 不是 SOCKS5 客户端</translation>
     </message>
@@ -2705,12 +2709,20 @@ Default 规则将改为使用 %1。
       <translation>代理链 %1 中没有启用的代理服务器</translation>
     </message>
     <message>
+      <source>%1 via %2</source>
+      <translation>%1（经 %2）</translation>
+    </message>
+    <message>
       <source>%1 - %2 matching %3 rule : using %4</source>
       <translation>%1 - %2 匹配规则 %3：使用 %4</translation>
     </message>
     <message>
       <source>direct connection</source>
       <translation>直接连接</translation>
+    </message>
+    <message>
+      <source>%1 - %2 network adapter %3 is not available, connected through the system's default adapter</source>
+      <translation>%1 - %2 网卡 %3 不可用，已通过系统默认网卡连接</translation>
     </message>
     <message>
       <source>%1 - %2 %3, trying the next proxy in the chain</source>
@@ -2817,6 +2829,18 @@ Default 规则将改为使用 %1。
       <translation>%1 - %2 通过代理 %3:%4 SOCKS5 连接（UDP）</translation>
     </message>
     <message>
+      <source>network adapter %1 is not available</source>
+      <translation>网卡 %1 不可用</translation>
+    </message>
+    <message>
+      <source>%1 - %2 open directly via %3 (UDP)</source>
+      <translation>%1 - %2 已经 %3 直接打开（UDP）</translation>
+    </message>
+    <message>
+      <source>%1 - %2 UDP could not resolve the host - %3</source>
+      <translation>%1 - %2 UDP 无法解析主机 - %3</translation>
+    </message>
+    <message>
       <source>%1 - %2 UDP cannot use the proxy (%3); sending directly</source>
       <translation>%1 - %2 UDP 无法使用代理（%3），改为直接连接</translation>
     </message>
@@ -2904,10 +2928,6 @@ Default 规则将改为使用 %1。
       <translation>高级...</translation>
     </message>
     <message>
-      <source>Per-rule network interface selection is not supported yet</source>
-      <translation>暂不支持为规则指定网络接口</translation>
-    </message>
-    <message>
       <source>Action:</source>
       <translation>操作：</translation>
     </message>
@@ -2922,6 +2942,54 @@ Default 规则将改为使用 %1。
     <message>
       <source>Select a Folder</source>
       <translation>选择文件夹</translation>
+    </message>
+    <message>
+      <source>Network interface: System Default</source>
+      <translation>网卡：系统默认</translation>
+    </message>
+    <message>
+      <source>Interface: %1...</source>
+      <translation>网卡：%1...</translation>
+    </message>
+    <message>
+      <source>Network interface: %1</source>
+      <translation>网卡：%1</translation>
+    </message>
+    <message>
+      <source>Rule Network Interface</source>
+      <translation>规则网卡</translation>
+    </message>
+    <message>
+      <source>Connections matching this rule leave through this network interface: direct connections to their target, proxied ones to the first proxy.</source>
+      <translation>匹配此规则的连接从这个网卡发出：直连时连接目标，走代理时连接第一个代理。</translation>
+    </message>
+    <message>
+      <source>System Default (chosen by the routing table)</source>
+      <translation>系统默认（由路由表决定）</translation>
+    </message>
+    <message>
+      <source>(disconnected)</source>
+      <translation>（未连接）</translation>
+    </message>
+    <message>
+      <source>%1 (not present)</source>
+      <translation>%1（不存在）</translation>
+    </message>
+    <message>
+      <source>Interface:</source>
+      <translation>网卡：</translation>
+    </message>
+    <message>
+      <source>When the interface is down (disconnected):</source>
+      <translation>网卡断开（未连接）时：</translation>
+    </message>
+    <message>
+      <source>Use the system default interface</source>
+      <translation>使用系统默认网卡</translation>
+    </message>
+    <message>
+      <source>Ignore this rule (the next matching rule applies)</source>
+      <translation>忽略此规则（由下一条匹配的规则处理）</translation>
     </message>
     <message>
       <source>Please enter the rule name.</source>
@@ -2993,6 +3061,10 @@ Use check boxes to enable/disable a rule.</source>
     <message>
       <source>Any</source>
       <translation>任意</translation>
+    </message>
+    <message>
+      <source>%1 via %2</source>
+      <translation>%1（经 %2）</translation>
     </message>
     <message>
       <source>New</source>

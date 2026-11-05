@@ -815,7 +815,9 @@ void NetFilterInterceptor::onTcpConnectRequest(ENDPOINT_ID id, PNF_TCP_CONN_INFO
         logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : blocked").arg(pinfo.name, target, match.ruleName));
         return;
     case ActionType::Direct:
-        if (!fake && !opt.handleDirectConnections) {
+        // A direct rule bound to a network adapter goes through the relay,
+        // which makes the connection from that adapter.
+        if (!fake && !opt.handleDirectConnections && match.action.interfaceId.isEmpty()) {
             logVerbose(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : direct connection").arg(pinfo.name, target, match.ruleName));
             return;
         }
@@ -1002,6 +1004,7 @@ void NetFilterInterceptor::handleUdpProxy(ENDPOINT_ID id, const unsigned char *r
     QString appName, appPath;
     bool haveProc = false;
     int decision = UdpBypass, proxyId = 0;
+    QString iface;
     bool decided = false;
     {
         QMutexLocker lock(&m_udpMutex);
@@ -1017,8 +1020,9 @@ void NetFilterInterceptor::handleUdpProxy(ENDPOINT_ID id, const unsigned char *r
         appPath = sock.appPath;
         const auto it = sock.decisions.constFind(remoteKey);
         if (it != sock.decisions.constEnd()) {
-            decision = it->first;
-            proxyId = it->second;
+            decision = it->decision;
+            proxyId = it->proxyId;
+            iface = it->interfaceId;
             decided = true;
         }
     }
@@ -1059,9 +1063,9 @@ void NetFilterInterceptor::handleUdpProxy(ENDPOINT_ID id, const unsigned char *r
             match = engine->match(req);
         }
         const QString target = host.isEmpty() ? util::formatEndpoint(dst, dport) : QString("%1:%2").arg(host).arg(dport);
-        decision = decideUdp(match, skip, engine->profile(), optns, dst, dport, fake, appName, target, &proxyId);
+        decision = decideUdp(match, skip, engine->profile(), optns, dst, dport, fake, appName, target, &proxyId, &iface);
         QMutexLocker lock(&m_udpMutex);
-        m_udpSocks[id].decisions.insert(remoteKey, {decision, proxyId});
+        m_udpSocks[id].decisions.insert(remoteKey, {decision, proxyId, iface});
     }
 
     switch (decision) {
@@ -1073,6 +1077,7 @@ void NetFilterInterceptor::handleUdpProxy(ENDPOINT_ID id, const unsigned char *r
         UdpDatagram dg;
         dg.id = id;
         dg.proxyId = proxyId;
+        dg.interfaceId = iface;
         dg.pid = pid;
         dg.appName = appName;
         dg.appPath = appPath;
@@ -1104,9 +1109,10 @@ void NetFilterInterceptor::handleUdpProxy(ENDPOINT_ID id, const unsigned char *r
 // reason once, since the result is cached per (socket, target).
 int NetFilterInterceptor::decideUdp(const RuleMatch &match, bool skip, const Profile &profile, const ProfileOptions &opt,
                                     const QHostAddress &dst, quint16 dport, bool fake, const QString &appName,
-                                    const QString &target, int *proxyId) const
+                                    const QString &target, int *proxyId, QString *interfaceId) const
 {
     *proxyId = 0;
+    *interfaceId = match.action.interfaceId;
     if (skip)
         return UdpBypass;   // services / other users, when not handled
     switch (match.action.type) {
@@ -1114,7 +1120,8 @@ int NetFilterInterceptor::decideUdp(const RuleMatch &match, bool skip, const Pro
         logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : blocked (UDP)").arg(appName, target, match.ruleName));
         return UdpDrop;
     case ActionType::Direct:
-        return UdpBypass;
+        // Bound to an adapter: the relay sends it from there.
+        return match.action.interfaceId.isEmpty() ? UdpBypass : UdpProxy;
     case ActionType::Proxy: {
         if (!fake && opt.loopDetection) {
             QMutexLocker lock(&m_rulesMutex);

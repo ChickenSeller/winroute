@@ -2222,6 +2222,10 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>チェーン #%1 が存在しません</translation>
     </message>
     <message>
+      <source>%1 via %2</source>
+      <translation>%1（%2 経由）</translation>
+    </message>
+    <message>
       <source>%1 - not a SOCKS5 client</source>
       <translation>%1 - SOCKS5 クライアントではありません</translation>
     </message>
@@ -2705,12 +2709,20 @@ Default ルールが %1 を使用するように変更されます。
       <translation>プロキシチェーン %1 に有効なプロキシサーバーがありません</translation>
     </message>
     <message>
+      <source>%1 via %2</source>
+      <translation>%1（%2 経由）</translation>
+    </message>
+    <message>
       <source>%1 - %2 matching %3 rule : using %4</source>
       <translation>%1 - %2 ルール %3 に一致：%4 を使用</translation>
     </message>
     <message>
       <source>direct connection</source>
       <translation>直接接続</translation>
+    </message>
+    <message>
+      <source>%1 - %2 network adapter %3 is not available, connected through the system's default adapter</source>
+      <translation>%1 - %2 ネットワークアダプター %3 が使えないため、システムの既定のアダプターで接続しました</translation>
     </message>
     <message>
       <source>%1 - %2 %3, trying the next proxy in the chain</source>
@@ -2817,6 +2829,18 @@ Default ルールが %1 を使用するように変更されます。
       <translation>%1 - %2 をプロキシ %3:%4 SOCKS5 経由で接続（UDP）</translation>
     </message>
     <message>
+      <source>network adapter %1 is not available</source>
+      <translation>ネットワークアダプター %1 が使えません</translation>
+    </message>
+    <message>
+      <source>%1 - %2 open directly via %3 (UDP)</source>
+      <translation>%1 - %2 を %3 経由で直接開きました（UDP）</translation>
+    </message>
+    <message>
+      <source>%1 - %2 UDP could not resolve the host - %3</source>
+      <translation>%1 - %2 UDP でホストを解決できません - %3</translation>
+    </message>
+    <message>
       <source>%1 - %2 UDP cannot use the proxy (%3); sending directly</source>
       <translation>%1 - %2 UDP はプロキシを使用できません（%3）。直接接続します</translation>
     </message>
@@ -2904,10 +2928,6 @@ Default ルールが %1 を使用するように変更されます。
       <translation>詳細設定...</translation>
     </message>
     <message>
-      <source>Per-rule network interface selection is not supported yet</source>
-      <translation>ルールごとのネットワークインターフェイスの指定にはまだ対応していません</translation>
-    </message>
-    <message>
       <source>Action:</source>
       <translation>アクション：</translation>
     </message>
@@ -2922,6 +2942,54 @@ Default ルールが %1 を使用するように変更されます。
     <message>
       <source>Select a Folder</source>
       <translation>フォルダーの選択</translation>
+    </message>
+    <message>
+      <source>Network interface: System Default</source>
+      <translation>ネットワークインターフェイス：システムの既定</translation>
+    </message>
+    <message>
+      <source>Interface: %1...</source>
+      <translation>インターフェイス：%1...</translation>
+    </message>
+    <message>
+      <source>Network interface: %1</source>
+      <translation>ネットワークインターフェイス：%1</translation>
+    </message>
+    <message>
+      <source>Rule Network Interface</source>
+      <translation>ルールのネットワークインターフェイス</translation>
+    </message>
+    <message>
+      <source>Connections matching this rule leave through this network interface: direct connections to their target, proxied ones to the first proxy.</source>
+      <translation>このルールに一致する接続は、このネットワークインターフェイスから出ます。直接接続は接続先へ、プロキシ経由は最初のプロキシへ接続します。</translation>
+    </message>
+    <message>
+      <source>System Default (chosen by the routing table)</source>
+      <translation>システムの既定（ルーティングテーブルで決定）</translation>
+    </message>
+    <message>
+      <source>(disconnected)</source>
+      <translation>（未接続）</translation>
+    </message>
+    <message>
+      <source>%1 (not present)</source>
+      <translation>%1（見つかりません）</translation>
+    </message>
+    <message>
+      <source>Interface:</source>
+      <translation>インターフェイス：</translation>
+    </message>
+    <message>
+      <source>When the interface is down (disconnected):</source>
+      <translation>インターフェイスが切断されているとき：</translation>
+    </message>
+    <message>
+      <source>Use the system default interface</source>
+      <translation>システムの既定のインターフェイスを使う</translation>
+    </message>
+    <message>
+      <source>Ignore this rule (the next matching rule applies)</source>
+      <translation>このルールを無視する（次に一致するルールを適用）</translation>
     </message>
     <message>
       <source>Please enter the rule name.</source>
@@ -2993,6 +3061,10 @@ Use check boxes to enable/disable a rule.</source>
     <message>
       <source>Any</source>
       <translation>すべて</translation>
+    </message>
+    <message>
+      <source>%1 via %2</source>
+      <translation>%1（%2 経由）</translation>
     </message>
     <message>
       <source>New</source>

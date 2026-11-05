@@ -1,4 +1,5 @@
 #include "RuleEngine.h"
+#include "NetInterfaces.h"
 #include "Utils.h"
 
 #include <QFileInfo>
@@ -31,6 +32,10 @@ RuleMatch RuleEngine::match(const ConnectionRequest &req) const
         if (!c.targets.isEmpty() && !matchHostList(c.targets, req.hostname, req.ip))
             continue;
         if (!c.ports.trimmed().isEmpty() && !matchPortList(c.ports, req.port))
+            continue;
+        // A rule bound to an adapter that is down can be set to step aside.
+        const RuleAction &a = c.result.action;
+        if (a.skipIfInterfaceDown && !a.interfaceId.isEmpty() && !netif::isUp(a.interfaceId))
             continue;
         return c.result;
     }

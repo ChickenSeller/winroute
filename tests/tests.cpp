@@ -7,6 +7,7 @@
 #include "core/FakeDns.h"
 #include "core/FlowTable.h"
 #include "core/HttpParse.h"
+#include "core/NetInterfaces.h"
 #include "core/Profile.h"
 #include "core/ProxyConnector.h"
 #include "core/ProxyGateway.h"
@@ -711,6 +712,158 @@ static void testGateway()
         CHECK(readAtLeast(c, 4, &buf) == "more");
     }
     gw.stop();
+}
+
+// Rules bound to a network adapter (Proxifier's rule "Advanced" interface).
+static void testInterfaces()
+{
+    // The loopback adapter is always there, with 127.0.0.1.
+    QString loopId;
+    for (const netif::Adapter &a : netif::adapters())
+        if (a.loopback && a.up)
+            loopId = a.id;
+    CHECK(!loopId.isEmpty() && loopId.startsWith('{'));
+    CHECK(netif::sourceAddress(loopId, QAbstractSocket::IPv4Protocol) == QHostAddress(QHostAddress::LocalHost));
+    const QString absent = "{00000000-0000-0000-0000-000000000000}";
+    CHECK(!netif::isUp(absent));
+    CHECK(netif::sourceAddress(absent, QAbstractSocket::IPv4Protocol).isNull());
+    CHECK(netif::displayName(absent) == absent);
+
+    // The profile keeps the adapter in Proxifier's attributes on <Rule>.
+    {
+        Profile p = Profile::createDefault();
+        Rule r;
+        r.name = "bound";
+        r.applications = "game.exe";
+        r.action.type = ActionType::Direct;
+        r.action.interfaceId = loopId;
+        r.action.skipIfInterfaceDown = true;
+        p.rules.prepend(r);
+        Rule b;
+        b.name = "blocked";
+        b.action.type = ActionType::Block;
+        b.action.interfaceId = loopId;   // a blocked connection has no adapter
+        p.rules.prepend(b);
+        const QByteArray xml = p.toXml();
+        CHECK(xml.contains("<Rule enabled=\"true\" interfaceId=\"" + loopId.toUtf8() + "\" skipIfInterfaceDown=\"true\">"));
+        Profile q;
+        QString err;
+        CHECK(q.fromXml(xml, &err));
+        CHECK(q.rules.size() >= 2);
+        if (q.rules.size() >= 2) {
+            CHECK(q.rules[0].action.type == ActionType::Block && q.rules[0].action.interfaceId.isEmpty());
+            CHECK(q.rules[1].action.interfaceId == loopId && q.rules[1].action.skipIfInterfaceDown);
+        }
+        // As Proxifier 4 writes it (a rule of a real profile).
+        const QByteArray proxied =
+            R"(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ProxifierProfile version="102" platform="Windows" product_id="0" product_minver="400">
+  <ProxyList><Proxy id="100" type="SOCKS5"><Address>127.0.0.1</Address><Port>1080</Port></Proxy></ProxyList>
+  <RuleList>
+    <Rule enabled="true" interfaceId="{1D741CCB-726B-4AEB-A0C7-B816F1F8DC3D}" skipIfInterfaceDown="false">
+      <Action type="Proxy">100</Action><Applications>game.exe</Applications><Name>p</Name></Rule>
+    <Rule enabled="true"><Action type="Direct" /><Name>Default</Name></Rule>
+  </RuleList>
+</ProxifierProfile>)";
+        Profile r2;
+        CHECK(r2.fromXml(proxied, &err));
+        CHECK(!r2.rules.isEmpty() && r2.rules[0].action.type == ActionType::Proxy && r2.rules[0].action.id == 100
+              && r2.rules[0].action.interfaceId == "{1D741CCB-726B-4AEB-A0C7-B816F1F8DC3D}"
+              && !r2.rules[0].action.skipIfInterfaceDown);
+    }
+
+    // "Ignore" steps over a rule whose adapter is down; "use the default" keeps it.
+    {
+        Profile p = Profile::createDefault();
+        Rule skip;
+        skip.name = "office";
+        skip.applications = "app.exe";
+        skip.action = {ActionType::Block, 0};
+        skip.action.type = ActionType::Direct;
+        skip.action.interfaceId = absent;
+        skip.action.skipIfInterfaceDown = true;
+        Rule keep = skip;
+        keep.name = "keep";
+        keep.applications = "other.exe";
+        keep.action.skipIfInterfaceDown = false;
+        Rule up = skip;
+        up.name = "up";
+        up.applications = "loop.exe";
+        up.action.interfaceId = loopId;
+        p.rules.prepend(up);
+        p.rules.prepend(keep);
+        p.rules.prepend(skip);
+        RuleEngine engine(p);
+        ConnectionRequest req;
+        req.ip = QHostAddress("1.2.3.4");
+        req.port = 80;
+        req.appName = "app.exe";
+        CHECK(engine.match(req).ruleName != "office");
+        req.appName = "other.exe";
+        CHECK(engine.match(req).ruleName == "keep");
+        req.appName = "loop.exe";
+        const RuleMatch m = engine.match(req);
+        CHECK(m.ruleName == "up" && m.action.interfaceId == loopId);
+    }
+
+    // A connection bound to the loopback adapter, and one whose adapter is gone
+    // (made through the system's choice).
+    {
+        EchoServer echo;
+        for (const QString &id : {loopId, absent}) {
+            QTcpSocket sock;
+            Endpoint target;
+            target.ip = QHostAddress::LocalHost;
+            target.port = echo.serverPort();
+            ProxyConnector conn(&sock, {}, target, nullptr, 5000);
+            conn.setInterface(id);
+            bool ok = false, done = false;
+            QObject::connect(&conn, &ProxyConnector::connected, [&](const QByteArray &) { ok = true; done = true; });
+            QObject::connect(&conn, &ProxyConnector::failed, [&](const QString &) { done = true; });
+            conn.start();
+            QElapsedTimer t;
+            t.start();
+            while (!done && t.elapsed() < 5000)
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+            CHECK(ok);
+            CHECK(conn.boundInterface() == (id == loopId ? loopId : QString()));
+            if (id == loopId)
+                CHECK(sock.localAddress() == QHostAddress(QHostAddress::LocalHost));
+        }
+    }
+
+    // UDP of a direct rule bound to an adapter: sent from it, replies delivered
+    // as from the address the application used.
+    {
+        FlowTable flows;
+        Relay relay(&flows);
+        QUdpSocket server;
+        CHECK(server.bind(QHostAddress::LocalHost, 0));
+        QObject::connect(&server, &QUdpSocket::readyRead, [&] {
+            while (server.hasPendingDatagrams()) {
+                QHostAddress from;
+                quint16 port = 0;
+                QByteArray d(int(server.pendingDatagramSize()), 0);
+                server.readDatagram(d.data(), d.size(), &from, &port);
+                server.writeDatagram("re:" + d, from, port);
+            }
+        });
+        UdpDatagram dg;
+        dg.id = 7;
+        dg.proxyId = 0;
+        dg.interfaceId = loopId;
+        dg.remote = makeSockaddr4(0x7F000001, server.localPort());
+        dg.data = "hello";
+        QByteArray gotRemote;
+        bool bypassed = false;
+        CHECK(runUdp(&relay, ProxyServer{}, dg, &gotRemote, &bypassed) == "re:hello");
+        CHECK(gotRemote == dg.remote && !bypassed);
+        // The adapter is gone: sent normally (the system's default adapter).
+        dg.interfaceId = absent;
+        bypassed = false;
+        runUdp(&relay, ProxyServer{}, dg, &gotRemote, &bypassed);
+        CHECK(bypassed);
+    }
 }
 
 static void testUdpProxy()
@@ -1483,6 +1636,7 @@ int main(int argc, char **argv)
     testProxies();
     testUdpProxy();
     testGateway();
+    testInterfaces();
     testWinDivertPacket();
     testCapture();
     testCaptureDatagrams();

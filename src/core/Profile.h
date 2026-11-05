@@ -55,6 +55,13 @@ enum class ActionType { Direct, Block, Proxy, Chain };
 struct RuleAction {
     ActionType type = ActionType::Direct;
     int id = 0;   // proxy or chain id
+    // The network adapter matching connections leave through (netif id, a
+    // "{GUID}"; empty = the system's choice): to the target for Direct, to the
+    // first proxy otherwise. Proxifier's rule "Advanced" interface setting.
+    QString interfaceId;
+    // When that adapter is down: skip the rule (true, Proxifier's "Ignore"),
+    // or connect through the system's default adapter (false).
+    bool skipIfInterfaceDown = false;
 };
 
 struct Rule {

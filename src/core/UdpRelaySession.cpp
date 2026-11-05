@@ -1,6 +1,7 @@
 #include "UdpRelaySession.h"
 #include "DnsClient.h"
 #include "Logger.h"
+#include "NetInterfaces.h"
 #include "NetFilterApi.h"
 #include "Utils.h"
 
@@ -68,6 +69,12 @@ UdpRelaySession::UdpRelaySession(Relay *relay, const UdpDatagram &first, const P
     m_targetText = first.hostname.isEmpty() ? util::formatEndpoint(a, p) : QString("%1:%2").arg(first.hostname).arg(p);
     m_meta = first;
     m_meta.data.clear();
+    m_direct = m_proxy.address.isEmpty();   // no proxy given: a direct rule bound to an adapter
+    m_iface = first.interfaceId;
+    m_actionText = m_direct ? QCoreApplication::translate("Relay", "Direct")
+                            : QString("%1:%2 %3").arg(m_proxy.address).arg(m_proxy.port).arg(proxyTypeToString(m_proxy.type));
+    if (!m_iface.isEmpty())
+        m_actionText = QCoreApplication::translate("Relay", "%1 via %2").arg(m_actionText, netif::displayName(m_iface));
     m_idle.setSingleShot(true);
     m_idle.setInterval(kIdleTimeoutMs);
     connect(&m_idle, &QTimer::timeout, this, &UdpRelaySession::finish);
@@ -91,6 +98,10 @@ void UdpRelaySession::start()
         return;
     if (!m_deliverSink && (!m_api || !m_api->udpPostReceive || !m_api->udpPostSend)) {
         toBypass(QCoreApplication::translate("Relay", "the network driver API is unavailable"));
+        return;
+    }
+    if (m_direct) {
+        openDirect();
         return;
     }
 
@@ -127,6 +138,9 @@ void UdpRelaySession::openControl(const QHostAddress &proxyIp)
     connect(m_control, &QTcpSocket::readyRead, this, &UdpRelaySession::onControlReadyRead);
     connect(m_control, &QTcpSocket::disconnected, this, &UdpRelaySession::onControlClosed);
     connect(m_control, &QTcpSocket::errorOccurred, this, &UdpRelaySession::onControlClosed);
+    const QHostAddress src = bindAddress(util::normalize(proxyIp).protocol());
+    if (src != QHostAddress::AnyIPv4 && src != QHostAddress::AnyIPv6)
+        m_control->bind(src, 0);
     m_control->connectToHost(proxyIp, m_proxy.port);
 }
 
@@ -271,8 +285,7 @@ void UdpRelaySession::openUdp(const QHostAddress &relayAddr, quint16 relayPort)
     m_relayAddr = relayAddr;
     m_relayPort = relayPort;
     m_udp = new QUdpSocket(this);
-    const bool v6 = relayAddr.protocol() == QAbstractSocket::IPv6Protocol;
-    if (!m_udp->bind(v6 ? QHostAddress(QHostAddress::AnyIPv6) : QHostAddress(QHostAddress::AnyIPv4), 0)) {
+    if (!m_udp->bind(bindAddress(relayAddr.protocol()), 0)) {
         toBypass(QCoreApplication::translate("Relay", "cannot open the local UDP socket"));
         return;
     }
@@ -283,6 +296,93 @@ void UdpRelaySession::openUdp(const QHostAddress &relayAddr, quint16 relayPort)
                   .arg(m_proxy.port));
     emit m_relay->statusChanged(m_id, "Open");
     flushPending();
+}
+
+QHostAddress UdpRelaySession::bindAddress(QAbstractSocket::NetworkLayerProtocol protocol) const
+{
+    const bool v6 = protocol == QAbstractSocket::IPv6Protocol;
+    if (!m_iface.isEmpty()) {
+        const QHostAddress src = netif::sourceAddress(m_iface, v6 ? QAbstractSocket::IPv6Protocol : QAbstractSocket::IPv4Protocol);
+        if (!src.isNull())
+            return src;
+    }
+    return v6 ? QHostAddress(QHostAddress::AnyIPv6) : QHostAddress(QHostAddress::AnyIPv4);
+}
+
+void UdpRelaySession::openDirect()
+{
+    const QAbstractSocket::NetworkLayerProtocol proto = m_meta.v6 ? QAbstractSocket::IPv6Protocol : QAbstractSocket::IPv4Protocol;
+    const QHostAddress src = netif::sourceAddress(m_iface, proto);
+    if (src.isNull()) {
+        // The rule's fallback is the system's default adapter: send normally.
+        toBypass(QCoreApplication::translate("Relay", "network adapter %1 is not available").arg(netif::displayName(m_iface)));
+        return;
+    }
+    m_udp = new QUdpSocket(this);
+    if (!m_udp->bind(src, 0)) {
+        toBypass(QCoreApplication::translate("Relay", "cannot open the local UDP socket"));
+        return;
+    }
+    connect(m_udp, &QUdpSocket::readyRead, this, &UdpRelaySession::onUdpReadyRead);
+    m_stage = Stage::Ready;
+    logNormal(QCoreApplication::translate("Relay", "%1 - %2 open directly via %3 (UDP)")
+                  .arg(m_appName, m_targetText, netif::displayName(m_iface)));
+    emit m_relay->statusChanged(m_id, "Open");
+    flushPending();
+}
+
+void UdpRelaySession::sendDirect(const UdpDatagram &dg)
+{
+    quint16 port = 0;
+    QHostAddress target = sockaddrToHost(dg.remote, &port);
+    m_lastRemote = dg.remote;
+    m_lastOpts = dg.opts;
+    if (!dg.hostname.isEmpty())
+        m_hostByRemote.insert(dg.remote, {dg.hostname, dg.fakeIp});
+    if (dg.fakeIp) {
+        // A fake-DNS address has no server behind it: send to the name's address.
+        if (dg.hostname.isEmpty())
+            return;
+        const QString key = dg.hostname.toLower();
+        const auto known = m_resolved.constFind(key);
+        if (known == m_resolved.cend()) {
+            const bool started = m_resolving.contains(key);
+            m_resolving[key] << dg;
+            DnsClient *dns = m_relay->dns();
+            if (started || !dns)
+                return;
+            QPointer<UdpRelaySession> self(this);
+            const QString host = dg.hostname;
+            const bool v6 = m_meta.v6;
+            dns->resolve(host, [self, key, v6](const QList<QHostAddress> &addrs, const QString &err) {
+                if (!self || self->m_finished)
+                    return;
+                const QList<UdpDatagram> waiting = self->m_resolving.take(key);
+                QHostAddress pick;
+                for (const QHostAddress &a : addrs)
+                    if ((a.protocol() == QAbstractSocket::IPv6Protocol) == v6) {
+                        pick = a;
+                        break;
+                    }
+                if (pick.isNull()) {
+                    logNormal(QCoreApplication::translate("Relay", "%1 - %2 UDP could not resolve the host - %3")
+                                  .arg(self->m_appName, self->m_targetText, err));
+                    return;
+                }
+                self->m_resolved.insert(key, pick);
+                for (const UdpDatagram &d : waiting)
+                    self->sendDirect(d);
+            });
+            return;
+        }
+        target = *known;
+    }
+    if (target.isNull() || !m_udp)
+        return;
+    m_remoteByOrigin.insert(util::formatEndpoint(util::normalize(target), port), dg.remote);
+    m_udp->writeDatagram(dg.data, target, port);
+    m_sent += dg.data.size();
+    capture(dg.remote, CaptureDir::Up, dg.data);
 }
 
 void UdpRelaySession::flushPending()
@@ -319,6 +419,10 @@ void UdpRelaySession::send(const UdpDatagram &dg)
 
 void UdpRelaySession::sendThrough(const UdpDatagram &dg)
 {
+    if (m_direct) {
+        sendDirect(dg);
+        return;
+    }
     quint16 port = 0;
     const QHostAddress target = sockaddrToHost(dg.remote, &port);
 
@@ -389,6 +493,10 @@ void UdpRelaySession::onUdpReadyRead()
         if (n < 0)
             break;
         buf.resize(int(n));
+        if (m_direct) {   // a plain reply from the server itself
+            deliver(util::normalize(from), fromPort, buf);
+            continue;
+        }
         if (buf.size() < 4)
             continue;
         if (quint8(buf[2]) != 0)
@@ -485,7 +593,7 @@ void UdpRelaySession::capture(const QByteArray &remote, CaptureDir dir, const QB
     m.appName = m_meta.appName;
     m.appPath = m_meta.appPath;
     m.ruleName = m_meta.ruleName;
-    m.actionText = QString("%1:%2 %3").arg(m_proxy.address).arg(m_proxy.port).arg(proxyTypeToString(m_proxy.type));
+    m.actionText = m_actionText;
     const QPair<QString, bool> host = m_hostByRemote.value(remote);
     m.hostname = host.first;
     quint16 port = 0;

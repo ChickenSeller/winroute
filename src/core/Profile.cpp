@@ -391,6 +391,10 @@ bool Profile::fromXml(const QByteArray &xml, QString *error)
                 }
                 Rule rule;
                 rule.enabled = attrBool(r, "enabled", true);
+                // Proxifier 4's per-rule network interface ("Advanced"), kept as
+                // attributes of <Rule>: interfaceId="{GUID}" skipIfInterfaceDown="false".
+                rule.action.interfaceId = r.attributes().value("interfaceId").toString().trimmed();
+                rule.action.skipIfInterfaceDown = attrBool(r, "skipIfInterfaceDown");
                 while (r.readNextStartElement()) {
                     const auto n = r.name();
                     if (n == QLatin1String("Name")) {
@@ -418,6 +422,10 @@ bool Profile::fromXml(const QByteArray &xml, QString *error)
                     } else {
                         r.skipCurrentElement();
                     }
+                }
+                if (rule.action.type == ActionType::Block || rule.action.interfaceId.isEmpty()) {
+                    rule.action.interfaceId.clear();   // a blocked connection has no adapter
+                    rule.action.skipIfInterfaceDown = false;
                 }
                 p.rules.append(rule);
             }
@@ -558,6 +566,10 @@ QByteArray Profile::toXml() const
     for (const auto &rule : rules) {
         w.writeStartElement("Rule");
         w.writeAttribute("enabled", boolStr(rule.enabled));
+        if (!rule.action.interfaceId.isEmpty() && rule.action.type != ActionType::Block) {
+            w.writeAttribute("interfaceId", rule.action.interfaceId);
+            w.writeAttribute("skipIfInterfaceDown", boolStr(rule.action.skipIfInterfaceDown));
+        }
         switch (rule.action.type) {
         case ActionType::Direct:
             w.writeEmptyElement("Action");

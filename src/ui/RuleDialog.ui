@@ -153,12 +153,6 @@
      </item>
      <item>
       <widget class="QPushButton" name="advancedButton">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="toolTip">
-        <string>Per-rule network interface selection is not supported yet</string>
-       </property>
        <property name="text">
         <string>Advanced...</string>
        </property>

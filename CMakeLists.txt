@@ -45,6 +45,7 @@ set(CORE_SOURCES
     src/core/DnsMessage.h         src/core/DnsMessage.cpp
     src/core/FakeDns.h            src/core/FakeDns.cpp
     src/core/DnsClient.h          src/core/DnsClient.cpp
+    src/core/NetInterfaces.h      src/core/NetInterfaces.cpp
     src/core/ProxyConnector.h     src/core/ProxyConnector.cpp
     src/core/ProxyGateway.h       src/core/ProxyGateway.cpp
     src/core/Relay.h              src/core/Relay.cpp

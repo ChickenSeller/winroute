@@ -26,7 +26,11 @@ public:
 
 private:
     void accept() override;
+    void editInterface();        // the "Advanced" dialog: the rule's network adapter
+    void updateAdvancedButton();
 
     Rule m_rule;
+    QString m_interfaceId;       // network adapter the rule is bound to, or empty
+    bool m_skipIfInterfaceDown = false;
     std::unique_ptr<Ui::RuleDialog> ui;
 };

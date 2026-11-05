@@ -27,6 +27,14 @@ public:
     ProxyConnector(QTcpSocket *socket, const QList<ProxyServer> &hops, const Endpoint &target,
                    DnsClient *dns, int timeoutMs, QObject *parent = nullptr);
 
+    // Send the first connection (to the target, or to the first proxy) out
+    // through this network adapter (netif id). Call before start(). When the
+    // adapter has no address of the needed protocol, the connection is made
+    // normally, through the adapter the system's routes choose.
+    void setInterface(const QString &id) { m_iface = id; }
+    // The adapter the connection was bound to, empty if none.
+    QString boundInterface() const { return m_boundIface; }
+
     void start();
     int currentHop() const { return m_hop; }
 
@@ -64,6 +72,8 @@ private:
     QList<ProxyServer> m_hops;
     QList<Endpoint> m_endpoints;   // m_endpoints[0] = first proxy (or target), then each next hop
     DnsClient *m_dns;
+    QString m_iface;
+    QString m_boundIface;
     int m_hop = 0;
     Stage m_stage = Stage::Resolving;
     QByteArray m_buf;

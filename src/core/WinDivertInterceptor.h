@@ -68,9 +68,16 @@ private:
 
     // UDP classification result for one (socket, target).
     enum UdpDecision { UdpBypass, UdpProxy, UdpDrop };
+    // A cached decision for one target of a UDP socket. UdpProxy with
+    // proxyId 0 sends it directly from interfaceId (a rule bound to an adapter).
+    struct UdpChoice {
+        int decision = UdpBypass;
+        int proxyId = 0;
+        QString interfaceId;
+    };
     int decideUdp(const RuleMatch &match, bool skip, const Profile &profile, const ProfileOptions &opt,
                   const QHostAddress &dst, quint16 dport, const QString &appName, const QString &target,
-                  int *proxyId) const;
+                  int *proxyId, QString *interfaceId) const;
 
     // Injection callbacks given to the relay (run on the relay thread).
     void injectUdpReply(const QByteArray &localEndpoint, const QByteArray &appRemote, const QByteArray &payload);
@@ -141,7 +148,7 @@ private:
         bool v6 = false;
         quint32 ifIdx = 0;
         quint32 subIfIdx = 0;
-        QHash<QString, QPair<int, int>> decisions;   // "ip:port" -> (UdpDecision, proxyId)
+        QHash<QString, UdpChoice> decisions;   // "ip:port" -> what to do with that target
         qint64 lastMs = 0;
     };
     bool m_udpProxyMode = false;       // udpMode == mode_proxy at start (guarded by m_rulesMutex)
