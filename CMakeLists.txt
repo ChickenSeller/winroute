@@ -48,6 +48,7 @@ set(CORE_SOURCES
     src/core/NetInterfaces.h      src/core/NetInterfaces.cpp
     src/core/LoopGuard.h          src/core/LoopGuard.cpp
     src/core/TlsHello.h           src/core/TlsHello.cpp
+    src/core/TlsMitm.h            src/core/TlsMitm.cpp
     src/core/ProxyConnector.h     src/core/ProxyConnector.cpp
     src/core/ProxyGateway.h       src/core/ProxyGateway.cpp
     src/core/Relay.h              src/core/Relay.cpp

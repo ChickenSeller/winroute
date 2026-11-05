@@ -37,6 +37,7 @@ Engine::Engine(QObject *parent)
     m_gatewayThread.setObjectName("gateway");
     m_gateway = new ProxyGateway;
     m_gateway->setCapture(&m_capture);
+    m_gateway->setCertAuthority(&m_certAuthority);
     m_gateway->moveToThread(&m_gatewayThread);
     connect(&m_gatewayThread, &QThread::finished, m_gateway, &QObject::deleteLater);
     m_gatewayThread.start();

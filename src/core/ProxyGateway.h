@@ -10,6 +10,7 @@
 #include <atomic>
 
 class Capture;
+class CertAuthority;
 class QTcpServer;
 class QTcpSocket;
 class DnsClient;
@@ -80,6 +81,9 @@ public:
     // The packet capture the forwarded connections are recorded in (when it is
     // on and its filter passes them). Set once, before connections arrive.
     void setCapture(Capture *capture) { m_capture = capture; }
+    // WinRoute's CA, for HTTPS decryption of captured connections (when the
+    // capture's "Decrypt HTTPS" is on). The devices must trust its root.
+    void setCertAuthority(CertAuthority *ca) { m_certAuthority = ca; }
     RuleEnginePtr rules() const;
 
     Config config() const { return m_config; }
@@ -108,6 +112,7 @@ private:
     RuleEnginePtr m_rules;
 
     std::atomic<Capture *> m_capture{nullptr};
+    std::atomic<CertAuthority *> m_certAuthority{nullptr};
     std::atomic<bool> m_running{false};
     std::atomic<qint64> m_totalSent{0};
     std::atomic<qint64> m_totalReceived{0};

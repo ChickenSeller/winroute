@@ -289,7 +289,8 @@ CaptureTab::CaptureTab(Capture *capture, CertAuthority *ca, QWidget *parent)
 
     m_decrypt = new QCheckBox(tr("Decrypt HTTPS"));
     m_decrypt->setToolTip(tr("Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. "
-                             "Capture must be started as well."));
+                             "Capture must be started as well. Devices using the proxy gateway must trust the root "
+                             "certificate too."));
     connect(m_decrypt, &QCheckBox::toggled, this, &CaptureTab::onDecryptToggled);
     auto *certBtn = new QPushButton(icons::certificate(), tr("Root Certificate..."));
     connect(certBtn, &QPushButton::clicked, this, &CaptureTab::onCertificate);

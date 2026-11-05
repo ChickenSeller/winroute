@@ -146,10 +146,6 @@
       <translation>解密 HTTPS</translation>
     </message>
     <message>
-      <source>Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. Capture must be started as well.</source>
-      <translation>用 WinRoute 的根证书解密抓取到的 HTTPS(443 端口)连接。还需先开始抓包。</translation>
-    </message>
-    <message>
       <source>Root Certificate...</source>
       <translation>根证书...</translation>
     </message>
@@ -272,6 +268,10 @@ SHA-256：%1</translation>
 %1</source>
       <translation>无法安装根证书：
 %1</translation>
+    </message>
+    <message>
+      <source>Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. Capture must be started as well. Devices using the proxy gateway must trust the root certificate too.</source>
+      <translation>用 WinRoute 的根证书解密抓取到的 HTTPS(443 端口)连接。还需先开始抓包。通过代理网关上网的设备也需要信任这个根证书。</translation>
     </message>
     <message>
       <source>WinRoute's root certificate is not trusted by this computer, so browsers will warn about every decrypted site.
@@ -2312,6 +2312,14 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     <message>
       <source>%1 - %2 proxy unreachable, connecting directly : %3</source>
       <translation>%1 - %2 代理无法连接，改为直连：%3</translation>
+    </message>
+    <message>
+      <source>%1 - %2 HTTPS decryption: the client asks for %3</source>
+      <translation>%1 - %2 HTTPS 解密：客户端请求的是 %3</translation>
+    </message>
+    <message>
+      <source>%1 - %2 HTTPS decryption failed : %3</source>
+      <translation>%1 - %2 HTTPS 解密失败：%3</translation>
     </message>
     <message>
       <source>%1 - %2</source>

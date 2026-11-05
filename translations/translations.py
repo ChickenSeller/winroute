@@ -327,9 +327,10 @@ T = {
     "Capture the connections of this computer's programs": ("抓取本机程序的连接", "このコンピューターのプログラムの接続をキャプチャします"),
     "Proxy gateway": ("代理网关", "プロキシゲートウェイ"),
     "Capture the connections other devices make through the proxy gateway": ("抓取其他设备通过代理网关建立的连接", "他の端末がプロキシゲートウェイ経由で行う接続をキャプチャします"),
-    "Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. Capture must be started as well.":
-        ("用 WinRoute 的根证书解密抓取到的 HTTPS(443 端口)连接。还需先开始抓包。",
-         "WinRoute のルート証明書でキャプチャした HTTPS(ポート 443)接続を復号します。キャプチャも開始する必要があります。"),
+    "Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. Capture must be started as well. Devices using the proxy gateway must trust the root certificate too.":
+        ("用 WinRoute 的根证书解密抓取到的 HTTPS(443 端口)连接。还需先开始抓包。通过代理网关上网的设备也需要信任这个根证书。",
+         "WinRoute のルート証明書でキャプチャした HTTPS(ポート 443)接続を復号します。キャプチャも開始する必要があります。プロキシゲートウェイを使う端末もルート証明書を信頼する必要があります。"),
+    "%1 - %2 HTTPS decryption failed : %3": ("%1 - %2 HTTPS 解密失败：%3", "%1 - %2 HTTPS 復号に失敗：%3"),
     "Root Certificate...": ("根证书...", "ルート証明書..."),
     "Could not prepare the root certificate:\n%1": ("无法准备根证书：\n%1", "ルート証明書を準備できませんでした：\n%1"),
     "To decrypt HTTPS, this computer must trust WinRoute's root certificate. Without it, browsers will warn about every decrypted site.\n\nCreate and install the root certificate now?":

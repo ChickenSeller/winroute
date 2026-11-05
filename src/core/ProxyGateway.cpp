@@ -4,12 +4,14 @@
 #include "Logger.h"
 #include "NetInterfaces.h"
 #include "ProxyConnector.h"
+#include "TlsMitm.h"
 #include "Utils.h"
 
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QPointer>
 #include <QRandomGenerator>
+#include <QSslSocket>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QUrl>
@@ -22,6 +24,23 @@ static constexpr int kConnectTimeoutMs = 20000;
 // blocked. Mirrors the relay's handling of a rule's action, simplified to a
 // single connection attempt (no redundancy failover yet).
 namespace {
+
+// Accepts clients as QSslSocket (in plain mode for the proxy protocol), so a
+// tunnel can switch to TLS for HTTPS decryption.
+class SslReadyServer : public QTcpServer {
+public:
+    using QTcpServer::QTcpServer;
+
+protected:
+    void incomingConnection(qintptr fd) override
+    {
+        auto *s = new QSslSocket(this);
+        if (s->setSocketDescriptor(fd))
+            addPendingConnection(s);
+        else
+            delete s;
+    }
+};
 
 struct Route {
     bool blocked = false;
@@ -440,13 +459,30 @@ private:
         m_interfaceId = route.interfaceId;
         m_fallbackDirect = !route.hops.isEmpty()
                            && m_gw->config().onMissing == ProxyGateway::OnMissing::Direct;
+        m_mitm = wantsDecryption();
         connectThrough(route.hops);
+    }
+
+    // HTTPS decryption, as for this computer's own connections: a tunnel to
+    // port 443 that the capture records, with "Decrypt HTTPS" on.
+    bool wantsDecryption() const
+    {
+        if (m_target.port != 443 || (m_proto == Proto::Http && !m_httpConnect))
+            return false;
+        Capture *cap = m_gw->m_capture.load();
+        if (!m_gw->m_certAuthority.load() || !cap || !cap->capturing(Capture::Source::Gateway) || !cap->decrypt())
+            return false;
+        if (!qobject_cast<QSslSocket *>(m_client.data()))
+            return false;
+        return cap->shouldCapture(tagged(m_peer), QString(), m_target.host, m_target.ip, m_target.port);
     }
 
     void connectThrough(const QList<ProxyServer> &hops)
     {
         m_directUpstream = hops.isEmpty();
-        m_upstream = new QTcpSocket(this);
+        // For decryption the upstream leg is a TLS client; the proxy handshake
+        // still runs in the clear on it first.
+        m_upstream = m_mitm ? new QSslSocket(this) : new QTcpSocket(this);
         m_upstream->setSocketOption(QAbstractSocket::LowDelayOption, 1);
         auto *connector = new ProxyConnector(m_upstream, hops, m_target, m_gw->dns(), kConnectTimeoutMs, this);
         connector->setInterface(m_interfaceId);
@@ -485,6 +521,10 @@ private:
 
     void onUpstreamReady(const QByteArray &leftover)
     {
+        // Bytes already taken from either side cannot go through the TLS
+        // engines any more: the tunnel is then passed through as it is.
+        if (m_mitm && (!leftover.isEmpty() || !m_pendingToUpstream.isEmpty()))
+            m_mitm = false;
         ackClient();
         m_stage = Stage::Open;
 
@@ -495,6 +535,10 @@ private:
         connect(m_upstream, &QTcpSocket::errorOccurred, this, [this] { onSideClosed(m_upstream); });
 
         noteCapture();
+        if (m_mitm) {
+            startMitm();
+            return;
+        }
         if (!leftover.isEmpty() && m_client) {
             m_client->write(leftover);   // downstream bytes the last proxy already sent
             count(&m_received, leftover);
@@ -508,6 +552,33 @@ private:
         pump(m_upstream, m_client, &m_received);
         if (m_upstream->state() != QAbstractSocket::ConnectedState)
             onSideClosed(m_upstream);
+    }
+
+    // The client now starts TLS in the tunnel: present a certificate for the
+    // name it asks for, connect TLS to the server, and pump plaintext between.
+    void startMitm()
+    {
+        const QString known = m_target.host.isEmpty() ? m_target.ip.toString() : m_target.host;
+        m_tls = new TlsMitm(qobject_cast<QSslSocket *>(m_client.data()), m_gw->m_certAuthority.load(), known, this);
+        m_tls->onNameChosen = [this](const QString &name) {
+            ::logVerbose(tagged(QCoreApplication::translate("ProxyGateway", "%1 - %2 HTTPS decryption: the client asks for %3")
+                                    .arg(m_peer, m_targetText, name)));
+        };
+        m_tls->onReady = [this] {
+            pump(m_client, m_upstream, &m_sent);
+            pump(m_upstream, m_client, &m_received);
+        };
+        m_tls->onFailed = [this](const QString &error) {
+            logError(QCoreApplication::translate("ProxyGateway", "%1 - %2 HTTPS decryption failed : %3").arg(m_peer, m_targetText, error));
+            m_failed = true;
+            if (m_client)
+                m_client->abort();
+            if (m_upstream)
+                m_upstream->abort();
+            finish();
+        };
+        m_tls->startClient();
+        m_tls->startUpstream(qobject_cast<QSslSocket *>(m_upstream.data()));
     }
 
     // Tell the client its tunnel is open (protocol-specific).
@@ -568,6 +639,9 @@ private:
     {
         if (m_stage != Stage::Open || !from || !to || to->state() != QAbstractSocket::ConnectedState)
             return;
+        // A decrypted tunnel waits for both TLS handshakes.
+        if (m_mitm && !(m_tls && m_tls->isReady()))
+            return;
         while (from->bytesAvailable() > 0 && to->bytesToWrite() < kMaxBuffered) {
             const QByteArray chunk = from->read(kChunk);
             if (chunk.isEmpty())
@@ -587,7 +661,7 @@ private:
         if (m_captured)
             if (Capture *cap = m_gw->m_capture.load())
                 cap->append(captureId(), counter == &m_sent ? CaptureDir::Up : CaptureDir::Down, data,
-                            QDateTime::currentMSecsSinceEpoch());
+                            QDateTime::currentMSecsSinceEpoch(), m_mitm);
     }
 
     // Capture ids of the gateway's connections are kept apart from the relay's
@@ -699,6 +773,8 @@ private:
     bool m_finished = false;
     bool m_captured = false;         // recorded in the packet capture
     bool m_directUpstream = false;   // the upstream socket goes to the target itself
+    bool m_mitm = false;             // HTTPS decryption of this tunnel
+    QPointer<TlsMitm> m_tls;         // its TLS handshakes
 };
 
 ProxyGateway::ProxyGateway(QObject *parent) : QObject(parent) {}
@@ -721,7 +797,7 @@ bool ProxyGateway::start(const Config &config, QString *error)
     const auto listen = [&](Proto proto, bool enabled, quint16 port, QTcpServer **serverOut, quint16 *portOut) -> bool {
         if (!enabled)
             return true;
-        auto *server = new QTcpServer(this);
+        auto *server = new SslReadyServer(this);
         server->setMaxPendingConnections(1024);
         if (!server->listen(config.listenAddress, port)) {
             if (error)

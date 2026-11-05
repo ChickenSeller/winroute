@@ -31,6 +31,7 @@
 #include <QSslSocket>
 #include <QSslCertificate>
 #include <QSslConfiguration>
+#include <QSslKey>
 #include <QUdpSocket>
 #include <QtEndian>
 #include <cstdio>
@@ -1819,6 +1820,102 @@ static void testCertAuthority()
             }
         }
         relay.closeAll();
+    }
+    // The proxy gateway decrypts HTTPS the same way, for the devices using it.
+    // Here the "real" server is a TLS echo server whose certificate WinRoute's
+    // CA signed, trusted by adding the CA to the default configuration.
+    {
+        CertAuthority ca;
+        CHECK(ca.ensureCa(nullptr));
+        const QSslCertificate caCert(ca.caCertPem(), QSsl::Pem);
+        const QSslConfiguration savedDefault = QSslConfiguration::defaultConfiguration();
+        QSslConfiguration trusting = savedDefault;
+        trusting.addCaCertificate(caCert);
+        QSslConfiguration::setDefaultConfiguration(trusting);
+
+        class TlsEcho : public QTcpServer {
+        public:
+            CertAuthority::Leaf leaf;
+        protected:
+            void incomingConnection(qintptr fd) override
+            {
+                auto *s = new QSslSocket(this);
+                s->setSocketDescriptor(fd);
+                QSslConfiguration cfg = QSslConfiguration::defaultConfiguration();
+                cfg.setLocalCertificate(QSslCertificate(leaf.certPem, QSsl::Pem));
+                cfg.setPrivateKey(QSslKey(leaf.keyPem, QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey));
+                s->setSslConfiguration(cfg);
+                QObject::connect(s, &QSslSocket::readyRead, s, [s] { s->write("echo:" + s->readAll()); });
+                s->startServerEncryption();
+            }
+        } server;
+        server.leaf = ca.leafFor(QStringLiteral("www.example.test"));
+        if (!server.listen(QHostAddress::LocalHost, 443)) {
+            std::printf("  (skipped the gateway decryption check: port 443 is in use)\n");
+        } else {
+            Capture cap;
+            cap.setEnabled(true);
+            cap.setDecrypt(true);
+            ProxyGateway gw;
+            gw.setCapture(&cap);
+            gw.setCertAuthority(&ca);
+            ProxyGateway::Config cfg;
+            cfg.enabled = true;
+            cfg.listenAddress = QHostAddress::LocalHost;
+            cfg.httpPort = 0;
+            cfg.socksPort = 0;
+            cfg.mode = ProxyGateway::Mode::Direct;
+            QString err;
+            CHECK(gw.start(cfg, &err));
+
+            QSslSocket c;
+            c.connectToHost(QHostAddress::LocalHost, gw.socksPort());
+            c.write(QByteArray("\x05\x01\x00", 3));
+            QByteArray buf;
+            CHECK(readAtLeast(c, 2, &buf) == QByteArray("\x05\x00", 2));
+            c.write(QByteArray("\x05\x01\x00\x01\x7f\x00\x00\x01\x01\xbb", 10));   // 127.0.0.1:443
+            buf.clear();
+            CHECK(readAtLeast(c, 10, &buf).left(2) == QByteArray("\x05\x00", 2));
+            QSslConfiguration ccfg = c.sslConfiguration();
+            ccfg.setCaCertificates({caCert});
+            c.setSslConfiguration(ccfg);
+            c.setPeerVerifyName(QStringLiteral("www.example.test"));
+            bool encrypted = false;
+            QList<QSslError> errors;
+            QObject::connect(&c, &QSslSocket::encrypted, [&] { encrypted = true; });
+            QObject::connect(&c, &QSslSocket::sslErrors, [&](const QList<QSslError> &e) { errors = e; });
+            c.startClientEncryption();
+            QElapsedTimer t;
+            t.start();
+            while (!encrypted && errors.isEmpty() && t.elapsed() < 10000)
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+            CHECK(encrypted && errors.isEmpty());
+            // WinRoute's certificate, made for the name the device asked for.
+            CHECK(c.peerCertificate().issuerInfo(QSslCertificate::CommonName) == caCert.subjectInfo(QSslCertificate::CommonName));
+            CHECK(c.peerCertificate().subjectAlternativeNames().values(QSsl::DnsEntry) == QStringList{"www.example.test"});
+            c.write("secret");
+            buf.clear();
+            t.restart();
+            while (!buf.contains("echo:secret") && t.elapsed() < 10000) {
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+                buf += c.readAll();
+            }
+            CHECK(buf == "echo:secret");
+            c.disconnectFromHost();
+            t.restart();
+            while (t.elapsed() < 300)
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+            gw.stop();
+            // The capture holds the plaintext, marked decrypted.
+            const QList<CaptureSummary> rows = cap.summaries();
+            CHECK(rows.size() == 1);
+            if (rows.size() == 1) {
+                const CaptureEntry e = cap.entry(rows.first().meta.id);
+                CHECK(e.decrypted && e.up == 6 && e.down == 11);
+                CHECK(!e.segs.isEmpty() && e.segs.first().data == "secret");
+            }
+        }
+        QSslConfiguration::setDefaultConfiguration(savedDefault);
     }
 
     if (savedAppData.isEmpty())

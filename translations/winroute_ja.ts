@@ -146,10 +146,6 @@
       <translation>HTTPS を復号</translation>
     </message>
     <message>
-      <source>Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. Capture must be started as well.</source>
-      <translation>WinRoute のルート証明書でキャプチャした HTTPS(ポート 443)接続を復号します。キャプチャも開始する必要があります。</translation>
-    </message>
-    <message>
       <source>Root Certificate...</source>
       <translation>ルート証明書...</translation>
     </message>
@@ -272,6 +268,10 @@ SHA-256：%1</translation>
 %1</source>
       <translation>ルート証明書をインストールできませんでした：
 %1</translation>
+    </message>
+    <message>
+      <source>Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. Capture must be started as well. Devices using the proxy gateway must trust the root certificate too.</source>
+      <translation>WinRoute のルート証明書でキャプチャした HTTPS(ポート 443)接続を復号します。キャプチャも開始する必要があります。プロキシゲートウェイを使う端末もルート証明書を信頼する必要があります。</translation>
     </message>
     <message>
       <source>WinRoute's root certificate is not trusted by this computer, so browsers will warn about every decrypted site.
@@ -2312,6 +2312,14 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     <message>
       <source>%1 - %2 proxy unreachable, connecting directly : %3</source>
       <translation>%1 - %2 プロキシに接続できないため直接接続します：%3</translation>
+    </message>
+    <message>
+      <source>%1 - %2 HTTPS decryption: the client asks for %3</source>
+      <translation>%1 - %2 HTTPS 復号：クライアントが求めているのは %3</translation>
+    </message>
+    <message>
+      <source>%1 - %2 HTTPS decryption failed : %3</source>
+      <translation>%1 - %2 HTTPS 復号に失敗：%3</translation>
     </message>
     <message>
       <source>%1 - %2</source>

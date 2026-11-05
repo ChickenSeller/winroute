@@ -4,7 +4,7 @@
 #include "CertAuthority.h"
 #include "DnsClient.h"
 #include "Logger.h"
-#include "TlsHello.h"
+#include "TlsMitm.h"
 #include "UdpRelaySession.h"
 #include "Utils.h"
 
@@ -194,7 +194,7 @@ public:
         // a certificate for that name. The upstream handshake follows once the
         // tunnel is up and the name is known.
         if (m_mitm)
-            waitClientHello();
+            startMitm();
         if (!m_finished)
             nextAttempt();
     }
@@ -295,137 +295,38 @@ private:
             onSideClosed(m_upstream);
     }
 
-    // Peeks at the client's first bytes until its ClientHello is complete, for
-    // the server name (SNI). The host name WinRoute knows for the address can
-    // be another site on the same IP (a CDN, or www. and down. of one site);
-    // the SNI is the name the client will check the certificate against.
-    void waitClientHello()
+    // HTTPS decryption: the two TLS handshakes (the client's, for a
+    // certificate made for the name in its ClientHello, and the server's) run
+    // in a TlsMitm; the plaintext pumps start once both are done.
+    void startMitm()
     {
-        auto *timer = new QTimer(this);
-        timer->setSingleShot(true);
-        // A client that sends nothing gets the known name, as before.
-        connect(timer, &QTimer::timeout, this, [this] { onClientHello(QString()); });
-        timer->start(kHelloWaitMs);
-        m_helloTimer = timer;
-        m_helloConn = connect(m_client, &QTcpSocket::readyRead, this, [this] { peekClientHello(); });
-        peekClientHello();
-    }
-
-    void peekClientHello()
-    {
-        if (m_helloDone || !m_client)
-            return;
-        // QSslSocket::peek() in unencrypted mode reads from the underlying
-        // socket without consuming, so startServerEncryption() sees it all.
-        const QByteArray head = m_client->peek(kMaxHelloPeek);
-        QString sni;
-        const tlshello::Result r = tlshello::serverName(head, &sni);
-        if (r == tlshello::Result::NeedMore && head.size() < kMaxHelloPeek)
-            return;
-        onClientHello(r == tlshello::Result::Done ? sni : QString());
-    }
-
-    void onClientHello(const QString &sni)
-    {
-        if (m_helloDone)
-            return;
-        m_helloDone = true;
-        QObject::disconnect(m_helloConn);
-        if (m_helloTimer)
-            m_helloTimer->deleteLater();
         const QString known = m_info.hostname.isEmpty() ? m_info.dstAddr.toString() : m_info.hostname;
-        m_tlsName = validHostName(sni) ? sni : known;
-        if (m_tlsName != known)
+        m_tls = new TlsMitm(qobject_cast<QSslSocket *>(m_client.data()), m_relay->m_certAuthority, known, this);
+        m_tls->onNameChosen = [this](const QString &name) {
             logVerbose(QCoreApplication::translate("Relay", "%1 - %2 HTTPS decryption: the client asks for %3")
-                           .arg(m_info.appName, m_targetText, m_tlsName));
-        startClientTls();
-        if (m_upstreamTlsPending && !m_finished) {
-            m_upstreamTlsPending = false;
-            startUpstreamTls({});
-        }
+                           .arg(m_info.appName, m_targetText, name));
+        };
+        m_tls->onReady = [this] { beginTunnel(); };
+        m_tls->onFailed = [this](const QString &error) { finishWithError(error); };
+        m_tls->startClient();
     }
 
-    // A DNS name fit for a certificate: letters, digits, '-', '_', '.'.
-    static bool validHostName(const QString &name)
-    {
-        if (name.isEmpty() || name.size() > 253 || name.startsWith(u'.') || name.endsWith(u'.'))
-            return false;
-        for (const QChar c : name)
-            if (!(c.isLetterOrNumber() && c.unicode() < 128) && c != u'-' && c != u'_' && c != u'.')
-                return false;
-        return true;
-    }
-
-    // Presents our leaf certificate to the application and begins the TLS
-    // server handshake on the client side.
-    void startClientTls()
-    {
-        auto *ssl = qobject_cast<QSslSocket *>(m_client.data());
-        if (!ssl || !m_relay->m_certAuthority) {
-            finishWithError(QCoreApplication::translate("Relay", "HTTPS decryption is not available"));
-            return;
-        }
-        const QString host = m_tlsName;
-        const CertAuthority::Leaf leaf = m_relay->m_certAuthority->leafFor(host);
-        const QSslCertificate cert(leaf.certPem, QSsl::Pem);
-        const QSslKey key(leaf.keyPem, QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey);
-        if (cert.isNull() || key.isNull()) {
-            finishWithError(QCoreApplication::translate("Relay", "could not create a certificate for %1").arg(host));
-            return;
-        }
-        QSslConfiguration cfg = QSslConfiguration::defaultConfiguration();
-        cfg.setLocalCertificate(cert);
-        cfg.setPrivateKey(key);
-        cfg.setAllowedNextProtocols({QByteArrayLiteral("http/1.1")});
-        ssl->setSslConfiguration(cfg);
-        connect(ssl, &QSslSocket::encrypted, this, [this] {
-            m_clientTls = true;
-            beginTunnel();
-        });
-        ssl->startServerEncryption();
-    }
-
-    // Begins the TLS client handshake to the real server, verifying its
-    // certificate against the system roots (a MITM upstream is refused).
+    // The tunnel to the server is up: the upstream handshake follows.
     void startUpstreamTls(const QByteArray &leftover)
     {
-        auto *ssl = qobject_cast<QSslSocket *>(m_upstream.data());
-        if (!ssl) {
-            finishWithError(QCoreApplication::translate("Relay", "HTTPS decryption is not available"));
-            return;
-        }
         if (!leftover.isEmpty()) {
             finishWithError(QCoreApplication::translate("Relay", "unexpected data before the TLS handshake"));
             return;
         }
-        // The server is asked for, and checked against, the client's name.
-        if (!m_helloDone) {
-            m_upstreamTlsPending = true;
-            return;
-        }
-        ssl->setPeerVerifyName(m_tlsName);
-        QSslConfiguration cfg = ssl->sslConfiguration();
-        cfg.setAllowedNextProtocols({QByteArrayLiteral("http/1.1")});
-        ssl->setSslConfiguration(cfg);
-        connect(ssl, &QSslSocket::encrypted, this, [this] {
-            m_upstreamTls = true;
-            beginTunnel();
-        });
-        connect(ssl, &QSslSocket::sslErrors, this, [this](const QList<QSslError> &errs) {
-            QStringList msgs;
-            for (const QSslError &e : errs)
-                msgs << e.errorString();
-            finishWithError(QCoreApplication::translate("Relay", "the server's certificate was rejected: %1")
-                                .arg(msgs.join(QStringLiteral("; "))));
-        });
-        ssl->startClientEncryption();
+        if (m_tls)
+            m_tls->startUpstream(qobject_cast<QSslSocket *>(m_upstream.data()));
     }
 
     // Both TLS legs are up: wire the plaintext pumps and start moving data. The
     // bytes handed to the capture store are now decrypted.
     void beginTunnel()
     {
-        if (m_finished || m_tunnel || !m_clientTls || !m_upstreamTls)
+        if (m_finished || m_tunnel || !m_tls || !m_tls->isReady())
             return;
         m_tunnel = true;
         connect(m_upstream, &QTcpSocket::readyRead, this, [this] { pump(m_upstream, m_client, &m_received); });
@@ -572,17 +473,8 @@ private:
     bool m_finished = false;
     bool m_announced = false;
     bool m_mitm = false;        // terminate TLS to decrypt this connection
-    bool m_clientTls = false;   // client-side handshake finished
-    bool m_upstreamTls = false; // upstream handshake finished
     bool m_tunnel = false;      // both handshakes done; plaintext is flowing
-    // Waiting for the ClientHello's server name (decryption only).
-    static constexpr int kHelloWaitMs = 5000;
-    static constexpr qint64 kMaxHelloPeek = 64 * 1024;
-    bool m_helloDone = false;
-    bool m_upstreamTlsPending = false;   // upstream ready before the name was known
-    QString m_tlsName;                   // the name the certificate is for
-    QMetaObject::Connection m_helloConn;
-    QPointer<QTimer> m_helloTimer;
+    QPointer<TlsMitm> m_tls;    // the TLS handshakes, when decrypting
 };
 
 Relay::Relay(FlowTable *flows, QObject *parent)
