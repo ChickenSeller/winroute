@@ -204,14 +204,15 @@ TrafficWidget::TrafficWidget(QWidget *parent)
 {
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(4, 4, 4, 4);
-    // Two rows of captions: this computer's lines (with Clear and the total),
-    // and below them, in the same columns, the proxy gateway's while it runs.
+    // Each group's down and up captions are stacked in a column: this
+    // computer's, then the proxy gateway's while it runs. Clear and the total
+    // sit beside them, centred on the two rows.
     auto *top = new QGridLayout;
     top->setHorizontalSpacing(16);
     top->setVerticalSpacing(2);
     auto *clearBtn = new QPushButton(tr("Clear"));
     m_totalLabel = new QLabel;
-    top->addWidget(clearBtn, 0, 0);
+    top->addWidget(clearBtn, 0, 0, 2, 1, Qt::AlignVCenter);
     m_graph = new TrafficGraph;
 
     // Which lines are hidden is remembered.
@@ -238,12 +239,12 @@ TrafficWidget::TrafficWidget(QWidget *parent)
         label->setMeaning(tr(meanings[s]));
         m_labels[s] = label;
         const bool gateway = s == TrafficGraph::GatewayDown || s == TrafficGraph::GatewayUp;
-        top->addWidget(label, gateway ? 1 : 0, 1 + (s % 2));
+        top->addWidget(label, s % 2, gateway ? 2 : 1);
     }
     m_labels[TrafficGraph::GatewayDown]->setVisible(false);
     m_labels[TrafficGraph::GatewayUp]->setVisible(false);
     top->setColumnStretch(3, 1);
-    top->addWidget(m_totalLabel, 0, 4);
+    top->addWidget(m_totalLabel, 0, 4, 2, 1, Qt::AlignVCenter);
     layout->addLayout(top);
     layout->addWidget(m_graph, 1);
     connect(clearBtn, &QPushButton::clicked, this, &TrafficWidget::clear);
