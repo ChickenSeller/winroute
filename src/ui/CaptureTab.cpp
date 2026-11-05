@@ -264,6 +264,7 @@ CaptureTab::CaptureTab(Capture *capture, CertAuthority *ca, QWidget *parent)
     sep->setFrameShadow(QFrame::Sunken);
 
     // Whose traffic is captured; remembered, both on by default.
+    auto *captureLabel = new QLabel(tr("Capture:"));
     m_local = new QCheckBox(tr("This computer"));
     m_local->setToolTip(tr("Capture the connections of this computer's programs"));
     m_gateway = new QCheckBox(tr("Proxy gateway"));
@@ -287,11 +288,20 @@ CaptureTab::CaptureTab(Capture *capture, CertAuthority *ca, QWidget *parent)
     sep2->setFrameShape(QFrame::VLine);
     sep2->setFrameShadow(QFrame::Sunken);
 
-    m_decrypt = new QCheckBox(tr("Decrypt HTTPS"));
-    m_decrypt->setToolTip(tr("Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. "
-                             "Capture must be started as well. Devices using the proxy gateway must trust the root "
-                             "certificate too."));
-    connect(m_decrypt, &QCheckBox::toggled, this, &CaptureTab::onDecryptToggled);
+    // HTTPS decryption, for each source apart.
+    auto *decryptLabel = new QLabel(tr("Decrypt HTTPS:"));
+    decryptLabel->setToolTip(tr("Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. "
+                                "Capture must be started as well."));
+    m_decryptLocal = new QCheckBox(tr("This computer"));
+    m_decryptLocal->setToolTip(tr("Decrypt the HTTPS connections of this computer's programs. "
+                                  "This computer must trust WinRoute's root certificate."));
+    m_decryptGateway = new QCheckBox(tr("Proxy gateway"));
+    m_decryptGateway->setToolTip(tr("Decrypt the HTTPS connections other devices make through the proxy gateway. "
+                                    "Those devices must trust WinRoute's root certificate."));
+    connect(m_decryptLocal, &QCheckBox::toggled, this,
+            [this](bool on) { onDecryptToggled(Capture::Source::Local, m_decryptLocal, on); });
+    connect(m_decryptGateway, &QCheckBox::toggled, this,
+            [this](bool on) { onDecryptToggled(Capture::Source::Gateway, m_decryptGateway, on); });
     auto *certBtn = new QPushButton(icons::certificate(), tr("Root Certificate..."));
     connect(certBtn, &QPushButton::clicked, this, &CaptureTab::onCertificate);
 
@@ -300,10 +310,13 @@ CaptureTab::CaptureTab(Capture *capture, CertAuthority *ca, QWidget *parent)
     bar->addWidget(exportBtn);
     bar->addWidget(filterBtn);
     bar->addWidget(sep);
+    bar->addWidget(captureLabel);
     bar->addWidget(m_local);
     bar->addWidget(m_gateway);
     bar->addWidget(sep2);
-    bar->addWidget(m_decrypt);
+    bar->addWidget(decryptLabel);
+    bar->addWidget(m_decryptLocal);
+    bar->addWidget(m_decryptGateway);
     bar->addWidget(certBtn);
     bar->addStretch();
     root->addLayout(bar);
@@ -343,11 +356,19 @@ CaptureTab::CaptureTab(Capture *capture, CertAuthority *ca, QWidget *parent)
     m_toggle->setIcon(on ? icons::pause() : icons::play());
     m_toggle->setText(on ? tr("Pause") : tr("Start"));
 
-    const bool decrypt = util::appSettings().value("capture/decrypt", false).toBool();
-    m_decrypt->blockSignals(true);
-    m_decrypt->setChecked(decrypt);
-    m_decrypt->blockSignals(false);
-    m_capture->setDecrypt(decrypt);
+    // "capture/decrypt" is the setting from before there were two sources,
+    // when only this computer's connections could be decrypted.
+    const struct { QCheckBox *box; Capture::Source source; const char *key; } decrypts[] = {
+        {m_decryptLocal, Capture::Source::Local, "capture/decrypt"},
+        {m_decryptGateway, Capture::Source::Gateway, "capture/decryptGateway"},
+    };
+    for (const auto &d : decrypts) {
+        const bool decrypt = util::appSettings().value(d.key, false).toBool();
+        d.box->blockSignals(true);
+        d.box->setChecked(decrypt);
+        d.box->blockSignals(false);
+        m_capture->setDecrypt(d.source, decrypt);
+    }
     loadFilter();
 
     m_timer = new QTimer(this);
@@ -474,14 +495,39 @@ void CaptureTab::onToggled(bool on)
     m_toggle->setText(on ? tr("Pause") : tr("Start"));
 }
 
-void CaptureTab::onDecryptToggled(bool on)
+void CaptureTab::onDecryptToggled(Capture::Source source, QCheckBox *box, bool on)
 {
-    auto revert = [this] {
-        m_decrypt->blockSignals(true);
-        m_decrypt->setChecked(false);
-        m_decrypt->blockSignals(false);
+    auto revert = [box] {
+        box->blockSignals(true);
+        box->setChecked(false);
+        box->blockSignals(false);
     };
-    if (on) {
+    const bool gateway = source == Capture::Source::Gateway;
+    if (on && gateway && !m_ca->exists()) {
+        // The devices using the gateway are the ones that must trust the root
+        // certificate; installing it here does not help them.
+        const auto btn = QMessageBox::question(
+            this, tr("Decrypt HTTPS"),
+            tr("To decrypt HTTPS through the proxy gateway, the devices using it must trust WinRoute's root "
+               "certificate.\n\nCreate the root certificate now? You can then export it with "
+               "\"Root Certificate...\" and install it on those devices."),
+            QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Yes);
+        if (btn != QMessageBox::Yes) {
+            revert();
+            return;
+        }
+        CertAuthority::CaInfo info = CertAuthority::defaultInfo();
+        if (!promptCaInfo(this, &info)) {
+            revert();
+            return;
+        }
+        QString err;
+        if (!m_ca->createCa(info, &err)) {
+            QMessageBox::warning(this, tr("Decrypt HTTPS"), tr("Could not prepare the root certificate:\n%1").arg(err));
+            revert();
+            return;
+        }
+    } else if (on && !gateway) {
         if (!m_ca->exists()) {
             // No certificate yet: on Yes, let the user fill in its details, then
             // create that certificate and install it (never a silent default).
@@ -528,8 +574,8 @@ void CaptureTab::onDecryptToggled(bool on)
             }
         }
     }
-    m_capture->setDecrypt(on);
-    util::appSettings().setValue("capture/decrypt", on);
+    m_capture->setDecrypt(source, on);
+    util::appSettings().setValue(gateway ? "capture/decryptGateway" : "capture/decrypt", on);
 }
 
 void CaptureTab::onCertificate()

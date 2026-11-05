@@ -542,7 +542,7 @@ void Relay::incomingConnection(qintptr fd)
     // and decryption are both on, a CA is wired, the target is the standard
     // HTTPS port, and the connection passes the capture filter. Committed here,
     // before any byte is read, because QSslSocket must own the ClientHello.
-    const bool mitm = m_capture && m_capture->capturing(Capture::Source::Local) && m_capture->decrypt() && m_certAuthority
+    const bool mitm = m_capture && m_capture->capturing(Capture::Source::Local) && m_capture->decrypt(Capture::Source::Local) && m_certAuthority
                       && info->dstPort == 443
                       && m_capture->shouldCapture(info->appName, info->appPath, info->hostname,
                                                   info->fakeIp ? QHostAddress() : info->dstAddr, info->dstPort);

@@ -108,11 +108,11 @@ public:
     // Capture is on and takes this source.
     bool capturing(Source source) const { return isEnabled() && sourceEnabled(source); }
 
-    // HTTPS decryption (MITM). When on, the relay terminates TLS for the
-    // connections it captures and feeds this store the plaintext. Off by
-    // default; read without the lock on the relay's fast path.
-    void setDecrypt(bool on);
-    bool decrypt() const;
+    // HTTPS decryption (MITM), for each source apart. When on, the relay (or
+    // the proxy gateway) terminates TLS for the connections it captures and
+    // feeds this store the plaintext. Off by default; read without the lock.
+    void setDecrypt(Source source, bool on);
+    bool decrypt(Source source) const;
 
     // Per-connection and total byte caps (thread-safe). 0 = unlimited.
     void setLimits(qint64 perConn, qint64 total);
@@ -176,7 +176,8 @@ private:
 
     mutable QMutex m_mutex;
     std::atomic<bool> m_enabled{false};   // read without the lock for a cheap off-path
-    std::atomic<bool> m_decrypt{false};   // HTTPS decryption (MITM)
+    std::atomic<bool> m_decryptLocal{false};     // HTTPS decryption (MITM), Source::Local
+    std::atomic<bool> m_decryptGateway{false};   // ... and Source::Gateway
     std::atomic<bool> m_local{true};      // Source::Local
     std::atomic<bool> m_gateway{true};    // Source::Gateway
     qint64 m_perConn = 8LL * 1024 * 1024;

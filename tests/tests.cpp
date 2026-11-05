@@ -1762,7 +1762,7 @@ static void testCertAuthority()
         CHECK(ca.ensureCa(nullptr));
         Capture cap;
         cap.setEnabled(true);
-        cap.setDecrypt(true);
+        cap.setDecrypt(Capture::Source::Local, true);
         FlowTable flows;
         Relay relay(&flows);
         relay.setRules(std::make_shared<RuleEngine>(Profile::createDefault()));
@@ -1855,7 +1855,9 @@ static void testCertAuthority()
         } else {
             Capture cap;
             cap.setEnabled(true);
-            cap.setDecrypt(true);
+            cap.setDecrypt(Capture::Source::Gateway, true);
+            // Each source is decrypted only when asked: this computer's is not.
+            CHECK(!cap.decrypt(Capture::Source::Local));
             ProxyGateway gw;
             gw.setCapture(&cap);
             gw.setCertAuthority(&ca);

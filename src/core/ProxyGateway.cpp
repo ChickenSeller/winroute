@@ -470,7 +470,7 @@ private:
         if (m_target.port != 443 || (m_proto == Proto::Http && !m_httpConnect))
             return false;
         Capture *cap = m_gw->m_capture.load();
-        if (!m_gw->m_certAuthority.load() || !cap || !cap->capturing(Capture::Source::Gateway) || !cap->decrypt())
+        if (!m_gw->m_certAuthority.load() || !cap || !cap->capturing(Capture::Source::Gateway) || !cap->decrypt(Capture::Source::Gateway))
             return false;
         if (!qobject_cast<QSslSocket *>(m_client.data()))
             return false;

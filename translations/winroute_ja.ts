@@ -142,6 +142,22 @@
       <translation>他の端末がプロキシゲートウェイ経由で行う接続をキャプチャします</translation>
     </message>
     <message>
+      <source>Decrypt HTTPS:</source>
+      <translation>HTTPS を復号：</translation>
+    </message>
+    <message>
+      <source>Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. Capture must be started as well.</source>
+      <translation>WinRoute のルート証明書でキャプチャした HTTPS(ポート 443)接続を復号します。キャプチャも開始する必要があります。</translation>
+    </message>
+    <message>
+      <source>Decrypt the HTTPS connections of this computer's programs. This computer must trust WinRoute's root certificate.</source>
+      <translation>このコンピューターのプログラムの HTTPS 接続を復号します。このコンピューターが WinRoute のルート証明書を信頼している必要があります。</translation>
+    </message>
+    <message>
+      <source>Decrypt the HTTPS connections other devices make through the proxy gateway. Those devices must trust WinRoute's root certificate.</source>
+      <translation>他の端末がプロキシゲートウェイ経由で行う HTTPS 接続を復号します。それらの端末が WinRoute のルート証明書を信頼している必要があります。</translation>
+    </message>
+    <message>
       <source>Decrypt HTTPS</source>
       <translation>HTTPS を復号</translation>
     </message>
@@ -226,6 +242,14 @@
       <translation>キャプチャは WinRoute を通る通信を記録し、HTTPS 復号を有効にするとパスワードなどの平文を含むことがあります。すべてこの PC 内にのみ保存されます。エクスポートや共有の際はご注意ください。</translation>
     </message>
     <message>
+      <source>To decrypt HTTPS through the proxy gateway, the devices using it must trust WinRoute's root certificate.
+
+Create the root certificate now? You can then export it with "Root Certificate..." and install it on those devices.</source>
+      <translation>プロキシゲートウェイ経由の HTTPS を復号するには、利用する端末が WinRoute のルート証明書を信頼している必要があります。
+
+今すぐルート証明書を作成しますか？その後「ルート証明書...」でエクスポートし、それらの端末にインストールできます。</translation>
+    </message>
+    <message>
       <source>To decrypt HTTPS, this computer must trust WinRoute's root certificate. Without it, browsers will warn about every decrypted site.
 
 Create and install the root certificate now?</source>
@@ -268,10 +292,6 @@ SHA-256：%1</translation>
 %1</source>
       <translation>ルート証明書をインストールできませんでした：
 %1</translation>
-    </message>
-    <message>
-      <source>Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. Capture must be started as well. Devices using the proxy gateway must trust the root certificate too.</source>
-      <translation>WinRoute のルート証明書でキャプチャした HTTPS(ポート 443)接続を復号します。キャプチャも開始する必要があります。プロキシゲートウェイを使う端末もルート証明書を信頼する必要があります。</translation>
     </message>
     <message>
       <source>WinRoute's root certificate is not trusted by this computer, so browsers will warn about every decrypted site.
@@ -415,7 +435,7 @@ Continue?</source>
     </message>
     <message>
       <source>Capture:</source>
-      <translation>キャプチャ:</translation>
+      <translation>キャプチャ：</translation>
     </message>
     <message>
       <source>Everything</source>

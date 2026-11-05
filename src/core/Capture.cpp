@@ -38,14 +38,14 @@ bool Capture::sourceEnabled(Source source) const
     return (source == Source::Local ? m_local : m_gateway).load(std::memory_order_relaxed);
 }
 
-void Capture::setDecrypt(bool on)
+void Capture::setDecrypt(Source source, bool on)
 {
-    m_decrypt.store(on, std::memory_order_relaxed);
+    (source == Source::Local ? m_decryptLocal : m_decryptGateway).store(on, std::memory_order_relaxed);
 }
 
-bool Capture::decrypt() const
+bool Capture::decrypt(Source source) const
 {
-    return m_decrypt.load(std::memory_order_relaxed);
+    return (source == Source::Local ? m_decryptLocal : m_decryptGateway).load(std::memory_order_relaxed);
 }
 
 void Capture::setLimits(qint64 perConn, qint64 total)

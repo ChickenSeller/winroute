@@ -142,6 +142,22 @@
       <translation>抓取其他设备通过代理网关建立的连接</translation>
     </message>
     <message>
+      <source>Decrypt HTTPS:</source>
+      <translation>解密 HTTPS：</translation>
+    </message>
+    <message>
+      <source>Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. Capture must be started as well.</source>
+      <translation>用 WinRoute 的根证书解密抓取到的 HTTPS(443 端口)连接。还需先开始抓包。</translation>
+    </message>
+    <message>
+      <source>Decrypt the HTTPS connections of this computer's programs. This computer must trust WinRoute's root certificate.</source>
+      <translation>解密本机程序的 HTTPS 连接。本机需要信任 WinRoute 的根证书。</translation>
+    </message>
+    <message>
+      <source>Decrypt the HTTPS connections other devices make through the proxy gateway. Those devices must trust WinRoute's root certificate.</source>
+      <translation>解密其他设备通过代理网关建立的 HTTPS 连接。这些设备需要信任 WinRoute 的根证书。</translation>
+    </message>
+    <message>
       <source>Decrypt HTTPS</source>
       <translation>解密 HTTPS</translation>
     </message>
@@ -226,6 +242,14 @@
       <translation>抓包会记录经过 WinRoute 的流量，开启 HTTPS 解密后还可能包含密码等明文。所有内容只保存在本机；导出或分享抓包时请注意。</translation>
     </message>
     <message>
+      <source>To decrypt HTTPS through the proxy gateway, the devices using it must trust WinRoute's root certificate.
+
+Create the root certificate now? You can then export it with "Root Certificate..." and install it on those devices.</source>
+      <translation>要解密通过代理网关的 HTTPS，使用网关的设备需要信任 WinRoute 的根证书。
+
+现在创建根证书吗？之后可以用“根证书...”导出，并安装到这些设备上。</translation>
+    </message>
+    <message>
       <source>To decrypt HTTPS, this computer must trust WinRoute's root certificate. Without it, browsers will warn about every decrypted site.
 
 Create and install the root certificate now?</source>
@@ -268,10 +292,6 @@ SHA-256：%1</translation>
 %1</source>
       <translation>无法安装根证书：
 %1</translation>
-    </message>
-    <message>
-      <source>Decrypt captured HTTPS (port 443) connections with WinRoute's root certificate. Capture must be started as well. Devices using the proxy gateway must trust the root certificate too.</source>
-      <translation>用 WinRoute 的根证书解密抓取到的 HTTPS(443 端口)连接。还需先开始抓包。通过代理网关上网的设备也需要信任这个根证书。</translation>
     </message>
     <message>
       <source>WinRoute's root certificate is not trusted by this computer, so browsers will warn about every decrypted site.
@@ -415,7 +435,7 @@ Continue?</source>
     </message>
     <message>
       <source>Capture:</source>
-      <translation>抓取:</translation>
+      <translation>抓取：</translation>
     </message>
     <message>
       <source>Everything</source>

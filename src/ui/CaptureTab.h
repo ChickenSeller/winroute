@@ -2,7 +2,7 @@
 
 #include <QWidget>
 
-class Capture;
+#include "core/Capture.h"
 class CaptureModel;
 class CertAuthority;
 class QCheckBox;
@@ -26,7 +26,7 @@ private:
     void onSelectionChanged();
     void renderDetail(quint64 id);
     void onToggled(bool on);
-    void onDecryptToggled(bool on);
+    void onDecryptToggled(Capture::Source source, QCheckBox *box, bool on);
     void onCertificate();   // the root-certificate dialog (generate / install)
     void onClear();
     void onExport();
@@ -39,7 +39,8 @@ private:
     QTableView *m_view;
     QPlainTextEdit *m_detail;
     QToolButton *m_toggle;
-    QCheckBox *m_decrypt;
+    QCheckBox *m_decryptLocal;     // decrypt HTTPS of this computer's connections
+    QCheckBox *m_decryptGateway;   // ... and of the proxy gateway's
     QCheckBox *m_local;     // capture this computer's connections
     QCheckBox *m_gateway;   // capture the proxy gateway's connections
     QTimer *m_timer;
