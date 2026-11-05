@@ -20,6 +20,9 @@ class CaptureTab : public QWidget {
     Q_OBJECT
 public:
     explicit CaptureTab(Capture *capture, CertAuthority *ca, QWidget *parent = nullptr);
+    // Whether the proxy gateway is running: its check boxes are disabled while
+    // it is not (their state is kept for when it runs again).
+    void setGatewayRunning(bool running);
 
 private:
     void refresh();
@@ -41,6 +44,8 @@ private:
     QToolButton *m_toggle;
     QCheckBox *m_decryptLocal;     // decrypt HTTPS of this computer's connections
     QCheckBox *m_decryptGateway;   // ... and of the proxy gateway's
+    QString m_gatewayTip, m_decryptGatewayTip;   // their tooltips while enabled
+    int m_gatewayRunning = -1;                   // unknown until told
     QCheckBox *m_local;     // capture this computer's connections
     QCheckBox *m_gateway;   // capture the proxy gateway's connections
     QTimer *m_timer;

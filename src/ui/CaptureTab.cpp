@@ -500,6 +500,22 @@ void CaptureTab::onToggled(bool on)
     m_toggle->setText(on ? tr("Pause") : tr("Start"));
 }
 
+void CaptureTab::setGatewayRunning(bool running)
+{
+    if (m_gatewayRunning == int(running))
+        return;
+    m_gatewayRunning = running;
+    if (m_gatewayTip.isEmpty()) {
+        m_gatewayTip = m_gateway->toolTip();
+        m_decryptGatewayTip = m_decryptGateway->toolTip();
+    }
+    const QString off = tr("The proxy gateway is not enabled");
+    m_gateway->setEnabled(running);
+    m_decryptGateway->setEnabled(running);
+    m_gateway->setToolTip(running ? m_gatewayTip : off);
+    m_decryptGateway->setToolTip(running ? m_decryptGatewayTip : off);
+}
+
 void CaptureTab::onDecryptToggled(Capture::Source source, QCheckBox *box, bool on)
 {
     auto revert = [box] {

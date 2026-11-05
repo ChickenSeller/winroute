@@ -474,6 +474,7 @@ void MainWindow::createCentral()
     m_tabs->addTab(m_stats, tr("Statistics"));
     m_captureTab = new CaptureTab(m_engine->capture(), m_engine->certAuthority(), this);
     m_tabs->addTab(m_captureTab, tr("Capture"));
+    m_captureTab->setGatewayRunning(m_engine->gateway()->running());
 
     m_log = ui->logEdit;
     m_log->setMaximumBlockCount(10000);
@@ -1011,6 +1012,8 @@ void MainWindow::showProxyServerSettings()
         logNormal(tr("Proxy gateway settings saved."));
     else
         logError(tr("Proxy gateway: %1").arg(error));
+    if (m_captureTab)
+        m_captureTab->setGatewayRunning(m_engine->gateway()->running());
 }
 
 void MainWindow::showAbout()
@@ -1208,6 +1211,8 @@ void MainWindow::onSecondTick()
     m_gwLastSent = gwSent;
     m_gwLastReceived = gwReceived;
     m_traffic->addSample(in, out, gw->running(), gwDown, gwUp);
+    if (m_captureTab)
+        m_captureTab->setGatewayRunning(gw->running());
     m_statusRate->setText(tr("Down %1, Up %2").arg(util::formatRate(in), util::formatRate(out)));
     if (m_tray->isVisible()) {
         updateTrayIcon();

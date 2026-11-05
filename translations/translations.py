@@ -331,6 +331,7 @@ T = {
         ("用 WinRoute 的根证书解密抓取到的 HTTPS(443 端口)连接。还需先开始抓包。",
          "WinRoute のルート証明書でキャプチャした HTTPS(ポート 443)接続を復号します。キャプチャも開始する必要があります。"),
     "Decrypt HTTPS:": ("解密 HTTPS：", "HTTPS を復号："),
+    "The proxy gateway is not enabled": ("代理网关未启用", "プロキシゲートウェイが有効になっていません"),
     "Capture:": ("抓取：", "キャプチャ："),
     "Decrypt the HTTPS connections of this computer's programs. This computer must trust WinRoute's root certificate.":
         ("解密本机程序的 HTTPS 连接。本机需要信任 WinRoute 的根证书。",

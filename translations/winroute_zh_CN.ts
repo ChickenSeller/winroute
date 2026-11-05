@@ -294,6 +294,10 @@ SHA-256：%1</translation>
 %1</translation>
     </message>
     <message>
+      <source>The proxy gateway is not enabled</source>
+      <translation>代理网关未启用</translation>
+    </message>
+    <message>
       <source>WinRoute's root certificate is not trusted by this computer, so browsers will warn about every decrypted site.
 
 Install it now?</source>
