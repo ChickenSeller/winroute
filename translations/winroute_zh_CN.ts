@@ -997,6 +997,10 @@ Continue?</source>
       <source>WinDivert could not open the network layer (error %1). Administrator rights are required.</source>
       <translation>WinDivert 无法打开网络层（错误 %1）。需要管理员权限。</translation>
     </message>
+    <message>
+      <source>%1 (PID %2) is the proxy server at %3; its connections go directly to prevent a connection loop</source>
+      <translation>%1（PID %2）是代理服务器 %3 的程序，它的连接直接发出，以防止连接环路</translation>
+    </message>
   </context>
   <context>
     <name>Language</name>
@@ -1086,10 +1090,6 @@ Continue?</source>
     <message>
       <source>Connection &amp;Loop Detection</source>
       <translation>连接环路检测(&amp;L)</translation>
-    </message>
-    <message>
-      <source>Connect directly to proxy servers to prevent infinite connection loops</source>
-      <translation>直接连接代理服务器，防止无限连接环路</translation>
     </message>
     <message>
       <source>Route &amp;UDP through SOCKS5</source>
@@ -1450,6 +1450,10 @@ Continue?</source>
     <message>
       <source>Signed by %1 — click for details</source>
       <translation>签名者：%1 — 点击查看详情</translation>
+    </message>
+    <message>
+      <source>Connect directly to proxy servers, and let a proxy program running on this computer connect directly, to prevent infinite connection loops</source>
+      <translation>直接连接代理服务器，并让本机运行的代理程序直接连接，防止无限连接环路</translation>
     </message>
     <message>
       <source>Let other machines use this computer as an HTTP or SOCKS5 proxy to reach the network.</source>

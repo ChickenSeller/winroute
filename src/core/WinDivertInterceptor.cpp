@@ -8,6 +8,7 @@
 #include "FakeDns.h"      // DnsCache
 #include "FlowTable.h"
 #include "Logger.h"
+#include "LoopGuard.h"
 #include "ProcessInfo.h"
 #include "Relay.h"
 #include "Utils.h"
@@ -500,7 +501,9 @@ void WinDivertInterceptor::decide(Conn &c, const QHostAddress &dst, quint16 dpor
     req.ip = fake ? QHostAddress() : dst;
     req.hostname = host;
     req.port = dport;
-    const RuleMatch match = engine->match(req);
+    RuleMatch match = engine->match(req);
+    // A local proxy program's own connections must not go back into it.
+    loopguard::bypass(c.pid, c.appName, engine->profile(), &match);
     const QString target = host.isEmpty() ? util::formatEndpoint(dst, dport) : QString("%1:%2").arg(host).arg(dport);
 
     switch (match.action.type) {
@@ -949,7 +952,8 @@ void WinDivertInterceptor::udpLoop()
                 req.ip = fakeDst ? QHostAddress() : dst;
                 req.hostname = host;
                 req.port = ep.dstPort;
-                const RuleMatch match = engine->match(req);
+                RuleMatch match = engine->match(req);
+                loopguard::bypass(pid, appName, engine->profile(), &match);
                 const QString target = host.isEmpty() ? targetKey : QString("%1:%2").arg(host).arg(ep.dstPort);
                 decision = decideUdp(match, false, engine->profile(), engine->profile().options, dst, ep.dstPort, appName, target, &proxyId, &iface);
                 QMutexLocker lock(&m_udpMutex);

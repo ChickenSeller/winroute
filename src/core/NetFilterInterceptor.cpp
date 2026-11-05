@@ -4,6 +4,7 @@
 #include "FakeDns.h"
 #include "FlowTable.h"
 #include "Logger.h"
+#include "LoopGuard.h"
 #include "ProcessInfo.h"
 #include "Relay.h"
 #include "Utils.h"
@@ -806,7 +807,9 @@ void NetFilterInterceptor::onTcpConnectRequest(ENDPOINT_ID id, PNF_TCP_CONN_INFO
     req.ip = fake ? QHostAddress() : dst;
     req.hostname = host;
     req.port = dport;
-    const RuleMatch match = engine->match(req);
+    RuleMatch match = engine->match(req);
+    // A local proxy program's own connections must not go back into it.
+    loopguard::bypass(pid, pinfo.name, engine->profile(), &match);
     const QString target = host.isEmpty() ? util::formatEndpoint(dst, dport) : QString("%1:%2").arg(host).arg(dport);
 
     switch (match.action.type) {
@@ -1061,6 +1064,7 @@ void NetFilterInterceptor::handleUdpProxy(ENDPOINT_ID id, const unsigned char *r
             req.hostname = host;
             req.port = dport;
             match = engine->match(req);
+            loopguard::bypass(pid, appName, engine->profile(), &match);
         }
         const QString target = host.isEmpty() ? util::formatEndpoint(dst, dport) : QString("%1:%2").arg(host).arg(dport);
         decision = decideUdp(match, skip, engine->profile(), optns, dst, dport, fake, appName, target, &proxyId, &iface);

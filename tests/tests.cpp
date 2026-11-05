@@ -9,6 +9,7 @@
 #include "core/HttpParse.h"
 #include "core/Logger.h"
 #include "core/NetInterfaces.h"
+#include "core/LoopGuard.h"
 #include "core/Profile.h"
 #include "core/ProxyConnector.h"
 #include "core/ProxyGateway.h"
@@ -731,6 +732,55 @@ static void testGateway()
             loopName = a.name;
     CHECK(!loopName.isEmpty() && logLines.filter(opened).filter(", adapter " + loopName).size() == 2);
     CHECK(logLines.filter("[Gateway] 127.0.0.1 - ").filter("closed").size() == 2);
+}
+
+// A local proxy program's own connections are not sent back into it.
+static void testLoopGuard()
+{
+    CHECK(loopguard::isLocalAddress("127.0.0.1") && loopguard::isLocalAddress("localhost") && loopguard::isLocalAddress("::1"));
+    CHECK(!loopguard::isLocalAddress("203.0.113.9") && !loopguard::isLocalAddress("proxy.example.com"));
+    // This process plays the local proxy: it listens on the proxy's port.
+    QTcpServer server;
+    CHECK(server.listen(QHostAddress::LocalHost, 0));
+    const quint32 self = quint32(QCoreApplication::applicationPid());
+    CHECK(loopguard::listeners().value(self).contains(server.serverPort()));
+    Profile p = Profile::createDefault();
+    ProxyServer local;
+    local.id = 100;
+    local.address = "127.0.0.1";
+    local.port = server.serverPort();
+    p.proxies << local;
+    CHECK(loopguard::localProxyOf(self, p) == QString("127.0.0.1:%1").arg(server.serverPort()));
+    CHECK(loopguard::localProxyOf(4, p).isEmpty());
+    // A proxy elsewhere on the same port is not this program's.
+    Profile remote = p;
+    remote.proxies[remote.proxies.size() - 1].address = "203.0.113.9";
+    CHECK(loopguard::localProxyOf(self, remote).isEmpty());
+
+    RuleMatch m;
+    m.ruleName = "Default";
+    m.action = {ActionType::Proxy, 100};
+    CHECK(loopguard::bypass(self, "proxy.exe", p, &m));
+    CHECK(m.action.type == ActionType::Direct && m.ruleName == "Default");
+    RuleMatch chain;
+    chain.action = {ActionType::Chain, 1};
+    CHECK(loopguard::bypass(self, "proxy.exe", p, &chain) && chain.action.type == ActionType::Direct);
+    RuleMatch block;
+    block.action = {ActionType::Block, 0};
+    CHECK(!loopguard::bypass(self, "proxy.exe", p, &block) && block.action.type == ActionType::Block);
+    // Off with the loop detection option.
+    p.options.loopDetection = false;
+    RuleMatch off;
+    off.action = {ActionType::Proxy, 100};
+    CHECK(!loopguard::bypass(self, "proxy.exe", p, &off) && off.action.type == ActionType::Proxy);
+    // Not listening any more: an ordinary program again.
+    server.close();
+    p.options.loopDetection = true;
+    QElapsedTimer t;
+    t.start();
+    while (!loopguard::localProxyOf(self, p).isEmpty() && t.elapsed() < 3000)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+    CHECK(loopguard::localProxyOf(self, p).isEmpty());
 }
 
 // Rules bound to a network adapter (Proxifier's rule "Advanced" interface).
@@ -1667,6 +1717,7 @@ int main(int argc, char **argv)
     testUdpProxy();
     testGateway();
     testInterfaces();
+    testLoopGuard();
     testWinDivertPacket();
     testCapture();
     testCaptureDatagrams();

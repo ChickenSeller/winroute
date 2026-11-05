@@ -164,7 +164,7 @@ void MainWindow::createActions()
     });
     m_actLoopDetection = new QAction(tr("Connection &Loop Detection"), this);
     m_actLoopDetection->setCheckable(true);
-    m_actLoopDetection->setStatusTip(tr("Connect directly to proxy servers to prevent infinite connection loops"));
+    m_actLoopDetection->setStatusTip(tr("Connect directly to proxy servers, and let a proxy program running on this computer connect directly, to prevent infinite connection loops"));
     connect(m_actLoopDetection, &QAction::triggered, this, [this](bool on) {
         Profile p = m_profile;
         p.options.loopDetection = on;

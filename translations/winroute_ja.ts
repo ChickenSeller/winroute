@@ -997,6 +997,10 @@ Continue?</source>
       <source>WinDivert could not open the network layer (error %1). Administrator rights are required.</source>
       <translation>WinDivert はネットワーク層を開けませんでした（エラー %1）。管理者権限が必要です。</translation>
     </message>
+    <message>
+      <source>%1 (PID %2) is the proxy server at %3; its connections go directly to prevent a connection loop</source>
+      <translation>%1（PID %2）はプロキシサーバー %3 のプログラムです。接続ループを防ぐため、その接続は直接送ります</translation>
+    </message>
   </context>
   <context>
     <name>Language</name>
@@ -1086,10 +1090,6 @@ Continue?</source>
     <message>
       <source>Connection &amp;Loop Detection</source>
       <translation>接続ループの検出(&amp;L)</translation>
-    </message>
-    <message>
-      <source>Connect directly to proxy servers to prevent infinite connection loops</source>
-      <translation>無限の接続ループを防ぐため、プロキシサーバーには直接接続します</translation>
     </message>
     <message>
       <source>Route &amp;UDP through SOCKS5</source>
@@ -1450,6 +1450,10 @@ Continue?</source>
     <message>
       <source>Signed by %1 — click for details</source>
       <translation>署名者：%1 — クリックで詳細</translation>
+    </message>
+    <message>
+      <source>Connect directly to proxy servers, and let a proxy program running on this computer connect directly, to prevent infinite connection loops</source>
+      <translation>無限の接続ループを防ぐため、プロキシサーバーには直接接続し、このコンピューターで動くプロキシプログラムも直接接続させます</translation>
     </message>
     <message>
       <source>Let other machines use this computer as an HTTP or SOCKS5 proxy to reach the network.</source>

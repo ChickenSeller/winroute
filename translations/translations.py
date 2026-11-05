@@ -153,7 +153,12 @@ T = {
     "Handle &Direct Connections": ("处理直接连接(&D)", "直接接続を処理する(&D)"),
     "Display and handle connections that are established directly": ("显示并处理直接建立的连接", "直接確立される接続も表示して処理します"),
     "Connection &Loop Detection": ("连接环路检测(&L)", "接続ループの検出(&L)"),
-    "Connect directly to proxy servers to prevent infinite connection loops": ("直接连接代理服务器，防止无限连接环路", "無限の接続ループを防ぐため、プロキシサーバーには直接接続します"),
+    "Connect directly to proxy servers, and let a proxy program running on this computer connect directly, to prevent infinite connection loops":
+        ("直接连接代理服务器，并让本机运行的代理程序直接连接，防止无限连接环路",
+         "無限の接続ループを防ぐため、プロキシサーバーには直接接続し、このコンピューターで動くプロキシプログラムも直接接続させます"),
+    "%1 (PID %2) is the proxy server at %3; its connections go directly to prevent a connection loop":
+        ("%1（PID %2）是代理服务器 %3 的程序，它的连接直接发出，以防止连接环路",
+         "%1（PID %2）はプロキシサーバー %3 のプログラムです。接続ループを防ぐため、その接続は直接送ります"),
     "&Passwords Encryption...": ("密码加密(&P)...", "パスワードの暗号化(&P)..."),
     "&Disconnect": ("断开连接(&D)", "切断(&D)"),
     "Disconnect": ("断开连接", "切断"),
