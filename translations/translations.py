@@ -944,6 +944,23 @@ T = {
     "When the interface is down (disconnected):": ("网卡断开（未连接）时：", "インターフェイスが切断されているとき："),
     "Use the system default interface": ("使用系统默认网卡", "システムの既定のインターフェイスを使う"),
     "Ignore this rule (the next matching rule applies)": ("忽略此规则（由下一条匹配的规则处理）", "このルールを無視する（次に一致するルールを適用）"),
+    # Traffic graph: short captions (meanings in the tooltips), clickable.
+    "Down: %1 | %2": ("下行：%1 | %2", "下り：%1 | %2"),
+    "Up: %1 | %2": ("上行：%1 | %2", "上り：%1 | %2"),
+    "Gateway down: %1 | %2": ("网关下行：%1 | %2", "ゲートウェイ下り：%1 | %2"),
+    "Gateway up: %1 | %2": ("网关上行：%1 | %2", "ゲートウェイ上り：%1 | %2"),
+    "Total: %1 | %2": ("合计：%1 | %2", "合計：%1 | %2"),
+    "%1\nCurrent rate | highest rate since cleared\nClick to show or hide this line":
+        ("%1\n当前速率 | 清除后的最高速率\n点击显示或隐藏这条线",
+         "%1\n現在の速度 | クリア後の最高速度\nクリックでこの線の表示・非表示を切り替えます"),
+    "This computer's incoming traffic": ("本机的下行流量", "このコンピューターの受信トラフィック"),
+    "This computer's outgoing traffic": ("本机的上行流量", "このコンピューターの送信トラフィック"),
+    "Proxy gateway: traffic to the devices using it": ("代理网关：发往使用它的设备的流量", "プロキシゲートウェイ：利用する端末へのトラフィック"),
+    "Proxy gateway: traffic from the devices using it": ("代理网关：来自使用它的设备的流量", "プロキシゲートウェイ：利用する端末からのトラフィック"),
+    "Since cleared, this computer: %1 down | %2 up": ("清除后，本机：下行 %1 | 上行 %2", "クリア後、このコンピューター：下り %1 | 上り %2"),
+    "Proxy gateway: %1 down | %2 up": ("代理网关：下行 %1 | 上行 %2", "プロキシゲートウェイ：下り %1 | 上り %2"),
+    # Log lines of the proxy gateway's connections.
+    "[Gateway] %1": ("[代理网关] %1", "[ゲートウェイ] %1"),
 }
 
 

@@ -159,4 +159,5 @@ private:
     DnsClient *m_dnsProbe = nullptr;
     QHash<quint64, QPair<qint64, qint64>> m_lastTotals;
     qint64 m_pendingIn = 0, m_pendingOut = 0;
+    qint64 m_gwLastSent = 0, m_gwLastReceived = 0;   // the proxy gateway's totals at the last tick
 };

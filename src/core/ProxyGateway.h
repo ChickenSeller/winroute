@@ -7,6 +7,8 @@
 #include <QMutex>
 #include <QObject>
 
+#include <atomic>
+
 class QTcpServer;
 class QTcpSocket;
 class DnsClient;
@@ -64,6 +66,12 @@ public:
     bool start(const Config &config, QString *error);
     void stop();
     bool isRunning() const { return m_httpServer || m_socksServer; }
+    // Thread-safe versions for the UI: whether the gateway is listening, and
+    // the bytes forwarded since the program started (sent = from the clients
+    // out to the network, "up"; received = back to the clients, "down").
+    bool running() const { return m_running.load(); }
+    qint64 totalSent() const { return m_totalSent.load(); }
+    qint64 totalReceived() const { return m_totalReceived.load(); }
     quint16 httpPort() const { return m_httpPort; }    // bound HTTP port, 0 if off
     quint16 socksPort() const { return m_socksPort; }  // bound SOCKS5 port, 0 if off
 
@@ -94,4 +102,8 @@ private:
 
     mutable QMutex m_mutex;
     RuleEnginePtr m_rules;
+
+    std::atomic<bool> m_running{false};
+    std::atomic<qint64> m_totalSent{0};
+    std::atomic<qint64> m_totalReceived{0};
 };

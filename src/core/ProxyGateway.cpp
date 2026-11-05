@@ -120,11 +120,19 @@ class GatewaySession : public QObject {
 public:
     enum class Proto { Unknown, Socks5, Http };
 
+    // A session's log lines are marked as the gateway's, so they stand apart
+    // from the lines of this machine's own (intercepted) connections. These
+    // hide the global functions inside the class.
+    static QString tagged(const QString &s) { return QCoreApplication::translate("ProxyGateway", "[Gateway] %1").arg(s); }
+    static void logNormal(const QString &s) { ::logNormal(tagged(s)); }
+    static void logError(const QString &s) { ::logError(tagged(s)); }
+
     GatewaySession(ProxyGateway *gw, quint64 id, QTcpSocket *client, Proto proto)
         : QObject(gw), m_gw(gw), m_id(id), m_client(client), m_proto(proto)
     {
         m_client->setParent(this);
-        m_peer = m_client->peerAddress().toString();
+        // An IPv4 client on the dual-stack listener shows as ::ffff:a.b.c.d.
+        m_peer = util::normalize(m_client->peerAddress()).toString();
         m_start = QDateTime::currentMSecsSinceEpoch();
         connect(m_client, &QTcpSocket::readyRead, this, [this] { onClientData(); });
         connect(m_client, &QTcpSocket::disconnected, this, [this] { onSideClosed(m_client); });
@@ -473,11 +481,11 @@ private:
 
         if (!leftover.isEmpty() && m_client) {
             m_client->write(leftover);   // downstream bytes the last proxy already sent
-            m_received += leftover.size();
+            count(&m_received, leftover.size());
         }
         if (!m_pendingToUpstream.isEmpty()) {
             m_upstream->write(m_pendingToUpstream);   // tunnelled data / rewritten request
-            m_sent += m_pendingToUpstream.size();
+            count(&m_sent, m_pendingToUpstream.size());
             m_pendingToUpstream.clear();
         }
         pump(m_client, m_upstream, &m_sent);
@@ -549,8 +557,15 @@ private:
             if (chunk.isEmpty())
                 break;
             to->write(chunk);
-            *counter += chunk.size();
+            count(counter, chunk.size());
         }
+    }
+
+    // Adds forwarded bytes to this session's and the gateway's totals.
+    void count(qint64 *counter, qint64 n)
+    {
+        *counter += n;
+        (counter == &m_sent ? m_gw->m_totalSent : m_gw->m_totalReceived) += n;
     }
 
     void onSideClosed(QTcpSocket *side)
@@ -672,11 +687,13 @@ bool ProxyGateway::start(const Config &config, QString *error)
         stop();
         return false;
     }
+    m_running = true;
     return true;
 }
 
 void ProxyGateway::stop()
 {
+    m_running = false;
     for (QTcpServer **s : {&m_httpServer, &m_socksServer}) {
         if (*s) {
             (*s)->close();

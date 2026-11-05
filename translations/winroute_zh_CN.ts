@@ -2226,6 +2226,10 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>%1（经 %2）</translation>
     </message>
     <message>
+      <source>[Gateway] %1</source>
+      <translation>[代理网关] %1</translation>
+    </message>
+    <message>
       <source>%1 - not a SOCKS5 client</source>
       <translation>%1 - 不是 SOCKS5 客户端</translation>
     </message>
@@ -3080,6 +3084,17 @@ Use check boxes to enable/disable a rule.</source>
     </message>
   </context>
   <context>
+    <name>SeriesLabel</name>
+    <message>
+      <source>%1
+Current rate | highest rate since cleared
+Click to show or hide this line</source>
+      <translation>%1
+当前速率 | 清除后的最高速率
+点击显示或隐藏这条线</translation>
+    </message>
+  </context>
+  <context>
     <name>ServicesDialog</name>
     <message>
       <source>Services and other users</source>
@@ -3155,36 +3170,52 @@ Use check boxes to enable/disable a rule.</source>
   <context>
     <name>TrafficWidget</name>
     <message>
-      <source>Show Both</source>
-      <translation>显示全部</translation>
-    </message>
-    <message>
-      <source>Incoming Only</source>
-      <translation>仅接收</translation>
-    </message>
-    <message>
-      <source>Outgoing Only</source>
-      <translation>仅发送</translation>
-    </message>
-    <message>
-      <source>Select the kind of the traffic to display</source>
-      <translation>选择要显示的流量类型</translation>
-    </message>
-    <message>
       <source>Clear</source>
       <translation>清除</translation>
     </message>
     <message>
-      <source>Incoming: %1 (max %2)</source>
-      <translation>接收：%1（最大 %2）</translation>
+      <source>This computer's incoming traffic</source>
+      <translation>本机的下行流量</translation>
     </message>
     <message>
-      <source>Outgoing: %1 (max %2)</source>
-      <translation>发送：%1（最大 %2）</translation>
+      <source>This computer's outgoing traffic</source>
+      <translation>本机的上行流量</translation>
     </message>
     <message>
-      <source>Total: %1 received, %2 sent</source>
-      <translation>合计：接收 %1，发送 %2</translation>
+      <source>Proxy gateway: traffic to the devices using it</source>
+      <translation>代理网关：发往使用它的设备的流量</translation>
+    </message>
+    <message>
+      <source>Proxy gateway: traffic from the devices using it</source>
+      <translation>代理网关：来自使用它的设备的流量</translation>
+    </message>
+    <message>
+      <source>Down: %1 | %2</source>
+      <translation>下行：%1 | %2</translation>
+    </message>
+    <message>
+      <source>Up: %1 | %2</source>
+      <translation>上行：%1 | %2</translation>
+    </message>
+    <message>
+      <source>Gateway down: %1 | %2</source>
+      <translation>网关下行：%1 | %2</translation>
+    </message>
+    <message>
+      <source>Gateway up: %1 | %2</source>
+      <translation>网关上行：%1 | %2</translation>
+    </message>
+    <message>
+      <source>Total: %1 | %2</source>
+      <translation>合计：%1 | %2</translation>
+    </message>
+    <message>
+      <source>Since cleared, this computer: %1 down | %2 up</source>
+      <translation>清除后，本机：下行 %1 | 上行 %2</translation>
+    </message>
+    <message>
+      <source>Proxy gateway: %1 down | %2 up</source>
+      <translation>代理网关：下行 %1 | 上行 %2</translation>
     </message>
   </context>
   <context>

@@ -1200,7 +1200,14 @@ void MainWindow::onSecondTick()
 {
     const double in = double(m_pendingIn), out = double(m_pendingOut);
     m_pendingIn = m_pendingOut = 0;
-    m_traffic->addSample(in, out);
+    // The proxy gateway's forwarded bytes since the last tick (its totals only grow).
+    const ProxyGateway *gw = m_engine->gateway();
+    const qint64 gwSent = gw->totalSent(), gwReceived = gw->totalReceived();
+    const double gwUp = double(qMax<qint64>(0, gwSent - m_gwLastSent));
+    const double gwDown = double(qMax<qint64>(0, gwReceived - m_gwLastReceived));
+    m_gwLastSent = gwSent;
+    m_gwLastReceived = gwReceived;
+    m_traffic->addSample(in, out, gw->running(), gwDown, gwUp);
     m_statusRate->setText(tr("Down %1, Up %2").arg(util::formatRate(in), util::formatRate(out)));
     if (m_tray->isVisible()) {
         updateTrayIcon();

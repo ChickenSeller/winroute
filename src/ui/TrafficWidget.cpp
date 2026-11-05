@@ -1,18 +1,28 @@
 #include "TrafficWidget.h"
 #include "core/Utils.h"
 
-#include <QComboBox>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPushButton>
+#include <QSettings>
 #include <cmath>
 
 static constexpr size_t kMaxSamples = 300;   // 5 minutes at 1 sample/sec
 
-static const QColor kInColor(40, 160, 60);
-static const QColor kOutColor(210, 60, 50);
+QColor TrafficGraph::color(Series s)
+{
+    switch (s) {
+    case In: return QColor(40, 160, 60);
+    case Out: return QColor(210, 60, 50);
+    case GatewayDown: return QColor(40, 110, 210);
+    case GatewayUp: return QColor(225, 135, 20);
+    default: return Qt::gray;
+    }
+}
 
 TrafficGraph::TrafficGraph(QWidget *parent)
     : QWidget(parent)
@@ -21,17 +31,25 @@ TrafficGraph::TrafficGraph(QWidget *parent)
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 }
 
-void TrafficGraph::addSample(double in, double out)
+void TrafficGraph::addSample(const Sample &s)
 {
-    m_samples.emplace_back(in, out);
+    m_samples.push_back(s);
     while (m_samples.size() > kMaxSamples)
         m_samples.pop_front();
     update();
 }
 
-void TrafficGraph::setMode(Mode m)
+void TrafficGraph::setSeriesVisible(Series s, bool visible)
 {
-    m_mode = m;
+    m_visible[s] = visible;
+    update();
+}
+
+void TrafficGraph::setGatewayShown(bool shown)
+{
+    if (m_gatewayShown == shown)
+        return;
+    m_gatewayShown = shown;
     update();
 }
 
@@ -39,6 +57,13 @@ void TrafficGraph::clear()
 {
     m_samples.clear();
     update();
+}
+
+bool TrafficGraph::drawn(int s) const
+{
+    if (!m_visible[s])
+        return false;
+    return (s != GatewayDown && s != GatewayUp) || m_gatewayShown;
 }
 
 // Rounds up to 1/2/5 * 10^n so the scale labels look tidy.
@@ -61,13 +86,12 @@ void TrafficGraph::paintEvent(QPaintEvent *)
     p.fillRect(rect(), palette().base());
     p.fillRect(area, QColor(250, 251, 253));
 
+    // The scale follows the lines that are drawn.
     double maxV = 0;
-    for (const auto &[in, out] : m_samples) {
-        if (m_mode != OutgoingOnly)
-            maxV = qMax(maxV, in);
-        if (m_mode != IncomingOnly)
-            maxV = qMax(maxV, out);
-    }
+    for (const Sample &s : m_samples)
+        for (int i = 0; i < SeriesCount; ++i)
+            if (drawn(i))
+                maxV = qMax(maxV, s[i]);
     maxV = niceCeil(maxV * 1.1);
 
     // grid + scale: solid labelled lines, with dotted, paler lines marking the
@@ -109,11 +133,11 @@ void TrafficGraph::paintEvent(QPaintEvent *)
 
     if (m_samples.size() < 2)
         return;
-    auto drawSeries = [&](bool incoming, const QColor &c) {
+    auto drawSeries = [&](int series, int fillAlpha) {
         QPainterPath path;
         const size_t n = m_samples.size();
         for (size_t i = 0; i < n; ++i) {
-            const double v = incoming ? m_samples[i].first : m_samples[i].second;
+            const double v = m_samples[i][series];
             const double x = area.right() - area.width() * double(n - 1 - i) / (kMaxSamples - 1);
             const double y = area.bottom() - area.height() * (v / maxV);
             if (i == 0)
@@ -121,21 +145,58 @@ void TrafficGraph::paintEvent(QPaintEvent *)
             else
                 path.lineTo(x, y);
         }
-        QPainterPath fill = path;
-        fill.lineTo(area.right(), area.bottom());
-        fill.lineTo(area.right() - area.width() * double(n - 1) / (kMaxSamples - 1), area.bottom());
-        fill.closeSubpath();
-        QColor fc = c;
-        fc.setAlpha(50);
-        p.fillPath(fill, fc);
+        const QColor c = color(Series(series));
+        if (fillAlpha > 0) {
+            QPainterPath fill = path;
+            fill.lineTo(area.right(), area.bottom());
+            fill.lineTo(area.right() - area.width() * double(n - 1) / (kMaxSamples - 1), area.bottom());
+            fill.closeSubpath();
+            QColor fc = c;
+            fc.setAlpha(fillAlpha);
+            p.fillPath(fill, fc);
+        }
         p.setPen(QPen(c, 1.6));
         p.drawPath(path);
     };
     p.setClipRect(area);
-    if (m_mode != OutgoingOnly)
-        drawSeries(true, kInColor);
-    if (m_mode != IncomingOnly)
-        drawSeries(false, kOutColor);
+    // The gateway lines are drawn with a fainter fill, so the four stay apart.
+    for (int s : {GatewayDown, GatewayUp, In, Out})
+        if (drawn(s))
+            drawSeries(s, s == In || s == Out ? 50 : 25);
+}
+
+SeriesLabel::SeriesLabel(const QColor &color, QWidget *parent)
+    : QLabel(parent), m_color(color)
+{
+    setCursor(Qt::PointingHandCursor);
+    restyle();
+}
+
+void SeriesLabel::setMeaning(const QString &meaning)
+{
+    setToolTip(tr("%1\nCurrent rate | highest rate since cleared\nClick to show or hide this line").arg(meaning));
+}
+
+void SeriesLabel::setOn(bool on)
+{
+    m_on = on;
+    restyle();
+}
+
+void SeriesLabel::mousePressEvent(QMouseEvent *e)
+{
+    if (e->button() != Qt::LeftButton) {
+        QLabel::mousePressEvent(e);
+        return;
+    }
+    setOn(!m_on);
+    emit toggled(m_on);
+}
+
+void SeriesLabel::restyle()
+{
+    setStyleSheet(m_on ? QString("color: %1").arg(m_color.name())
+                       : QStringLiteral("color: #a0a4ac; text-decoration: line-through"));
 }
 
 TrafficWidget::TrafficWidget(QWidget *parent)
@@ -143,49 +204,89 @@ TrafficWidget::TrafficWidget(QWidget *parent)
 {
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(4, 4, 4, 4);
-    auto *top = new QHBoxLayout;
-    m_mode = new QComboBox;
-    m_mode->addItems({tr("Show Both"), tr("Incoming Only"), tr("Outgoing Only")});
-    m_mode->setToolTip(tr("Select the kind of the traffic to display"));
+    // Two rows of captions: this computer's lines (with Clear and the total),
+    // and below them, in the same columns, the proxy gateway's while it runs.
+    auto *top = new QGridLayout;
+    top->setHorizontalSpacing(16);
+    top->setVerticalSpacing(2);
     auto *clearBtn = new QPushButton(tr("Clear"));
-    m_inLabel = new QLabel;
-    m_outLabel = new QLabel;
     m_totalLabel = new QLabel;
-    m_inLabel->setStyleSheet(QString("color: %1").arg(kInColor.name()));
-    m_outLabel->setStyleSheet(QString("color: %1").arg(kOutColor.name()));
-    top->addWidget(m_mode);
-    top->addWidget(clearBtn);
-    top->addSpacing(16);
-    top->addWidget(m_inLabel);
-    top->addSpacing(16);
-    top->addWidget(m_outLabel);
-    top->addStretch();
-    top->addWidget(m_totalLabel);
-    layout->addLayout(top);
+    top->addWidget(clearBtn, 0, 0);
     m_graph = new TrafficGraph;
+
+    // Which lines are hidden is remembered.
+    const QStringList hidden = util::appSettings().value("traffic/hidden").toStringList();
+    for (int s = 0; s < TrafficGraph::SeriesCount; ++s) {
+        auto *label = new SeriesLabel(TrafficGraph::color(TrafficGraph::Series(s)));
+        const bool on = !hidden.contains(QString::number(s));
+        label->setOn(on);
+        m_graph->setSeriesVisible(TrafficGraph::Series(s), on);
+        connect(label, &SeriesLabel::toggled, this, [this, s](bool on) {
+            m_graph->setSeriesVisible(TrafficGraph::Series(s), on);
+            QStringList off;
+            for (int i = 0; i < TrafficGraph::SeriesCount; ++i)
+                if (!m_labels[i]->isOn())
+                    off << QString::number(i);
+            util::appSettings().setValue("traffic/hidden", off);
+        });
+        static const char *const meanings[] = {
+            QT_TR_NOOP("This computer's incoming traffic"),
+            QT_TR_NOOP("This computer's outgoing traffic"),
+            QT_TR_NOOP("Proxy gateway: traffic to the devices using it"),
+            QT_TR_NOOP("Proxy gateway: traffic from the devices using it"),
+        };
+        label->setMeaning(tr(meanings[s]));
+        m_labels[s] = label;
+        const bool gateway = s == TrafficGraph::GatewayDown || s == TrafficGraph::GatewayUp;
+        top->addWidget(label, gateway ? 1 : 0, 1 + (s % 2));
+    }
+    m_labels[TrafficGraph::GatewayDown]->setVisible(false);
+    m_labels[TrafficGraph::GatewayUp]->setVisible(false);
+    top->setColumnStretch(3, 1);
+    top->addWidget(m_totalLabel, 0, 4);
+    layout->addLayout(top);
     layout->addWidget(m_graph, 1);
-    connect(m_mode, &QComboBox::currentIndexChanged, this, [this](int i) { m_graph->setMode(TrafficGraph::Mode(i)); });
     connect(clearBtn, &QPushButton::clicked, this, &TrafficWidget::clear);
     addSample(0, 0);
 }
 
-void TrafficWidget::addSample(double in, double out)
+void TrafficWidget::addSample(double in, double out, bool gatewayOn, double gwDown, double gwUp)
 {
-    m_graph->addSample(in, out);
-    m_inMax = qMax(m_inMax, in);
-    m_outMax = qMax(m_outMax, out);
-    m_inTotal += in;
-    m_outTotal += out;
-    m_inLabel->setText(tr("Incoming: %1 (max %2)").arg(util::formatRate(in), util::formatRate(m_inMax)));
-    m_outLabel->setText(tr("Outgoing: %1 (max %2)").arg(util::formatRate(out), util::formatRate(m_outMax)));
-    m_totalLabel->setText(tr("Total: %1 received, %2 sent")
-                              .arg(util::formatBytes(qint64(m_inTotal)), util::formatBytes(qint64(m_outTotal))));
+    const TrafficGraph::Sample s{in, out, gwDown, gwUp};
+    m_graph->addSample(s);
+    for (int i = 0; i < TrafficGraph::SeriesCount; ++i) {
+        m_max[i] = qMax(m_max[i], s[i]);
+        m_total[i] += s[i];
+    }
+    if (gatewayOn != m_gatewayOn) {
+        m_gatewayOn = gatewayOn;
+        m_graph->setGatewayShown(gatewayOn);
+        m_labels[TrafficGraph::GatewayDown]->setVisible(gatewayOn);
+        m_labels[TrafficGraph::GatewayUp]->setVisible(gatewayOn);
+    }
+    m_labels[TrafficGraph::In]->setText(tr("Down: %1 | %2").arg(util::formatRate(in), util::formatRate(m_max[TrafficGraph::In])));
+    m_labels[TrafficGraph::Out]->setText(tr("Up: %1 | %2").arg(util::formatRate(out), util::formatRate(m_max[TrafficGraph::Out])));
+    m_labels[TrafficGraph::GatewayDown]->setText(
+        tr("Gateway down: %1 | %2").arg(util::formatRate(gwDown), util::formatRate(m_max[TrafficGraph::GatewayDown])));
+    m_labels[TrafficGraph::GatewayUp]->setText(
+        tr("Gateway up: %1 | %2").arg(util::formatRate(gwUp), util::formatRate(m_max[TrafficGraph::GatewayUp])));
+    updateTotal();
+}
+
+void TrafficWidget::updateTotal()
+{
+    const auto bytes = [this](int s) { return util::formatBytes(qint64(m_total[s])); };
+    m_totalLabel->setText(tr("Total: %1 | %2").arg(bytes(TrafficGraph::In), bytes(TrafficGraph::Out)));
+    QString tip = tr("Since cleared, this computer: %1 down | %2 up").arg(bytes(TrafficGraph::In), bytes(TrafficGraph::Out));
+    if (m_gatewayOn || m_total[TrafficGraph::GatewayDown] > 0 || m_total[TrafficGraph::GatewayUp] > 0)
+        tip += u'\n' + tr("Proxy gateway: %1 down | %2 up").arg(bytes(TrafficGraph::GatewayDown), bytes(TrafficGraph::GatewayUp));
+    m_totalLabel->setToolTip(tip);
 }
 
 void TrafficWidget::clear()
 {
     m_graph->clear();
-    m_inMax = m_outMax = 0;
-    m_inTotal = m_outTotal = 0;
-    addSample(0, 0);
+    m_max = {};
+    m_total = {};
+    addSample(0, 0, m_gatewayOn);
 }

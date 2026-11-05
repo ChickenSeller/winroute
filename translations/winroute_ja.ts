@@ -2226,6 +2226,10 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>%1（%2 経由）</translation>
     </message>
     <message>
+      <source>[Gateway] %1</source>
+      <translation>[ゲートウェイ] %1</translation>
+    </message>
+    <message>
       <source>%1 - not a SOCKS5 client</source>
       <translation>%1 - SOCKS5 クライアントではありません</translation>
     </message>
@@ -3080,6 +3084,17 @@ Use check boxes to enable/disable a rule.</source>
     </message>
   </context>
   <context>
+    <name>SeriesLabel</name>
+    <message>
+      <source>%1
+Current rate | highest rate since cleared
+Click to show or hide this line</source>
+      <translation>%1
+現在の速度 | クリア後の最高速度
+クリックでこの線の表示・非表示を切り替えます</translation>
+    </message>
+  </context>
+  <context>
     <name>ServicesDialog</name>
     <message>
       <source>Services and other users</source>
@@ -3155,36 +3170,52 @@ Use check boxes to enable/disable a rule.</source>
   <context>
     <name>TrafficWidget</name>
     <message>
-      <source>Show Both</source>
-      <translation>両方を表示</translation>
-    </message>
-    <message>
-      <source>Incoming Only</source>
-      <translation>受信のみ</translation>
-    </message>
-    <message>
-      <source>Outgoing Only</source>
-      <translation>送信のみ</translation>
-    </message>
-    <message>
-      <source>Select the kind of the traffic to display</source>
-      <translation>表示するトラフィックの種類を選択します</translation>
-    </message>
-    <message>
       <source>Clear</source>
       <translation>クリア</translation>
     </message>
     <message>
-      <source>Incoming: %1 (max %2)</source>
-      <translation>受信：%1（最大 %2）</translation>
+      <source>This computer's incoming traffic</source>
+      <translation>このコンピューターの受信トラフィック</translation>
     </message>
     <message>
-      <source>Outgoing: %1 (max %2)</source>
-      <translation>送信：%1（最大 %2）</translation>
+      <source>This computer's outgoing traffic</source>
+      <translation>このコンピューターの送信トラフィック</translation>
     </message>
     <message>
-      <source>Total: %1 received, %2 sent</source>
-      <translation>合計：受信 %1、送信 %2</translation>
+      <source>Proxy gateway: traffic to the devices using it</source>
+      <translation>プロキシゲートウェイ：利用する端末へのトラフィック</translation>
+    </message>
+    <message>
+      <source>Proxy gateway: traffic from the devices using it</source>
+      <translation>プロキシゲートウェイ：利用する端末からのトラフィック</translation>
+    </message>
+    <message>
+      <source>Down: %1 | %2</source>
+      <translation>下り：%1 | %2</translation>
+    </message>
+    <message>
+      <source>Up: %1 | %2</source>
+      <translation>上り：%1 | %2</translation>
+    </message>
+    <message>
+      <source>Gateway down: %1 | %2</source>
+      <translation>ゲートウェイ下り：%1 | %2</translation>
+    </message>
+    <message>
+      <source>Gateway up: %1 | %2</source>
+      <translation>ゲートウェイ上り：%1 | %2</translation>
+    </message>
+    <message>
+      <source>Total: %1 | %2</source>
+      <translation>合計：%1 | %2</translation>
+    </message>
+    <message>
+      <source>Since cleared, this computer: %1 down | %2 up</source>
+      <translation>クリア後、このコンピューター：下り %1 | 上り %2</translation>
+    </message>
+    <message>
+      <source>Proxy gateway: %1 down | %2 up</source>
+      <translation>プロキシゲートウェイ：下り %1 | 上り %2</translation>
     </message>
   </context>
   <context>

@@ -7,6 +7,7 @@
 #include "core/FakeDns.h"
 #include "core/FlowTable.h"
 #include "core/HttpParse.h"
+#include "core/Logger.h"
 #include "core/NetInterfaces.h"
 #include "core/Profile.h"
 #include "core/ProxyConnector.h"
@@ -670,6 +671,9 @@ static QByteArray readAtLeast(QTcpSocket &sock, int n, QByteArray *buf)
 static void testGateway()
 {
     EchoServer echo;
+    QStringList logLines;
+    const QMetaObject::Connection logConn =
+        QObject::connect(&Logger::instance(), &Logger::entryAdded, [&](int, const QString &line) { logLines << line; });
     ProxyGateway gw;
     ProxyGateway::Config cfg;
     cfg.enabled = true;
@@ -711,7 +715,16 @@ static void testGateway()
         c.write("more");
         CHECK(readAtLeast(c, 4, &buf) == "more");
     }
+    CHECK(gw.running());
+    // Forwarded bytes, both ways ("early" + "after-open" + "again" + "tls-hello" + "more").
+    CHECK(gw.totalSent() == 33 && gw.totalReceived() == 33);
     gw.stop();
+    CHECK(!gw.running());
+    QObject::disconnect(logConn);
+    // Each connection is logged as the gateway's, with the client's plain IPv4 address.
+    const QString opened = QString("[Gateway] 127.0.0.1 - 127.0.0.1:%1 via").arg(echo.serverPort());
+    CHECK(logLines.filter(opened).size() == 2);
+    CHECK(logLines.filter("[Gateway] 127.0.0.1 - ").filter("closed").size() == 2);
 }
 
 // Rules bound to a network adapter (Proxifier's rule "Advanced" interface).
