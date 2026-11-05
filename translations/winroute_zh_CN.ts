@@ -2757,6 +2757,10 @@ Default 规则将改为使用 %1。
       <translation>%1 - %2 匹配规则 %3：通过 %4 连接，网卡 %5</translation>
     </message>
     <message>
+      <source>%1 - %2 HTTPS decryption: the client asks for %3</source>
+      <translation>%1 - %2 HTTPS 解密：客户端请求的是 %3</translation>
+    </message>
+    <message>
       <source>HTTPS decryption is not available</source>
       <translation>HTTPS 解密不可用</translation>
     </message>

@@ -4,6 +4,7 @@
 #include "CertAuthority.h"
 #include "DnsClient.h"
 #include "Logger.h"
+#include "TlsHello.h"
 #include "UdpRelaySession.h"
 #include "Utils.h"
 
@@ -18,6 +19,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QThread>
+#include <QTimer>
 #include <QtEndian>
 
 #include <winsock2.h>
@@ -187,11 +189,12 @@ public:
         noteCapture();
         logVerbose(QCoreApplication::translate("Relay", "%1 - %2 matching %3 rule : using %4").arg(m_info.appName, m_targetText, m_info.match.ruleName,
                                                                        action.type == ActionType::Direct ? QCoreApplication::translate("Relay", "direct connection") : m_actionText));
-        // Start the client-side TLS handshake now, before the event loop runs
-        // again, so the ClientHello is read by the SSL engine and not buffered
-        // as plaintext. The upstream handshake follows once the tunnel is up.
+        // For decryption, first read the name the client asks for from its
+        // ClientHello (peeked, so the SSL engine still gets it), then present
+        // a certificate for that name. The upstream handshake follows once the
+        // tunnel is up and the name is known.
         if (m_mitm)
-            startClientTls();
+            waitClientHello();
         if (!m_finished)
             nextAttempt();
     }
@@ -292,6 +295,67 @@ private:
             onSideClosed(m_upstream);
     }
 
+    // Peeks at the client's first bytes until its ClientHello is complete, for
+    // the server name (SNI). The host name WinRoute knows for the address can
+    // be another site on the same IP (a CDN, or www. and down. of one site);
+    // the SNI is the name the client will check the certificate against.
+    void waitClientHello()
+    {
+        auto *timer = new QTimer(this);
+        timer->setSingleShot(true);
+        // A client that sends nothing gets the known name, as before.
+        connect(timer, &QTimer::timeout, this, [this] { onClientHello(QString()); });
+        timer->start(kHelloWaitMs);
+        m_helloTimer = timer;
+        m_helloConn = connect(m_client, &QTcpSocket::readyRead, this, [this] { peekClientHello(); });
+        peekClientHello();
+    }
+
+    void peekClientHello()
+    {
+        if (m_helloDone || !m_client)
+            return;
+        // QSslSocket::peek() in unencrypted mode reads from the underlying
+        // socket without consuming, so startServerEncryption() sees it all.
+        const QByteArray head = m_client->peek(kMaxHelloPeek);
+        QString sni;
+        const tlshello::Result r = tlshello::serverName(head, &sni);
+        if (r == tlshello::Result::NeedMore && head.size() < kMaxHelloPeek)
+            return;
+        onClientHello(r == tlshello::Result::Done ? sni : QString());
+    }
+
+    void onClientHello(const QString &sni)
+    {
+        if (m_helloDone)
+            return;
+        m_helloDone = true;
+        QObject::disconnect(m_helloConn);
+        if (m_helloTimer)
+            m_helloTimer->deleteLater();
+        const QString known = m_info.hostname.isEmpty() ? m_info.dstAddr.toString() : m_info.hostname;
+        m_tlsName = validHostName(sni) ? sni : known;
+        if (m_tlsName != known)
+            logVerbose(QCoreApplication::translate("Relay", "%1 - %2 HTTPS decryption: the client asks for %3")
+                           .arg(m_info.appName, m_targetText, m_tlsName));
+        startClientTls();
+        if (m_upstreamTlsPending && !m_finished) {
+            m_upstreamTlsPending = false;
+            startUpstreamTls({});
+        }
+    }
+
+    // A DNS name fit for a certificate: letters, digits, '-', '_', '.'.
+    static bool validHostName(const QString &name)
+    {
+        if (name.isEmpty() || name.size() > 253 || name.startsWith(u'.') || name.endsWith(u'.'))
+            return false;
+        for (const QChar c : name)
+            if (!(c.isLetterOrNumber() && c.unicode() < 128) && c != u'-' && c != u'_' && c != u'.')
+                return false;
+        return true;
+    }
+
     // Presents our leaf certificate to the application and begins the TLS
     // server handshake on the client side.
     void startClientTls()
@@ -301,7 +365,7 @@ private:
             finishWithError(QCoreApplication::translate("Relay", "HTTPS decryption is not available"));
             return;
         }
-        const QString host = m_info.hostname.isEmpty() ? m_info.dstAddr.toString() : m_info.hostname;
+        const QString host = m_tlsName;
         const CertAuthority::Leaf leaf = m_relay->m_certAuthority->leafFor(host);
         const QSslCertificate cert(leaf.certPem, QSsl::Pem);
         const QSslKey key(leaf.keyPem, QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey);
@@ -334,8 +398,12 @@ private:
             finishWithError(QCoreApplication::translate("Relay", "unexpected data before the TLS handshake"));
             return;
         }
-        const QString host = m_info.hostname.isEmpty() ? m_info.dstAddr.toString() : m_info.hostname;
-        ssl->setPeerVerifyName(host);
+        // The server is asked for, and checked against, the client's name.
+        if (!m_helloDone) {
+            m_upstreamTlsPending = true;
+            return;
+        }
+        ssl->setPeerVerifyName(m_tlsName);
         QSslConfiguration cfg = ssl->sslConfiguration();
         cfg.setAllowedNextProtocols({QByteArrayLiteral("http/1.1")});
         ssl->setSslConfiguration(cfg);
@@ -507,6 +575,14 @@ private:
     bool m_clientTls = false;   // client-side handshake finished
     bool m_upstreamTls = false; // upstream handshake finished
     bool m_tunnel = false;      // both handshakes done; plaintext is flowing
+    // Waiting for the ClientHello's server name (decryption only).
+    static constexpr int kHelloWaitMs = 5000;
+    static constexpr qint64 kMaxHelloPeek = 64 * 1024;
+    bool m_helloDone = false;
+    bool m_upstreamTlsPending = false;   // upstream ready before the name was known
+    QString m_tlsName;                   // the name the certificate is for
+    QMetaObject::Connection m_helloConn;
+    QPointer<QTimer> m_helloTimer;
 };
 
 Relay::Relay(FlowTable *flows, QObject *parent)

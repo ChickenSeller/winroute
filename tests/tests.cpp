@@ -10,6 +10,7 @@
 #include "core/Logger.h"
 #include "core/NetInterfaces.h"
 #include "core/LoopGuard.h"
+#include "core/TlsHello.h"
 #include "core/Profile.h"
 #include "core/ProxyConnector.h"
 #include "core/ProxyGateway.h"
@@ -27,6 +28,9 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTemporaryDir>
+#include <QSslSocket>
+#include <QSslCertificate>
+#include <QSslConfiguration>
 #include <QUdpSocket>
 #include <QtEndian>
 #include <cstdio>
@@ -1699,6 +1703,79 @@ static void testCertAuthority()
         if (cc) X509_free(cc);
         // Querying installation status must not crash (not installed here).
         (void)ca.isInstalled();
+    }
+
+    // HTTPS decryption presents a certificate for the name the client asks for
+    // (its SNI), not the name WinRoute knows for the address: www. and down.
+    // of one site can share an IP.
+    {
+        QString sni;
+        CHECK(tlshello::serverName("GET / HTTP/1.1\r\n", &sni) == tlshello::Result::NotTls);
+        CHECK(tlshello::serverName(QByteArray("\x16\x03\x01", 3), &sni) == tlshello::Result::NeedMore);
+        CHECK(tlshello::serverName(QByteArray("\x16\x03\x01\x02\x00\x01", 6), &sni) == tlshello::Result::NeedMore);
+
+        CertAuthority ca;
+        CHECK(ca.ensureCa(nullptr));
+        Capture cap;
+        cap.setEnabled(true);
+        cap.setDecrypt(true);
+        FlowTable flows;
+        Relay relay(&flows);
+        relay.setRules(std::make_shared<RuleEngine>(Profile::createDefault()));
+        relay.setCapture(&cap);
+        relay.setCertAuthority(&ca);
+        QString err;
+        CHECK(relay.listen(&err));
+        // The "server": decryption is only for port 443. It accepts and stays
+        // silent, so only the client-side handshake is checked here.
+        QTcpServer server;
+        if (!server.listen(QHostAddress::LocalHost, 443)) {
+            std::printf("  (skipped the SNI relay check: port 443 is in use)\n");
+        } else {
+            for (const QString &asked : {QStringLiteral("www.example.test"), QString()}) {
+                QSslSocket client;
+                CHECK(client.bind(QHostAddress::LocalHost, 0));
+                RedirectInfo info;
+                info.srcAddr = QHostAddress::LocalHost;
+                info.srcPort = client.localPort();
+                info.dstAddr = QHostAddress::LocalHost;
+                info.dstPort = 443;
+                info.hostname = "down.example.test";   // what the DNS cache says
+                info.appName = "browser.exe";
+                info.createdMs = QDateTime::currentMSecsSinceEpoch();
+                info.match.ruleName = "Default";
+                flows.add(info);
+                QSslConfiguration cfg = client.sslConfiguration();
+                cfg.setCaCertificates({QSslCertificate(ca.caCertPem(), QSsl::Pem)});
+                client.setSslConfiguration(cfg);
+                // The SNI sent is the verify name; none at all for a bare IP.
+                if (!asked.isEmpty())
+                    client.setPeerVerifyName(asked);
+                else
+                    client.setPeerVerifyMode(QSslSocket::QueryPeer);
+                bool done = false;
+                QList<QSslError> errors;
+                QObject::connect(&client, &QSslSocket::encrypted, [&] { done = true; });
+                QObject::connect(&client, &QSslSocket::sslErrors, [&](const QList<QSslError> &e) { errors = e; done = true; });
+                QObject::connect(&client, &QAbstractSocket::errorOccurred, [&] { done = true; });
+                client.connectToHostEncrypted(QStringLiteral("127.0.0.1"), relay.port());
+                QElapsedTimer t;
+                t.start();
+                while (!done && t.elapsed() < 10000)
+                    QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+                const QStringList names = client.peerCertificate().subjectAlternativeNames().values(QSsl::DnsEntry);
+                if (!asked.isEmpty()) {
+                    CHECK(client.isEncrypted() && errors.isEmpty());
+                    CHECK(names == QStringList{asked});
+                } else {
+                    // No SNI: the known name, as before.
+                    CHECK(client.isEncrypted());
+                    CHECK(names == QStringList{QStringLiteral("down.example.test")});
+                }
+                client.abort();
+            }
+        }
+        relay.closeAll();
     }
 
     if (savedAppData.isEmpty())

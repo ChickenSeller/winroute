@@ -2757,6 +2757,10 @@ Default ルールが %1 を使用するように変更されます。
       <translation>%1 - %2 ルール %3 に一致：%4 経由で接続、アダプター %5</translation>
     </message>
     <message>
+      <source>%1 - %2 HTTPS decryption: the client asks for %3</source>
+      <translation>%1 - %2 HTTPS 復号：クライアントが求めているのは %3</translation>
+    </message>
+    <message>
       <source>HTTPS decryption is not available</source>
       <translation>HTTPS の復号は利用できません</translation>
     </message>

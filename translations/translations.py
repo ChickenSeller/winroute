@@ -374,6 +374,7 @@ T = {
     "Could not export the certificate:\n%1": ("无法导出证书：\n%1", "証明書をエクスポートできませんでした：\n%1"),
     # Relay, HTTPS decryption path
     "HTTPS decryption is not available": ("HTTPS 解密不可用", "HTTPS の復号は利用できません"),
+    "%1 - %2 HTTPS decryption: the client asks for %3": ("%1 - %2 HTTPS 解密：客户端请求的是 %3", "%1 - %2 HTTPS 復号：クライアントが求めているのは %3"),
     "could not create a certificate for %1": ("无法为 %1 创建证书", "%1 の証明書を作成できませんでした"),
     "unexpected data before the TLS handshake": ("TLS 握手前出现意外数据", "TLS ハンドシェイク前に想定外のデータがありました"),
     "the server's certificate was rejected: %1": ("服务器证书被拒绝：%1", "サーバーの証明書が拒否されました：%1"),
