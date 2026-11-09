@@ -193,6 +193,10 @@
       node.textContent = table[node.getAttribute('data-i18n')] || node.dataset.en;
     }
     document.documentElement.lang = htmlLang[lang];
+    // The guide has a version per language: Chinese at its root.
+    var guides = document.querySelectorAll('[data-guide]');
+    for (var g = 0; g < guides.length; g++)
+      guides[g].setAttribute('href', {zh: 'guide/', en: 'guide/en/', ja: 'guide/ja/'}[lang]);
     button.textContent = names[lang];
     var items = menu.querySelectorAll('[data-lang]');
     for (var j = 0; j < items.length; j++)
