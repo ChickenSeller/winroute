@@ -113,11 +113,12 @@ release-from-github:
 # on the default branch, and can be started by hand.
 pages:
   stage: deploy
-  image: alpine:latest
+  image: node:22-alpine
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         - site/**/*
+        - docs/**/*
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: manual
       allow_failure: true
@@ -134,6 +135,12 @@ pages:
       -e "s|%DEFAULT_BRANCH%|${CI_DEFAULT_BRANCH}|g"
       -e "s|%ASSET_VERSION%|${CI_COMMIT_SHORT_SHA}|g"
       public/index.html public/releases.html
+    # The guide (docs/, VitePress) is built into <homepage>/guide/.
+    - cd docs
+    - npm ci --no-audit --no-fund
+    # Its base path (/kaguya/winroute/guide/) is set in docs/.vitepress/config.mts.
+    - npx vitepress build
+    - cp -r .vitepress/dist ../public/guide
   artifacts:
     paths:
       - public

@@ -3,6 +3,7 @@
   var text = {
     zh: {
       'nav.features': '功能',
+      'nav.guide': '使用说明',
       'nav.releases': '版本',
       'nav.how': '工作原理',
       'nav.support': '支持情况',
@@ -89,6 +90,7 @@
     },
     ja: {
       'nav.features': '機能',
+      'nav.guide': '使い方',
       'nav.releases': 'リリース',
       'nav.how': 'しくみ',
       'nav.support': '対応状況',

@@ -1,0 +1,22 @@
+/* The homepage's blue, so the guide looks like part of the same site. */
+:root {
+  --vp-c-brand-1: #2d7dd2;
+  --vp-c-brand-2: #2468b0;
+  --vp-c-brand-3: #2d7dd2;
+  --vp-c-brand-soft: rgba(45, 125, 210, 0.14);
+}
+.dark {
+  --vp-c-brand-1: #5aa2ec;
+  --vp-c-brand-2: #7ab5f0;
+  --vp-c-brand-3: #2d7dd2;
+  --vp-c-brand-soft: rgba(90, 162, 236, 0.16);
+}
+
+/* Screenshots: centered, with a soft shadow so window edges stand out. */
+.vp-doc img[src*="/images/"] {
+  display: block;
+  margin: 16px auto;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
