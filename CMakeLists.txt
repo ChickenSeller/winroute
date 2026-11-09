@@ -233,3 +233,13 @@ enable_testing()
 add_executable(winroute_tests tests/tests.cpp)
 target_link_libraries(winroute_tests PRIVATE winroute_core)
 add_test(NAME winroute_tests COMMAND winroute_tests)
+
+# UI pieces that run network logic (the proxy checker); run offscreen.
+if(WINROUTE_BUILD_GUI)
+add_executable(winroute_ui_tests tests/ui_tests.cpp
+    src/ui/ProxyCheckerDialog.h src/ui/ProxyCheckerDialog.cpp src/ui/ProxyCheckerDialog.ui)
+target_include_directories(winroute_ui_tests PRIVATE src/ui)
+target_link_libraries(winroute_ui_tests PRIVATE winroute_core Qt6::Widgets)
+add_test(NAME winroute_ui_tests COMMAND winroute_ui_tests)
+set_tests_properties(winroute_ui_tests PROPERTIES ENVIRONMENT QT_QPA_PLATFORM=offscreen)
+endif()

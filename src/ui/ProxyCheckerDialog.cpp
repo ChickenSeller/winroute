@@ -71,6 +71,7 @@ void ProxyCheckerDialog::startTest()
     if (m_running || m_choices.isEmpty())
         return;
     m_running = true;
+    ++m_run;
     m_start->setEnabled(false);
     m_output->clear();
     m_hops = m_choices[qMax(0, m_choice->currentIndex())].second;
@@ -173,8 +174,8 @@ void ProxyCheckerDialog::step2()
         });
         ssl->setPeerVerifyName(host);
         ssl->startClientEncryption();
-        QTimer::singleShot(10000, this, [this, ssl] {
-            if (m_running && ssl && !ssl->isEncrypted()) {
+        QTimer::singleShot(10000, this, [this, run = m_run, ssl = QPointer<QSslSocket>(ssl)] {
+            if (run == m_run && m_running && ssl && !ssl->isEncrypted()) {
                 out(tr("%1 : TLS handshake timed out").arg(kFailed));
                 finish(false);
             }
@@ -190,27 +191,51 @@ void ProxyCheckerDialog::httpRequest(const QString &host, const QByteArray &left
     out(tr("<b>HTTP Request Test</b>"));
     m_httpBuf = leftover;
     m_httpDone = false;
-    connect(m_socket, &QTcpSocket::readyRead, this, [this] {
-        m_httpBuf += m_socket->readAll();
+    // The request asks the server to close after replying, so the reply and
+    // the close can be reported together, the close (or a "remote host
+    // closed" error) even first. Drop the earlier handlers, the TLS one that
+    // fails on any error included, and read what arrived before judging.
+    m_socket->disconnect(this);
+    const auto takeReply = [this]() -> bool {
+        if (m_httpDone)
+            return true;
+        if (m_socket)
+            m_httpBuf += m_socket->readAll();
         const qsizetype eol = m_httpBuf.indexOf("\r\n");
         if (eol < 0)
-            return;
+            return false;
         out(tr("Response: %1 %2").arg(QString::fromLatin1(m_httpBuf.left(eol)).toHtmlEscaped(), kOk));
         m_httpDone = true;
-        m_socket->disconnect(this);
+        if (m_socket)
+            m_socket->disconnect(this);
         afterTcpTests();
+        return true;
+    };
+    const auto closed = [this, takeReply](const QString &failure) {
+        if (takeReply())
+            return;
+        // Give a reply still on its way (a pending readyRead) a moment.
+        QTimer::singleShot(300, this, [this, run = m_run, takeReply, failure] {
+            if (run == m_run && m_running && !takeReply()) {
+                out(failure);
+                finish(false);
+            }
+        });
+    };
+    connect(m_socket, &QTcpSocket::readyRead, this, [takeReply] { takeReply(); });
+    connect(m_socket, &QTcpSocket::disconnected, this, [this, closed] {
+        closed(tr("%1 : connection closed without a response").arg(kFailed));
     });
-    connect(m_socket, &QTcpSocket::disconnected, this, [this] {
-        if (!m_httpDone) {
-            out(tr("%1 : connection closed without a response").arg(kFailed));
-            finish(false);
-        }
+    connect(m_socket, &QTcpSocket::errorOccurred, this, [this, closed](QAbstractSocket::SocketError e) {
+        closed(e == QAbstractSocket::RemoteHostClosedError
+                   ? tr("%1 : connection closed without a response").arg(kFailed)
+                   : QString("%1 : %2").arg(kFailed, m_socket->errorString().toHtmlEscaped()));
     });
     m_socket->write(QString("GET / HTTP/1.1\r\nHost: %1\r\nUser-Agent: WinRoute ProxyChecker\r\nConnection: close\r\n\r\n")
                         .arg(host)
                         .toLatin1());
-    QTimer::singleShot(10000, this, [this] {
-        if (m_running && !m_httpDone) {
+    QTimer::singleShot(10000, this, [this, run = m_run] {
+        if (run == m_run && m_running && !m_httpDone) {
             out(tr("%1 : no response within 10 seconds").arg(kFailed));
             finish(false);
         }
@@ -263,8 +288,9 @@ void ProxyCheckerDialog::udpTest()
         udpDone(false, m_udpCtrl ? m_udpCtrl->errorString() : QString());
     });
     m_udpCtrl->connectToHost(p.address, p.port);
-    QTimer::singleShot(12000, this, [this] {
-        udpDone(false, tr("the proxy did not grant a UDP relay in time"));
+    QTimer::singleShot(12000, this, [this, run = m_run] {
+        if (run == m_run)
+            udpDone(false, tr("the proxy did not grant a UDP relay in time"));
     });
 }
 
@@ -398,8 +424,9 @@ void ProxyCheckerDialog::udpProbe()
 
     out(tr("Sending a DNS query to 8.8.8.8:53 through the relay ..."));
     m_udp->writeDatagram(pkt, m_relayAddr, m_relayPort);
-    QTimer::singleShot(5000, this, [this] {
-        udpDone(false, tr("no reply from the relay within 5 seconds (UDP may be blocked)"));
+    QTimer::singleShot(5000, this, [this, run = m_run] {
+        if (run == m_run)
+            udpDone(false, tr("no reply from the relay within 5 seconds (UDP may be blocked)"));
     });
 }
 

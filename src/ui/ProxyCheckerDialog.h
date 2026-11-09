@@ -64,6 +64,9 @@ private:
     QList<ProxyServer> m_hops;
     QElapsedTimer m_timer;
     bool m_running = false;
+    // Counts test runs. Each timer belongs to the run that started it and
+    // does nothing once another run has begun.
+    int m_run = 0;
 
     // HTTP request test state.
     QByteArray m_httpBuf;
