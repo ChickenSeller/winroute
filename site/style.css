@@ -269,15 +269,18 @@ h2 { font-size: clamp(28px, 3.8vw, 42px); line-height: 1.15; letter-spacing: -.0
 .tile:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); }
 .tile h3 { margin: 16px 0 6px; font-size: 18px; letter-spacing: -.01em; }
 .tile p { margin: 0; color: var(--muted); font-size: 15px; }
-.tile.wide { grid-column: span 2; display: flex; flex-direction: column; }
-.tile.tall { grid-row: span 2; display: flex; flex-direction: column; }
+/* Screenshots inside tiles: framed and aligned with the text */
 .tile-shot {
-  margin: 22px -26px -26px 26px; border-radius: 10px 0 0 0; border: 1px solid var(--line); border-right: 0; border-bottom: 0;
-  width: calc(100% - 0px); max-width: none;
-  box-shadow: var(--shadow);
+  width: 100%; border-radius: 10px;
+  border: 1px solid var(--line); box-shadow: var(--shadow);
 }
+/* wide: text on the left, screenshot on the right */
+.tile.wide { grid-column: span 2; display: flex; align-items: center; gap: 28px; }
+.tile.wide .tile-text { flex: 0 0 38%; }
+.tile.wide .tile-shot { flex: 1; min-width: 0; }
+/* tall: text on top, screenshot at the bottom */
+.tile.tall { grid-row: span 2; display: flex; flex-direction: column; gap: 22px; }
 .tile.tall .tile-shot { margin-top: auto; }
-.tile.wide .tile-text { max-width: 36em; }
 
 /* How it works */
 .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 64px; align-items: center; }
@@ -434,6 +437,6 @@ pre {
   .section, .cta { padding: 72px 0; }
   .head { margin-bottom: 40px; }
   .bento, .checks { grid-template-columns: minmax(0, 1fr); }
-  .tile.wide { grid-column: auto; }
+  .tile.wide { grid-column: auto; flex-direction: column; align-items: stretch; gap: 22px; }
   .facts-inner > div { padding: 18px 10px; }
 }
