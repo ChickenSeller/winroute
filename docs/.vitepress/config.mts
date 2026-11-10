@@ -42,6 +42,9 @@ export default defineConfig({
     ['meta', { name: 'theme-color', content: '#2d7dd2' }],
   ],
   lastUpdated: false,
+  // Dark by default, like the homepage; the switch in the nav bar still
+  // changes it, and the choice is remembered.
+  appearance: 'dark',
   locales: {
     root: {
       label: '简体中文',
