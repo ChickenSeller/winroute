@@ -27,14 +27,13 @@
 
 <header class="top">
   <div class="wrap top-inner">
-    <a class="brand" href="#"><img src="logo.svg" alt="" width="28" height="28"> WinRoute</a>
+    <a class="brand" href="#"><img src="logo.svg" alt="" width="26" height="26"> WinRoute</a>
     <nav class="nav">
       <a href="#features" data-i18n="nav.features">Features</a>
-      <a href="guide/en/" data-guide data-i18n="nav.guide">Guide</a>
-      <a href="releases.html" data-i18n="nav.releases">Releases</a>
       <a href="#how" data-i18n="nav.how">How it works</a>
       <a href="#support" data-i18n="nav.support">Support</a>
-      <a href="#build" data-i18n="nav.build">Build</a>
+      <a href="guide/en/" data-guide="" data-i18n="nav.guide">Guide</a>
+      <a href="releases.html" data-i18n="nav.releases">Releases</a>
     </nav>
     <details class="dropdown lang-menu">
       <summary class="lang" id="lang" aria-label="Language">English</summary>
@@ -49,167 +48,241 @@
 
 <main>
 
+<!-- Hero: always dark, whatever the page theme -->
 <section class="hero">
   <div class="wrap hero-inner">
-    <div class="hero-text">
-      <h1 data-i18n="hero.title">Send any Windows app through a proxy.</h1>
-      <p class="lead" data-i18n="hero.lead">WinRoute captures the connections of programs that have no proxy setting of their own and routes them through SOCKS or HTTPS proxies, or chains of them, by rules you write. Your Proxifier profiles work as they are.</p>
-      <div class="actions">
-        <details class="dropdown" id="download">
-          <summary class="btn primary split-btn"><span data-i18n="hero.download">Download</span><span class="arrow" aria-hidden="true"><i></i></span></summary>
-          <div class="menu">
-            <a class="btn" href="releases.html" data-i18n="dl.site">From this site</a>
-            <a class="btn" href="https://github.com/ChickenSeller/winroute/releases/latest" target="_blank" rel="noopener" data-i18n="dl.github">From GitHub</a>
-            <a class="btn" href="%PROJECT_URL%/-/releases/permalink/latest" target="_blank" rel="noopener" data-i18n="dl.gitlab">From GitLab</a>
-          </div>
-        </details>
-        <a class="btn" href="https://github.com/ChickenSeller/winroute" target="_blank" rel="noopener" data-i18n="hero.source">Source code</a>
-      </div>
-      <p class="meta" data-i18n="hero.meta">Windows 10 and 11, x64 · English, 简体中文, 日本語</p>
+    <p class="eyebrow"><span class="dot"></span><span data-i18n="hero.eyebrow">Opens Proxifier profiles as they are</span></p>
+    <h1 data-i18n="hero.title">Send any Windows app through a proxy.</h1>
+    <p class="lead" data-i18n="hero.lead">WinRoute captures the connections of programs that have no proxy setting of their own and routes them through SOCKS or HTTPS proxies, or chains of them, by rules you write. Your Proxifier profiles work as they are.</p>
+    <div class="actions">
+      <details class="dropdown" id="download">
+        <summary class="btn primary split-btn"><span data-i18n="hero.download">Download</span><span class="arrow" aria-hidden="true"><i></i></span></summary>
+        <div class="menu">
+          <a class="btn" href="releases.html" data-i18n="dl.site">From this site</a>
+          <a class="btn" href="https://github.com/ChickenSeller/winroute/releases/latest" target="_blank" rel="noopener" data-i18n="dl.github">From GitHub</a>
+          <a class="btn" href="%PROJECT_URL%/-/releases/permalink/latest" target="_blank" rel="noopener" data-i18n="dl.gitlab">From GitLab</a>
+        </div>
+      </details>
+      <a class="btn ghost" href="guide/en/getting-started" data-guide="getting-started"><span data-i18n="hero.guide">Getting started</span> <span aria-hidden="true">→</span></a>
     </div>
+    <p class="meta" data-i18n="hero.meta">Windows 10 and 11, x64 · English, 简体中文, 日本語</p>
 
-    <div class="shot" aria-hidden="true">
-      <div class="shot-bar"><i></i><i></i><i></i><span>WinRoute - Default</span></div>
-      <div class="shot-tabs"><b data-i18n="shot.connections">Connections</b><span data-i18n="shot.traffic">Traffic</span><span data-i18n="shot.statistics">Statistics</span></div>
-      <table class="conns">
-        <thead><tr>
-          <th data-i18n="shot.app">Application</th><th data-i18n="shot.target">Target</th>
-          <th data-i18n="shot.rule">Rule : Proxy</th><th data-i18n="shot.received">Received</th>
-        </tr></thead>
-        <tbody>
-          <tr><td class="app">chrome.exe</td><td>www.google.com:443</td><td><span class="tag proxy">Browsers : SOCKS5</span></td><td class="num">1.82 MB</td></tr>
-          <tr><td class="app">git.exe</td><td>github.com:443</td><td><span class="tag chain">Dev : Chain Office</span></td><td class="num">640 KB</td></tr>
-          <tr><td class="app">parsecd.exe</td><td>kessel-api.parsec.app:443</td><td><span class="tag proxy">Parsec : SOCKS5</span></td><td class="num">96 KB</td></tr>
-          <tr><td class="app">Teams.exe</td><td>teams.microsoft.com:443</td><td><span class="tag direct">Default : Direct</span></td><td class="num">312 KB</td></tr>
-          <tr><td class="app">updater.exe</td><td>telemetry.example.com:443</td><td><span class="tag block">Telemetry : Block</span></td><td class="num">0 bytes</td></tr>
-        </tbody>
-      </table>
-<pre class="shot-log">[10.23 23:16:15] chrome.exe - www.google.com:443 open through proxy 207.180.212.59:1080 SOCKS5
-[10.23 23:16:19] git.exe - github.com:443 open through chain Office
-[10.23 23:16:31] Teams.exe - teams.microsoft.com:443 close, 2.1 KB sent, 312 KB received</pre>
-    </div>
+    <figure class="hero-shot">
+      <img data-shot="connections.png" src="guide/images/en/connections.png" width="1654" height="557" alt="WinRoute main window: the connection list">
+    </figure>
   </div>
 </section>
 
+<!-- Facts strip -->
+<section class="facts">
+  <div class="wrap facts-inner">
+    <div><b>SOCKS4 · 5 / HTTPS</b><span data-i18n="fact.proxies">Proxy protocols, with authentication</span></div>
+    <div><b>.ppx</b><span data-i18n="fact.ppx">Reads and writes Proxifier profiles</span></div>
+    <div><b>WFP / WinDivert</b><span data-i18n="fact.drivers">Two capture backends, switchable</span></div>
+    <div><b>TCP + UDP</b><span data-i18n="fact.udp">IPv4 and IPv6</span></div>
+  </div>
+</section>
+
+<!-- Showcase: one feature per row, text and a real screenshot -->
 <section id="features" class="section">
   <div class="wrap">
-    <h2 data-i18n="features.title">Proxifier's features, in a new app</h2>
-    <div class="grid">
-      <article class="card">
+    <div class="head">
+      <p class="kicker" data-i18n="features.kicker">Features</p>
+      <h2 data-i18n="features.title">Proxifier's features, in a new app</h2>
+    </div>
+
+    <article class="show">
+      <div class="show-text">
         <span class="ico big" style="--i:url(icons/rule.svg)"></span>
         <h3 data-i18n="f.rules.t">Rules per application</h3>
         <p data-i18n="f.rules.d">Match by program (name, path or wildcard), target host, IP range or port, and send the connection through a proxy, directly, or block it. Rules apply from top to bottom.</p>
-      </article>
-      <article class="card">
-        <span class="ico big" style="--i:url(icons/dns.svg)"></span>
-        <h3 data-i18n="f.proxies.t">SOCKS and HTTPS proxies</h3>
-        <p data-i18n="f.proxies.d">SOCKS4, SOCKS4A, SOCKS5 with a username and password, and HTTPS proxies with CONNECT and Basic authentication, over IPv4 and IPv6.</p>
-      </article>
-      <article class="card">
+        <ul class="ticks">
+          <li data-i18n="sc.rules.1">Host-name rules work even when a program connects by IP</li>
+          <li data-i18n="sc.rules.2">Send a rule out through a chosen network adapter</li>
+          <li data-i18n="sc.rules.3">Change the action right in the list</li>
+        </ul>
+        <a class="more" href="guide/en/rules" data-guide="rules"><span data-i18n="more">Read in the guide</span> →</a>
+      </div>
+      <figure class="show-shot"><img data-shot="rules.png" src="guide/images/en/rules.png" width="1294" height="707" alt="" loading="lazy"></figure>
+    </article>
+
+    <article class="show flip">
+      <div class="show-text">
         <span class="ico big" style="--i:url(icons/link.svg)"></span>
-        <h3 data-i18n="f.chains.t">Proxy chains</h3>
-        <p data-i18n="f.chains.d">Go through several proxies one after another, fall back to the next when one fails, or spread connections over them at random.</p>
-      </article>
-      <article class="card">
+        <h3 data-i18n="sc.proxies.t">Proxies and chains</h3>
+        <p data-i18n="sc.proxies.d">SOCKS4, SOCKS4A, SOCKS5 and HTTPS proxies, with a username and password. Put several of them in a chain: one after another, fall back to the next when one fails, or spread connections over them at random.</p>
+        <ul class="ticks">
+          <li data-i18n="sc.proxies.1">Drag proxies into a chain to build it</li>
+          <li data-i18n="sc.proxies.2">Simple, redundancy and load-balancing chains</li>
+          <li data-i18n="sc.proxies.3">A custom label for each proxy</li>
+        </ul>
+        <a class="more" href="guide/en/chains" data-guide="chains"><span data-i18n="more">Read in the guide</span> →</a>
+      </div>
+      <figure class="show-shot narrow"><img data-shot="proxies.png" src="guide/images/en/proxies.png" width="844" height="887" alt="" loading="lazy"></figure>
+    </article>
+
+    <article class="show">
+      <div class="show-text">
+        <span class="ico big" style="--i:url(icons/lock_open.svg)"></span>
+        <h3 data-i18n="f.capture.t">Packet capture, HTTPS included</h3>
+        <p data-i18n="f.capture.d">Record what programs send and receive, read HTTP requests and responses per connection, and decrypt HTTPS with a root certificate of your own. Export to Wireshark (PCAPNG) or HAR.</p>
+        <ul class="ticks">
+          <li data-i18n="sc.capture.1">Capture this computer, the gateway, or both</li>
+          <li data-i18n="sc.capture.2">Filter by program, host and port</li>
+          <li data-i18n="sc.capture.3">The root certificate is created on your machine</li>
+        </ul>
+        <a class="more" href="guide/en/capture" data-guide="capture"><span data-i18n="more">Read in the guide</span> →</a>
+      </div>
+      <figure class="show-shot"><img data-shot="capture.png" src="guide/images/en/capture.png" width="1654" height="790" alt="" loading="lazy"></figure>
+    </article>
+
+    <article class="show flip">
+      <div class="show-text">
         <span class="ico big" style="--i:url(icons/hub.svg)"></span>
         <h3 data-i18n="f.gateway.t">Proxy gateway for other machines</h3>
         <p data-i18n="f.gateway.d">Run WinRoute as a SOCKS5 and HTTP proxy on your network, so other devices reach the internet through this machine — following your rules and chains, through one chosen exit, or straight out.</p>
+        <ul class="ticks">
+          <li data-i18n="sc.gateway.1">For phones, consoles and devices with a proxy setting</li>
+          <li data-i18n="sc.gateway.2">Optional username and password</li>
+          <li data-i18n="sc.gateway.3">Gateway traffic shown in its own graph</li>
+        </ul>
+        <a class="more" href="guide/en/gateway" data-guide="gateway"><span data-i18n="more">Read in the guide</span> →</a>
+      </div>
+      <figure class="show-shot narrow"><img data-shot="gateway.png" src="guide/images/en/gateway.png" width="844" height="812" alt="" loading="lazy"></figure>
+    </article>
+  </div>
+</section>
+
+<!-- Bento: everything else, one tile each -->
+<section class="section alt">
+  <div class="wrap">
+    <div class="head">
+      <p class="kicker" data-i18n="bento.kicker">And more</p>
+      <h2 data-i18n="bento.title">Everything else you need</h2>
+    </div>
+    <div class="bento">
+      <article class="tile wide">
+        <div class="tile-text">
+          <span class="ico big" style="--i:url(icons/monitoring.svg)"></span>
+          <h3 data-i18n="f.monitor.t">Live connections and traffic</h3>
+          <p data-i18n="f.monitor.d">Every connection with its program, target, rule and bytes, a traffic graph, per-program statistics and a log. Disconnect a connection or end its process in one click.</p>
+        </div>
+        <img class="tile-shot" data-shot="traffic.png" src="guide/images/en/traffic.png" width="1654" height="790" alt="" loading="lazy">
       </article>
-      <article class="card">
+      <article class="tile tall">
+        <div class="tile-text">
+          <span class="ico big" style="--i:url(icons/network_check.svg)"></span>
+          <h3 data-i18n="f.checker.t">Proxy checker</h3>
+          <p data-i18n="f.checker.d">Test a proxy or a whole chain: the connection to it, a connection through it and an HTTP request, step by step.</p>
+        </div>
+        <img class="tile-shot" data-shot="checker.png" src="guide/images/en/checker.png" width="934" height="737" alt="" loading="lazy">
+      </article>
+      <article class="tile">
         <span class="ico big" style="--i:url(icons/travel_explore.svg)"></span>
         <h3 data-i18n="f.dns.t">Name resolution through the proxy</h3>
         <p data-i18n="f.dns.d">Let the proxy resolve host names, so the local network never sees them, and write rules by host name even when programs connect by IP.</p>
       </article>
-      <article class="card">
-        <span class="ico big" style="--i:url(icons/monitoring.svg)"></span>
-        <h3 data-i18n="f.monitor.t">Live connections and traffic</h3>
-        <p data-i18n="f.monitor.d">Every connection with its program, target, rule and bytes, a traffic graph, per-program statistics and a log. Disconnect a connection or end its process in one click.</p>
-      </article>
-      <article class="card">
-        <span class="ico big" style="--i:url(icons/lock_open.svg)"></span>
-        <h3 data-i18n="f.capture.t">Packet capture, HTTPS included</h3>
-        <p data-i18n="f.capture.d">Record what programs send and receive, read HTTP requests and responses per connection, and decrypt HTTPS with a root certificate of your own. Export to Wireshark (PCAPNG) or HAR.</p>
-      </article>
-      <article class="card">
+      <article class="tile">
         <span class="ico big" style="--i:url(icons/upload_file.svg)"></span>
         <h3 data-i18n="f.profiles.t">Proxifier profiles</h3>
         <p data-i18n="f.profiles.d">Reads and writes Proxifier's .ppx files and imports your Proxifier profile on the first start. Switch between profiles from the tray.</p>
       </article>
-      <article class="card">
-        <span class="ico big" style="--i:url(icons/network_check.svg)"></span>
-        <h3 data-i18n="f.checker.t">Proxy checker</h3>
-        <p data-i18n="f.checker.d">Test a proxy or a whole chain: the connection to it, a connection through it and an HTTP request, step by step.</p>
-      </article>
-      <article class="card">
+      <article class="tile">
         <span class="ico big" style="--i:url(icons/swap.svg)"></span>
         <h3 data-i18n="f.backend.t">Two capture backends</h3>
         <p data-i18n="f.backend.d">Catch connections with the NetFilter SDK WFP driver — the default, with UDP and name resolution through the proxy — or with WinDivert. Switch between them in the app, with no reinstall.</p>
       </article>
-      <article class="card">
+      <article class="tile">
         <span class="ico big" style="--i:url(icons/translate.svg)"></span>
         <h3 data-i18n="f.lang.t">English, Chinese and Japanese</h3>
         <p data-i18n="f.lang.d">The app, its log and the installer follow the Windows language, or the one you pick.</p>
+      </article>
+      <article class="tile">
+        <span class="ico big" style="--i:url(icons/update.svg)"></span>
+        <h3 data-i18n="t.update.t">Updates from inside the app</h3>
+        <p data-i18n="t.update.d">Check for a new version, download, verify and install it from the Help menu, through a proxy when the update server cannot be reached directly. Choose how often it updates on its own.</p>
       </article>
     </div>
   </div>
 </section>
 
-<section id="how" class="section alt">
+<!-- How it works: steps beside a real log -->
+<section id="how" class="section">
   <div class="wrap split">
     <div>
+      <p class="kicker" data-i18n="how.kicker">Under the hood</p>
       <h2 data-i18n="how.title">How it works</h2>
-      <p data-i18n="how.lead">No program is changed and nothing is injected into it. A network driver catches each new connection before it leaves the machine, and WinRoute decides where it goes.</p>
-    </div>
-    <div>
+      <p class="sub" data-i18n="how.lead">No program is changed and nothing is injected into it. A network driver catches each new connection before it leaves the machine, and WinRoute decides where it goes.</p>
       <ol class="steps">
         <li><strong data-i18n="how.s1.t">Catch</strong> <span data-i18n="how.s1.d">A network driver — the NetFilter SDK WFP driver, or WinDivert — reports every outgoing TCP connection (and UDP, when you turn it on) with the program that opened it.</span></li>
         <li><strong data-i18n="how.s2.t">Decide</strong> <span data-i18n="how.s2.d">The first rule that matches the program, host and port picks the action: a proxy, a chain, direct, or block.</span></li>
         <li><strong data-i18n="how.s3.t">Redirect</strong> <span data-i18n="how.s3.d">Proxied connections are pointed at WinRoute's local relay; direct ones go on untouched.</span></li>
         <li><strong data-i18n="how.s4.t">Tunnel</strong> <span data-i18n="how.s4.d">The relay talks SOCKS or HTTPS to the proxies, then passes the data through and counts it.</span></li>
       </ol>
+    </div>
+    <div class="terminal" aria-hidden="true">
+      <div class="term-bar"><i></i><i></i><i></i><span data-i18n="how.logtitle">Log</span></div>
+<pre data-i18n="how.log">[11.09 22:08:01] curl.exe - github.com:443 matching Command-line tools rule : open through proxy 127.0.0.1:10808 SOCKS5, adapter Ethernet
+[11.09 22:08:01] python.exe - github.com:443 matching Default rule : open directly, adapter Ethernet
+[11.09 22:08:02] game.exe - 203.0.113.7:27015 matching Games rule : open through proxy 203.0.113.20:1080 SOCKS5 (UDP), adapter Ethernet
+[11.09 22:08:02] updater.exe - t.ads.example.com:443 matching Block ads rule : blocked
+[11.09 22:08:09] curl.exe - github.com:443 close, 151 bytes sent, 5591 bytes (5.46 KB) received, lifetime 00:08</pre>
       <p class="note" data-i18n="how.note">WinRoute's own connections are never caught, and a connection to one of your proxies goes direct, so traffic cannot loop.</p>
     </div>
   </div>
 </section>
 
-<section id="support" class="section">
+<!-- Support: a compact two-column checklist -->
+<section id="support" class="section alt">
   <div class="wrap">
-    <h2 data-i18n="sp.title">What is supported</h2>
-    <div class="table">
-      <table>
-        <thead><tr><th></th><th data-i18n="sp.status">Status</th></tr></thead>
-        <tbody>
-          <tr><td>SOCKS4 / SOCKS4A</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.socks5">SOCKS5, with a username and password</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.https">HTTPS (CONNECT), with Basic authentication</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.chains">Simple, redundancy and load-balancing chains</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.dns">Resolving host names through the proxy</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.ipv6">IPv6 targets</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.ppx">Proxifier .ppx profiles</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.services">Windows services and other users (optional)</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.udp">UDP through SOCKS5</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.gateway">SOCKS5 and HTTP proxy gateway for other devices</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.iface">Choosing the network adapter per rule</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.windivert">WinDivert as an alternative capture backend</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.capture">Packet capture, with PCAPNG and HAR export</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.mitm">Decrypting HTTPS (HTTP/1.1 on port 443)</td><td class="y">✓</td></tr>
-          <tr><td data-i18n="sp.ntlm">NTLM and Kerberos proxy authentication</td><td class="n" data-i18n="sp.planned">Planned</td></tr>
-        </tbody>
-      </table>
+    <div class="head">
+      <p class="kicker" data-i18n="sp.kicker">Compatibility</p>
+      <h2 data-i18n="sp.title">What is supported</h2>
+    </div>
+    <ul class="checks">
+      <li>SOCKS4 / SOCKS4A</li>
+      <li data-i18n="sp.socks5">SOCKS5, with a username and password</li>
+      <li data-i18n="sp.https">HTTPS (CONNECT), with Basic authentication</li>
+      <li data-i18n="sp.chains">Simple, redundancy and load-balancing chains</li>
+      <li data-i18n="sp.dns">Resolving host names through the proxy</li>
+      <li data-i18n="sp.ipv6">IPv6 targets</li>
+      <li data-i18n="sp.ppx">Proxifier .ppx profiles</li>
+      <li data-i18n="sp.services">Windows services and other users (optional)</li>
+      <li data-i18n="sp.udp">UDP through SOCKS5</li>
+      <li data-i18n="sp.gateway">SOCKS5 and HTTP proxy gateway for other devices</li>
+      <li data-i18n="sp.iface">Choosing the network adapter per rule</li>
+      <li data-i18n="sp.windivert">WinDivert as an alternative capture backend</li>
+      <li data-i18n="sp.capture">Packet capture, with PCAPNG and HAR export</li>
+      <li data-i18n="sp.mitm">Decrypting HTTPS (HTTP/1.1 on port 443)</li>
+      <li class="planned"><span data-i18n="sp.ntlm">NTLM and Kerberos proxy authentication</span> <em data-i18n="sp.planned">Planned</em></li>
+    </ul>
+  </div>
+</section>
+
+<!-- Closing call to action -->
+<section class="cta">
+  <div class="wrap cta-inner">
+    <h2 data-i18n="cta.title">Try it on your own programs.</h2>
+    <p data-i18n="cta.lead">Install, open your Proxifier profile or write a first rule, and watch the connections go where you send them.</p>
+    <div class="actions">
+      <a class="btn primary" href="releases.html" data-i18n="hero.download">Download</a>
+      <a class="btn ghost" href="guide/en/" data-guide=""><span data-i18n="cta.guide">Read the guide</span> <span aria-hidden="true">→</span></a>
     </div>
   </div>
 </section>
 
-<section id="build" class="section alt">
+<section id="build" class="section build">
   <div class="wrap">
-    <h2 data-i18n="b.title">Build from source</h2>
-    <p class="sub" data-i18n="b.lead">Needs Qt 6 (MinGW, 64-bit), CMake 3.21 and the NetFilter SDK with a signed netfilter2.sys, which are not part of the repository. Inno Setup 6 builds the installer.</p>
+    <details class="build-box">
+      <summary><span data-i18n="b.title">Build from source</span></summary>
+      <p class="sub" data-i18n="b.lead">Needs Qt 6 (MinGW, 64-bit), CMake 3.21 and the NetFilter SDK with a signed netfilter2.sys, which are not part of the repository. Inno Setup 6 builds the installer.</p>
 <pre><code>git clone %PROJECT_URL%.git
 cd winroute
 # put the NetFilter SDK in netfilter/ and the driver in netfilter2.sys
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=&lt;Qt dir&gt;
 cmake --build build
 cmake --build build --target installer</code></pre>
+    </details>
   </div>
 </section>
 
@@ -219,7 +292,7 @@ cmake --build build --target installer</code></pre>
   <div class="wrap foot-inner">
     <span><img src="logo.svg" alt="" width="20" height="20"> WinRoute</span>
     <span>
-      <a href="https://github.com/ChickenSeller/winroute#readme" target="_blank" rel="noopener" data-i18n="foot.readme">Documentation</a> ·
+      <a href="https://github.com/ChickenSeller/winroute" target="_blank" rel="noopener" data-i18n="hero.source">Source code</a> ·
       <span data-i18n="foot.driver">Network driver: NetFilter SDK or WinDivert</span> ·
       <a href="icons/LICENSE-Apache-2.0.txt" data-i18n="foot.icons">Icons: Material Symbols</a>
     </span>

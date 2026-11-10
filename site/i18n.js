@@ -16,13 +16,6 @@
       'dl.site': '从本站下载',
       'dl.github': '从 GitHub 下载',
       'dl.gitlab': '从 GitLab 下载',
-      'shot.connections': '连接',
-      'shot.traffic': '流量',
-      'shot.statistics': '统计',
-      'shot.app': '应用程序',
-      'shot.target': '目标',
-      'shot.rule': '规则 : 代理',
-      'shot.received': '已接收',
       'features.title': 'Proxifier 有的功能，一个新程序',
       'f.rules.t': '按程序设置规则',
       'f.rules.d': '按程序（名称、路径或通配符）、目标主机、IP 范围或端口匹配，让连接走代理、直连或者阻止。规则从上到下依次匹配。',
@@ -86,7 +79,44 @@
       'rel.none': '还没有发布任何版本。',
       'rel.error': '暂时无法读取版本列表，可以先到 GitLab 下载。',
       'rel.latest': '最新',
-      'rel.download': '下载 Windows 安装包'
+      'rel.download': '下载 Windows 安装包',
+      'hero.eyebrow': '可直接打开 Proxifier 配置文件',
+      'hero.guide': '快速上手',
+      'fact.proxies': '代理协议，支持身份验证',
+      'fact.ppx': '读写 Proxifier 配置文件',
+      'fact.drivers': '两种拦截后端，随时切换',
+      'fact.udp': '支持 IPv4 和 IPv6',
+      'features.kicker': '功能',
+      'sc.rules.1': '程序按 IP 连接时，按域名写的规则同样生效',
+      'sc.rules.2': '可为规则指定出口网卡',
+      'sc.rules.3': '在列表中直接修改动作',
+      'sc.proxies.t': '代理与代理链',
+      'sc.proxies.d': '支持 SOCKS4、SOCKS4A、SOCKS5 和 HTTPS 代理，可使用用户名和密码。多个代理可组成代理链：依次经过、出错时切换到下一个，或随机分配连接。',
+      'sc.proxies.1': '把代理拖入代理链即可完成配置',
+      'sc.proxies.2': '简单链、冗余链和负载均衡链',
+      'sc.proxies.3': '可为每个代理设置自定义标签',
+      'sc.capture.1': '可抓取本机、代理网关或两者的流量',
+      'sc.capture.2': '按程序、主机和端口筛选',
+      'sc.capture.3': '根证书在本机生成',
+      'sc.gateway.1': '适用于手机、游戏机等可设置代理的设备',
+      'sc.gateway.2': '可设置用户名和密码',
+      'sc.gateway.3': '流量图中单独显示网关流量',
+      'more': '查看使用说明',
+      'bento.kicker': '更多功能',
+      'bento.title': '日常使用所需的一切',
+      'how.kicker': '实现方式',
+      'how.logtitle': '日志',
+      'how.log': '[11.09 22:08:01] curl.exe - github.com:443 匹配规则 命令行工具：通过代理 127.0.0.1:10808 SOCKS5 连接，网卡 以太网\n' +
+                 '[11.09 22:08:01] python.exe - github.com:443 匹配规则 Default：直接连接，网卡 以太网\n' +
+                 '[11.09 22:08:02] game.exe - 203.0.113.7:27015 匹配规则 游戏：通过代理 203.0.113.20:1080 SOCKS5 连接（UDP），网卡 以太网\n' +
+                 '[11.09 22:08:02] updater.exe - t.ads.example.com:443 匹配规则 屏蔽广告：已阻止\n' +
+                 '[11.09 22:08:09] curl.exe - github.com:443 关闭，发送 151 字节，接收 5591 字节（5.46 KB），持续 00:08',
+      'sp.kicker': '兼容性',
+      'cta.title': '在你自己的程序上试试。',
+      'cta.lead': '安装后打开 Proxifier 配置文件，或者写一条规则，即可看到连接按规则转发。',
+      'cta.guide': '阅读使用说明',
+      't.update.t': '在程序内更新',
+      't.update.d': '在“帮助”菜单中检查新版本，下载、校验并安装；无法直接连接更新服务器时可通过代理更新。也可设置自动更新的方式。'
     },
     ja: {
       'nav.features': '機能',
@@ -103,13 +133,6 @@
       'dl.site': 'このサイトから',
       'dl.github': 'GitHub から',
       'dl.gitlab': 'GitLab から',
-      'shot.connections': '接続',
-      'shot.traffic': 'トラフィック',
-      'shot.statistics': '統計',
-      'shot.app': 'アプリケーション',
-      'shot.target': '接続先',
-      'shot.rule': 'ルール : プロキシ',
-      'shot.received': '受信',
       'features.title': 'Proxifier の機能を、新しいアプリで',
       'f.rules.t': 'アプリごとのルール',
       'f.rules.d': 'プログラム（名前、パス、ワイルドカード）、接続先ホスト、IP 範囲、ポートで判定し、プロキシ経由・直接接続・ブロックを選べます。ルールは上から順に適用されます。',
@@ -173,7 +196,44 @@
       'rel.none': 'まだリリースはありません。',
       'rel.error': '現在リリース一覧を読み込めません。GitLab からダウンロードしてください。',
       'rel.latest': '最新',
-      'rel.download': 'Windows インストーラーをダウンロード'
+      'rel.download': 'Windows インストーラーをダウンロード',
+      'hero.eyebrow': 'Proxifier のプロファイルをそのまま開けます',
+      'hero.guide': 'クイックスタート',
+      'fact.proxies': '認証に対応したプロキシプロトコル',
+      'fact.ppx': 'Proxifier のプロファイルを読み書き',
+      'fact.drivers': '2 つのキャプチャ方式を切り替え可能',
+      'fact.udp': 'IPv4 と IPv6 に対応',
+      'features.kicker': '機能',
+      'sc.rules.1': 'IP アドレスで接続するプログラムにも、ホスト名のルールを適用',
+      'sc.rules.2': 'ルールごとに送信ネットワークアダプターを指定',
+      'sc.rules.3': '一覧上でアクションを直接変更',
+      'sc.proxies.t': 'プロキシとプロキシチェーン',
+      'sc.proxies.d': 'SOCKS4、SOCKS4A、SOCKS5、HTTPS プロキシに対応し、ユーザー名とパスワードを使用できます。複数のプロキシでチェーンを構成し、順に経由する、失敗時に次へ切り替える、接続をランダムに振り分けることができます。',
+      'sc.proxies.1': 'プロキシをドラッグしてチェーンを構成',
+      'sc.proxies.2': 'シンプル、冗長化、負荷分散の各チェーン',
+      'sc.proxies.3': 'プロキシごとにカスタムラベルを設定',
+      'sc.capture.1': 'このコンピューター、プロキシゲートウェイ、またはその両方をキャプチャ',
+      'sc.capture.2': 'プログラム、ホスト、ポートで絞り込み',
+      'sc.capture.3': 'ルート証明書はこのコンピューター上で生成',
+      'sc.gateway.1': 'プロキシを設定できるスマートフォンやゲーム機などに',
+      'sc.gateway.2': 'ユーザー名とパスワードを設定可能',
+      'sc.gateway.3': 'トラフィックグラフにゲートウェイの曲線を表示',
+      'more': 'ユーザーガイドを見る',
+      'bento.kicker': 'その他の機能',
+      'bento.title': '日常の利用に必要な機能',
+      'how.kicker': '実装',
+      'how.logtitle': 'ログ',
+      'how.log': '[11.09 22:08:01] curl.exe - github.com:443 ルール コマンドラインツール に一致：プロキシ 127.0.0.1:10808 SOCKS5 経由で接続、アダプター イーサネット\n' +
+                 '[11.09 22:08:01] python.exe - github.com:443 ルール Default に一致：直接接続、アダプター イーサネット\n' +
+                 '[11.09 22:08:02] game.exe - 203.0.113.7:27015 ルール ゲーム に一致：プロキシ 203.0.113.20:1080 SOCKS5 経由で接続（UDP）、アダプター イーサネット\n' +
+                 '[11.09 22:08:02] updater.exe - t.ads.example.com:443 ルール 広告ブロック に一致：ブロック\n' +
+                 '[11.09 22:08:09] curl.exe - github.com:443 切断、送信 151 バイト、受信 5591 バイト（5.46 KB）、接続時間 00:08',
+      'sp.kicker': '互換性',
+      'cta.title': 'お使いのプログラムで試してください。',
+      'cta.lead': 'インストールして Proxifier のプロファイルを開くか、ルールを 1 つ作成すると、接続がルールどおりに転送されることを確認できます。',
+      'cta.guide': 'ユーザーガイドを読む',
+      't.update.t': 'アプリ内で更新',
+      't.update.d': '［ヘルプ］メニューから新しいバージョンを確認し、ダウンロード、検証、インストールまで行えます。更新サーバーに直接接続できない場合はプロキシ経由で更新できます。自動更新の方法も選択できます。'
     }
   };
   var names = {en: 'English', zh: '简体中文', ja: '日本語'};
@@ -194,9 +254,14 @@
     }
     document.documentElement.lang = htmlLang[lang];
     // The guide has a version per language: Chinese at its root.
+    // data-guide holds the page within the guide ("" for its start).
     var guides = document.querySelectorAll('[data-guide]');
     for (var g = 0; g < guides.length; g++)
-      guides[g].setAttribute('href', {zh: 'guide/', en: 'guide/en/', ja: 'guide/ja/'}[lang]);
+      guides[g].setAttribute('href', 'guide/' + {zh: '', en: 'en/', ja: 'ja/'}[lang] + guides[g].getAttribute('data-guide'));
+    // Screenshots in the page's language.
+    var shots = document.querySelectorAll('[data-shot]');
+    for (var t = 0; t < shots.length; t++)
+      shots[t].setAttribute('src', 'guide/images/' + {zh: '', en: 'en/', ja: 'ja/'}[lang] + shots[t].getAttribute('data-shot'));
     button.textContent = names[lang];
     var items = menu.querySelectorAll('[data-lang]');
     for (var j = 0; j < items.length; j++)
@@ -247,4 +312,16 @@
       open.querySelector('summary').focus();
     });
   });
+
+  // Sections fade in as they scroll into view.
+  if ('IntersectionObserver' in window) {
+    var seen = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('in'); seen.unobserve(e.target); }
+      });
+    }, {rootMargin: '0px 0px -10% 0px'});
+    document.querySelectorAll('.show, .tile, .head, .checks, .split > *').forEach(function (el) {
+      el.classList.add('reveal'); seen.observe(el);
+    });
+  }
 })();
