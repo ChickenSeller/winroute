@@ -428,10 +428,13 @@ pre {
   .facts-inner > div:nth-child(3) { border-left: 0; }
   .facts-inner > div:nth-child(n+3) { border-top: 1px solid var(--line); }
 }
-@media (max-width: 640px) {
-  .wrap { padding: 0 16px; }
+/* six links no longer fit beside the brand and the language menu */
+@media (max-width: 860px) {
   .nav { display: none; }
   .lang { margin-left: auto; }
+}
+@media (max-width: 640px) {
+  .wrap { padding: 0 16px; }
   .hero { padding-top: 117px; }
   .hero-shot { margin-top: 44px; transform: none; }
   .section, .cta { padding: 72px 0; }
