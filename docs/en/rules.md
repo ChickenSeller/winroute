@@ -88,6 +88,27 @@ If the selected adapter has no route to the target, the connection fails rather 
 
 The interface is stored by GUID, in the same format as the rule network interface of Proxifier 4, so profiles can be read by both. UDP forwarding and the proxy gateway also follow the interface set by a rule.
 
+## Host name resolution
+
+Under **Name Resolution** in the **Advanced...** window, a rule can set its own way of resolving host names. The rule's setting takes precedence over the profile's [Name Resolution](./dns) setting; rules that do not set their own follow the profile.
+
+**Resolve host names**:
+
+| Option | Description |
+| --- | --- |
+| As set in Name Resolution (default) | Follow the profile's Name Resolution setting |
+| Through a proxy | The proxy chosen under **Resolve through** resolves host names, regardless of the profile's switch and domain list |
+| On this computer | Host names are resolved on this computer; through a proxy, the IP address is sent to the proxy server |
+
+**Resolve through** (with **Through a proxy**):
+
+- **The rule's exit**: the host name is sent to the rule's proxy or chain, which resolves it. A Direct rule has no exit: it follows the **Resolver for direct connections** choice in Name Resolution while the profile is set by hand to resolve host names through a proxy, and resolves on this computer otherwise.
+- **A chosen proxy or chain**: WinRoute queries the DNS server set in Name Resolution over TCP through that proxy, then connects to the returned IP address as the rule specifies.
+
+The setting does not apply to Block rules.
+
+Applications' DNS queries are all sent by the Windows DNS Client service, so the application is not known when a name is queried. A name therefore receives a fake IP address when the profile's **Resolve hostnames through proxy** is on and the name is not excluded by its domain list, or, when that setting is off, when the name may match a rule set to resolve through a proxy. When the connection is made, the rule it actually matches decides who resolves the name.
+
 ## Troubleshooting rules
 
 The log records the rule matched by each connection and the adapter actually used:

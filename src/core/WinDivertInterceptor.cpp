@@ -447,7 +447,7 @@ bool WinDivertInterceptor::resolveViaProxy(const ProfileOptions &opt) const
 bool WinDivertInterceptor::shouldFakeResolve(const RuleEngine &engine, const QString &name) const
 {
     const ProfileOptions &opt = engine.profile().options;
-    if (!resolveViaProxy(opt) || name.isEmpty())
+    if (name.isEmpty())
         return false;
     const QString lower = name.toLower();
     if (lower.endsWith(".arpa") || lower == "localhost" || lower.endsWith(".localhost"))
@@ -457,8 +457,8 @@ bool WinDivertInterceptor::shouldFakeResolve(const RuleEngine &engine, const QSt
         if (m_proxyHosts.contains(lower))
             return false;
     }
-    const bool listed = RuleEngine::matchHostList(util::splitList(opt.dnsExclusionList), lower, QHostAddress());
-    return opt.dnsOnlyFromList ? listed : !listed;
+    // Rules may override the profile's setting, either way.
+    return engine.resolveNameViaProxy(lower, resolveViaProxy(opt));
 }
 
 void WinDivertInterceptor::decide(Conn &c, const QHostAddress &dst, quint16 dport)
@@ -471,7 +471,11 @@ void WinDivertInterceptor::decide(Conn &c, const QHostAddress &dst, quint16 dpor
     const ProfileOptions &opt = engine->profile().options;
 
     const bool isService = c.pid == 4 || c.sessionId == 0;
-    if ((isService && !opt.processServices) || (!isService && c.sessionId != m_selfSession && !opt.processOtherUsers)) {
+    const bool skip = (isService && !opt.processServices)
+                      || (!isService && c.sessionId != m_selfSession && !opt.processOtherUsers);
+    // Unhandled processes connect directly, except to a fake-DNS address (they
+    // share the system's DNS cache), which only the relay can follow.
+    if (skip && !(m_ctx.fakeDns && FakeDns::isFake(dst))) {
         c.state = State::Passthrough;
         return;
     }
@@ -501,9 +505,12 @@ void WinDivertInterceptor::decide(Conn &c, const QHostAddress &dst, quint16 dpor
     req.ip = fake ? QHostAddress() : dst;
     req.hostname = host;
     req.port = dport;
-    RuleMatch match = engine->match(req);
-    // A local proxy program's own connections must not go back into it.
-    loopguard::bypass(c.pid, c.appName, engine->profile(), &match);
+    RuleMatch match;   // unhandled process: Direct, through the relay
+    if (!skip) {
+        match = engine->match(req);
+        // A local proxy program's own connections must not go back into it.
+        loopguard::bypass(c.pid, c.appName, engine->profile(), &match);
+    }
     const QString target = host.isEmpty() ? util::formatEndpoint(dst, dport) : QString("%1:%2").arg(host).arg(dport);
 
     switch (match.action.type) {
@@ -539,6 +546,7 @@ void WinDivertInterceptor::decide(Conn &c, const QHostAddress &dst, quint16 dpor
     c.hostname = host;
     c.fakeIp = fake;
     c.match = match;
+    c.resolver = engine->resolverFor(match, resolveViaProxy(opt));
 }
 
 void WinDivertInterceptor::networkLoop()
@@ -623,6 +631,7 @@ void WinDivertInterceptor::networkLoop()
                         info.hostname = c.hostname;
                         info.fakeIp = c.fakeIp;
                         info.match = c.match;
+                        info.resolver = c.resolver;
                         info.createdMs = c.createdMs;
                         if (m_ctx.flows)
                             m_ctx.flows->add(info);
@@ -754,7 +763,8 @@ void WinDivertInterceptor::dnsLoop()
         const QByteArray query = QByteArray::fromRawData(reinterpret_cast<const char *>(payload), int(plen));
         dns::Question q;
         const bool haveQuery = dns::parseQuestion(query, &q) && !(q.flags & 0x8000) && q.qclass == 1;
-        const bool viaProxy = engine && m_ctx.fakeDns && resolveViaProxy(engine->profile().options);
+        const bool viaProxy = engine && m_ctx.fakeDns
+                              && (resolveViaProxy(engine->profile().options) || engine->anyRuleResolvesViaProxy());
         // Never fake-resolve (nor clutter the log with) WinRoute's own look-ups:
         // the relay resolves names for direct connections, and a fake answer there
         // would misdirect it. The owner is only needed when we will act or log.

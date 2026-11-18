@@ -18,6 +18,7 @@
 #include "Updater.h"
 #include "UsageStats.h"
 #include "core/DnsClient.h"
+#include "core/NetworkWatcher.h"
 #include "core/Logger.h"
 #include "core/NetFilterInterceptor.h"
 #include "core/WinDivertInterceptor.h"
@@ -110,6 +111,13 @@ MainWindow::MainWindow(Engine *engine, QWidget *parent)
     m_dnsProbe->bind(0);
     connect(&m_dnsProbeTimer, &QTimer::timeout, this, &MainWindow::probeLocalDns);
     m_dnsProbeTimer.start(60000);
+    // A new network brings new DNS servers: use them, and check them at once.
+    auto *watcher = new NetworkWatcher(this);
+    connect(watcher, &NetworkWatcher::changed, this, [this] {
+        logVerbose(tr("The network changed"));
+        m_engine->networkChanged();
+        probeLocalDns();
+    });
 }
 
 MainWindow::~MainWindow() = default;
@@ -933,7 +941,7 @@ void MainWindow::showRules()
 
 void MainWindow::showNameResolution()
 {
-    NameResolutionDialog dlg(m_profile.options, this);
+    NameResolutionDialog dlg(m_profile, this);
     if (dlg.exec() == QDialog::Accepted) {
         Profile p = m_profile;
         dlg.apply(&p.options);
@@ -1018,9 +1026,10 @@ void MainWindow::showProxyServerSettings()
 
 void MainWindow::showAbout()
 {
-    // A fixed epigraph (Exodus 3:14), shown as-is in Hebrew; not translated.
-    const QString motto = QString::fromUtf8(
-        "<p align='center' dir='rtl' style='font-size:13pt'>אֶהְיֶה אֲשֶׁר אֶהְיֶה</p>");
+    // A fixed epigraph (Matthew 6:10), in Latin capitals with the classical V
+    // for U, as in inscriptions; not translated.
+    const QString motto = QStringLiteral(
+        "<p align='center' style='font-size:13pt'>ADVENIAT REGNVM TVVM</p>");
     // The product name, slightly enlarged, with the localized version beside it.
     const QString header =
         QStringLiteral("<p style='margin-bottom:2px'>"
@@ -1235,6 +1244,9 @@ void MainWindow::probeLocalDns()
 {
     if (!m_profile.options.dnsAutoDetect || !m_engine->isRunning() || !m_dnsProbe)
         return;
+    // Always the current servers, never a cached answer: the point is whether
+    // they answer now.
+    m_dnsProbe->refreshServers();
     m_dnsProbe->resolve("www.msftconnecttest.com", [this](const QList<QHostAddress> &addrs, const QString &) {
         static int last = -1;
         const bool ok = !addrs.isEmpty();
@@ -1243,7 +1255,7 @@ void MainWindow::probeLocalDns()
             logVerbose(ok ? tr("Local DNS is available, host names are resolved locally")
                           : tr("Local DNS is not available, host names are resolved through proxy"));
         last = int(ok);
-    });
+    }, false);
 }
 
 // ---- language --------------------------------------------------------------------

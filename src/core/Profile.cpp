@@ -170,6 +170,18 @@ const ProxyChain *Profile::chainById(int id) const
     return nullptr;
 }
 
+int Profile::defaultDnsId() const
+{
+    const int id = options.dnsDirectProxyId;
+    if (id && (proxyById(id) || chainById(id)))
+        return id;
+    if (!proxies.isEmpty())
+        return proxies.first().id;
+    if (!chains.isEmpty())
+        return chains.first().id;
+    return 0;
+}
+
 int Profile::nextId() const
 {
     int id = 100;
@@ -270,6 +282,12 @@ bool Profile::fromXml(const QByteArray &xml, QString *error)
                             p.options.dnsExclusionList = r.readElementText();
                         } else if (rn == QLatin1String("DnsUdpMode")) {
                             p.options.dnsUdpMode = r.readElementText().toInt();
+                        } else if (rn == QLatin1String("WinRouteDnsDirectProxy")) {   // WinRoute extensions
+                            p.options.dnsDirectProxyId = r.readElementText().toInt();
+                        } else if (rn == QLatin1String("WinRouteDnsServer")) {
+                            const QString s = r.readElementText().trimmed();
+                            if (!s.isEmpty())
+                                p.options.dnsProxyServer = s;
                         } else {
                             r.skipCurrentElement();
                         }
@@ -405,6 +423,13 @@ bool Profile::fromXml(const QByteArray &xml, QString *error)
                         rule.targets = r.readElementText();
                     } else if (n == QLatin1String("Ports")) {
                         rule.ports = r.readElementText();
+                    } else if (n == QLatin1String("WinRouteResolve")) {
+                        // WinRoute extension; Proxifier ignores unknown elements.
+                        rule.resolveProxyId = r.attributes().value("proxy").toInt();
+                        const QString v = r.readElementText().trimmed();
+                        rule.resolve = v == QLatin1String("proxy") ? DnsResolve::Proxy
+                                     : v == QLatin1String("local") ? DnsResolve::Local
+                                                                   : DnsResolve::Inherit;
                     } else if (n == QLatin1String("Action")) {
                         const QString t = r.attributes().value("type").toString();
                         const QString val = r.readElementText();
@@ -491,6 +516,11 @@ QByteArray Profile::toXml() const
     w.writeCharacters(options.dnsExclusionList);
     w.writeEndElement();
     w.writeTextElement("DnsUdpMode", QString::number(options.dnsUdpMode));
+    // WinRoute extensions; Proxifier ignores unknown elements.
+    if (options.dnsDirectProxyId)
+        w.writeTextElement("WinRouteDnsDirectProxy", QString::number(options.dnsDirectProxyId));
+    if (options.dnsProxyServer != ProfileOptions().dnsProxyServer)
+        w.writeTextElement("WinRouteDnsServer", options.dnsProxyServer);
     w.writeEndElement(); // Resolve
     w.writeEmptyElement("Encryption");
     w.writeAttribute("mode", encryptionToString(options.encryption));
@@ -594,6 +624,13 @@ QByteArray Profile::toXml() const
         if (!rule.applications.isEmpty())
             w.writeTextElement("Applications", util::joinAppList(rule.applications));
         w.writeTextElement("Name", rule.name);
+        if (rule.resolve != DnsResolve::Inherit) {   // WinRoute extension
+            w.writeStartElement("WinRouteResolve");
+            if (rule.resolve == DnsResolve::Proxy && rule.resolveProxyId)
+                w.writeAttribute("proxy", QString::number(rule.resolveProxyId));
+            w.writeCharacters(rule.resolve == DnsResolve::Proxy ? "proxy" : "local");
+            w.writeEndElement();
+        }
         w.writeEndElement();
     }
     w.writeEndElement();

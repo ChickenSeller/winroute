@@ -32,6 +32,9 @@ public:
     // adapter has no address of the needed protocol, the connection is made
     // normally, through the adapter the system's routes choose.
     void setInterface(const QString &id) { m_iface = id; }
+    // Resolve the target's name on this computer and give the last proxy its
+    // address, never the name (a rule set to resolve names locally).
+    void setResolveTargetLocally(bool on) { m_resolveTarget = on; }
     // The adapter the connection was bound to, empty if none.
     QString boundInterface() const { return m_boundIface; }
 
@@ -73,6 +76,7 @@ private:
     QList<Endpoint> m_endpoints;   // m_endpoints[0] = first proxy (or target), then each next hop
     DnsClient *m_dns;
     QString m_iface;
+    bool m_resolveTarget = false;
     QString m_boundIface;
     int m_hop = 0;
     Stage m_stage = Stage::Resolving;

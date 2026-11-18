@@ -51,6 +51,9 @@ private:
     void editProxy();
     void removeProxy();
     void checkProxy();
+    void toggleDnsProxy();
+    void toggleChainDns();
+    void updateDnsButton();
     void createChain();
     void chainType();
     void removeChainOrMember();

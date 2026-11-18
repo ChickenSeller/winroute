@@ -998,6 +998,10 @@ Continue?</source>
       <translation>DNS：%1 向 %2 查询 %3（%4），直连</translation>
     </message>
     <message>
+      <source>%1 - UDP socket is not tunnelled, filtering disabled</source>
+      <translation>%1 - 该 UDP 套接字不走代理，已停止过滤</translation>
+    </message>
+    <message>
       <source>%1 - %2 matching %3 rule : blocked (UDP)</source>
       <translation>%1 - %2 匹配规则 %3：已阻止（UDP）</translation>
     </message>
@@ -1058,6 +1062,10 @@ Continue?</source>
     <message>
       <source>%1 active connections</source>
       <translation>%1 个活动连接</translation>
+    </message>
+    <message>
+      <source>The network changed</source>
+      <translation>网络已变化</translation>
     </message>
     <message>
       <source>&amp;New Profile</source>
@@ -1815,6 +1823,26 @@ Restart WinRoute now?</source>
 （本地 DNS 不可用时可能导致明显延迟！）</translation>
     </message>
     <message>
+      <source>Resolving through a proxy</source>
+      <translation>通过代理解析</translation>
+    </message>
+    <message>
+      <source>Resolver for direct connections:</source>
+      <translation>直接连接的解析代理：</translation>
+    </message>
+    <message>
+      <source>DNS server:</source>
+      <translation>DNS 服务器：</translation>
+    </message>
+    <message>
+      <source>8.8.8.8</source>
+      <translation>8.8.8.8</translation>
+    </message>
+    <message>
+      <source>Asked over TCP, through the chosen proxy or chain</source>
+      <translation>经所选代理或代理链，以 TCP 查询</translation>
+    </message>
+    <message>
       <source>Note</source>
       <translation>注意</translation>
     </message>
@@ -1841,6 +1869,22 @@ WinRoute 会分配“虚拟”IP 地址（198.18.*.*），它们只在 WinRoute 
 localhost; *.example.com; %ComputerName%; %SimpleHostnames%</source>
       <translation>示例：
 localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
+    </message>
+    <message>
+      <source>(no proxy servers)</source>
+      <translation>（没有代理服务器）</translation>
+    </message>
+    <message>
+      <source>Direct connections have no proxy of their own: their host names are resolved through the chosen proxy or chain.</source>
+      <translation>直接连接没有自己的代理：其主机名通过所选的代理或代理链解析。</translation>
+    </message>
+    <message>
+      <source>The DNS server must be an IP address, optionally with a port, for example 8.8.8.8 or 8.8.8.8:53.</source>
+      <translation>DNS 服务器必须是 IP 地址，可附带端口，例如 8.8.8.8 或 8.8.8.8:53。</translation>
+    </message>
+    <message>
+      <source>This computer</source>
+      <translation>本机</translation>
     </message>
   </context>
   <context>
@@ -2232,6 +2276,49 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     </message>
   </context>
   <context>
+    <name>ProxyDns</name>
+    <message>
+      <source>proxy %1</source>
+      <translation>代理 %1</translation>
+    </message>
+    <message>
+      <source>chain %1</source>
+      <translation>代理链 %1</translation>
+    </message>
+    <message>
+      <source>proxy #%1</source>
+      <translation>代理 #%1</translation>
+    </message>
+    <message>
+      <source>invalid DNS server address %1</source>
+      <translation>DNS 服务器地址 %1 无效</translation>
+    </message>
+    <message>
+      <source>%1 does not exist or has no enabled proxy servers</source>
+      <translation>%1 不存在，或没有已启用的代理服务器</translation>
+    </message>
+    <message>
+      <source>invalid DNS response</source>
+      <translation>DNS 响应无效</translation>
+    </message>
+    <message>
+      <source>host not found</source>
+      <translation>找不到主机</translation>
+    </message>
+    <message>
+      <source>no address in the DNS response</source>
+      <translation>DNS 响应中没有地址</translation>
+    </message>
+    <message>
+      <source>DNS request timed out</source>
+      <translation>DNS 请求超时</translation>
+    </message>
+    <message>
+      <source>connection closed by the DNS server</source>
+      <translation>DNS 服务器关闭了连接</translation>
+    </message>
+  </context>
+  <context>
     <name>ProxyGateway</name>
     <message>
       <source>Direct</source>
@@ -2603,6 +2690,10 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>检测...</translation>
     </message>
     <message>
+      <source>Default DNS</source>
+      <translation>设为默认 DNS</translation>
+    </message>
+    <message>
       <source>You can chain several proxy servers together:</source>
       <translation>可以将多个代理服务器串成代理链：</translation>
     </message>
@@ -2625,6 +2716,18 @@ Use check boxes to enable/disable a proxy in a chain.</source>
 用复选框启用/禁用链中的代理。</translation>
     </message>
     <message>
+      <source>DNS</source>
+      <translation>DNS</translation>
+    </message>
+    <message>
+      <source>The default DNS proxy: resolves the host names of direct connections while names are resolved through a proxy (Name Resolution)</source>
+      <translation>默认 DNS 代理：通过代理解析主机名时，由它解析直接连接的主机名（域名解析）</translation>
+    </message>
+    <message>
+      <source>Proxy Chains</source>
+      <translation>代理链</translation>
+    </message>
+    <message>
       <source>Proxy Chain</source>
       <translation>代理链</translation>
     </message>
@@ -2635,6 +2738,14 @@ Use check boxes to enable/disable a proxy in a chain.</source>
     <message>
       <source>Drag and Drop a proxy server from the list to add it into a chain.</source>
       <translation>从列表中把代理服务器拖放到代理链中即可添加。</translation>
+    </message>
+    <message>
+      <source>Use this proxy as the default DNS proxy: it resolves the host names of direct connections while names are resolved through a proxy (Name Resolution)</source>
+      <translation>将此代理用作默认 DNS 代理：通过代理解析主机名时，由它解析直接连接的主机名（域名解析）</translation>
+    </message>
+    <message>
+      <source>Use this chain as the default DNS proxy: it resolves the host names of direct connections while names are resolved through a proxy (Name Resolution)</source>
+      <translation>将此代理链用作默认 DNS 代理：通过代理解析主机名时，由它解析直接连接的主机名（域名解析）</translation>
     </message>
     <message>
       <source> (Redundancy)</source>
@@ -2783,6 +2894,14 @@ Default 规则将改为使用 %1。
     <message>
       <source>direct connection</source>
       <translation>直接连接</translation>
+    </message>
+    <message>
+      <source>Could not resolve %1 through %2 - %3</source>
+      <translation>无法通过 %2 解析 %1 - %3</translation>
+    </message>
+    <message>
+      <source>%1 - %2 resolved through %3 as %4</source>
+      <translation>%1 - %2 通过 %3 解析为 %4</translation>
     </message>
     <message>
       <source>%1 - %2 network adapter %3 is not available, connected through the system's default adapter</source>
@@ -2996,8 +3115,20 @@ Default 规则将改为使用 %1。
       <translation>高级...</translation>
     </message>
     <message>
+      <source>Resolve host names:</source>
+      <translation>解析主机名：</translation>
+    </message>
+    <message>
       <source>Action:</source>
       <translation>操作：</translation>
+    </message>
+    <message>
+      <source>As set in Name Resolution</source>
+      <translation>跟随域名解析设置</translation>
+    </message>
+    <message>
+      <source>On this computer</source>
+      <translation>在本机解析</translation>
     </message>
     <message>
       <source>Select Applications</source>
@@ -3024,8 +3155,24 @@ Default 规则将改为使用 %1。
       <translation>网卡：%1</translation>
     </message>
     <message>
-      <source>Rule Network Interface</source>
-      <translation>规则网卡</translation>
+      <source>Host names: resolved on this computer</source>
+      <translation>主机名：在本机解析</translation>
+    </message>
+    <message>
+      <source>Host names: resolved through %1</source>
+      <translation>主机名：通过 %1 解析</translation>
+    </message>
+    <message>
+      <source>Host names: resolved through the rule's exit</source>
+      <translation>主机名：通过规则的出口解析</translation>
+    </message>
+    <message>
+      <source>Advanced Rule Settings</source>
+      <translation>规则高级设置</translation>
+    </message>
+    <message>
+      <source>Network Interface</source>
+      <translation>网卡</translation>
     </message>
     <message>
       <source>Connections matching this rule leave through this network interface: direct connections to their target, proxied ones to the first proxy.</source>
@@ -3058,6 +3205,30 @@ Default 规则将改为使用 %1。
     <message>
       <source>Ignore this rule (the next matching rule applies)</source>
       <translation>忽略此规则（由下一条匹配的规则处理）</translation>
+    </message>
+    <message>
+      <source>Name Resolution</source>
+      <translation>域名解析</translation>
+    </message>
+    <message>
+      <source>How host names of this rule's connections are resolved. This overrides the profile's Name Resolution setting for this rule.</source>
+      <translation>本规则的连接如何解析主机名。本规则的这项设置优先于配置文件的域名解析设置。</translation>
+    </message>
+    <message>
+      <source>Through a proxy</source>
+      <translation>通过代理解析</translation>
+    </message>
+    <message>
+      <source>Resolve through:</source>
+      <translation>解析代理：</translation>
+    </message>
+    <message>
+      <source>The rule's exit</source>
+      <translation>规则的出口</translation>
+    </message>
+    <message>
+      <source>The rule's exit (Direct: the resolver for direct connections in Name Resolution)</source>
+      <translation>规则的出口（直连规则：按域名解析中的“直接连接的解析代理”）</translation>
     </message>
     <message>
       <source>Please enter the rule name.</source>

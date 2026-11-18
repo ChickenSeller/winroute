@@ -96,8 +96,8 @@ ProxyServersDialog::ProxyServersDialog(const Profile &profile, QWidget *parent)
     m_chainLabel = ui->chainLabel;
     m_chainsButton = ui->chainsButton;
 
-    m_proxies->setColumnCount(3);
-    m_proxies->setHeaderLabels({tr("Address"), tr("Port"), tr("Type")});
+    m_proxies->setColumnCount(4);
+    m_proxies->setHeaderLabels({tr("Address"), tr("Port"), tr("Type"), tr("DNS")});
     m_proxies->setRootIsDecorated(false);
     m_proxies->setDragEnabled(true);
     m_proxies->setDragDropMode(QAbstractItemView::DragOnly);
@@ -105,14 +105,27 @@ ProxyServersDialog::ProxyServersDialog(const Profile &profile, QWidget *parent)
     m_proxies->header()->setStretchLastSection(false);
     m_proxies->header()->resizeSection(1, 70);
     m_proxies->header()->resizeSection(2, 80);
+    m_proxies->header()->resizeSection(3, 50);
+    m_proxies->headerItem()->setToolTip(3, tr("The default DNS proxy: resolves the host names of direct connections "
+                                              "while names are resolved through a proxy (Name Resolution)"));
 
-    m_chains->setHeaderHidden(true);
+    // Like the proxy list: the name, and the default DNS mark.
+    m_chains->setColumnCount(2);
+    m_chains->setHeaderLabels({tr("Proxy Chains"), tr("DNS")});
+    m_chains->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+    m_chains->header()->setStretchLastSection(false);
+    m_chains->header()->resizeSection(1, 50);
+    m_chains->headerItem()->setToolTip(1, m_proxies->headerItem()->toolTip(3));
     m_chains->proxySource = m_proxies;
 
     connect(ui->addButton, &QPushButton::clicked, this, &ProxyServersDialog::addProxy);
     connect(ui->editButton, &QPushButton::clicked, this, &ProxyServersDialog::editProxy);
     connect(ui->removeButton, &QPushButton::clicked, this, &ProxyServersDialog::removeProxy);
     connect(ui->checkButton, &QPushButton::clicked, this, &ProxyServersDialog::checkProxy);
+    connect(ui->dnsButton, &QPushButton::clicked, this, &ProxyServersDialog::toggleDnsProxy);
+    connect(m_proxies, &QTreeWidget::currentItemChanged, this, &ProxyServersDialog::updateDnsButton);
+    connect(ui->chainDnsButton, &QPushButton::clicked, this, &ProxyServersDialog::toggleChainDns);
+    connect(m_chains, &QTreeWidget::currentItemChanged, this, &ProxyServersDialog::updateDnsButton);
     connect(m_proxies, &QTreeWidget::itemDoubleClicked, this, &ProxyServersDialog::editProxy);
     connect(m_chainsButton, &QPushButton::toggled, this, &ProxyServersDialog::showChains);
     connect(ui->createButton, &QPushButton::clicked, this, &ProxyServersDialog::createChain);
@@ -184,11 +197,51 @@ void ProxyServersDialog::rebuildProxies(int selectId)
                                                      proxyTypeToString(p.type)});
         item->setIcon(0, icons::proxy());
         item->setData(0, RoleId, p.id);
+        if (p.id == m_profile.defaultDnsId())
+            item->setText(3, QStringLiteral("✓"));
+        item->setTextAlignment(3, Qt::AlignCenter);
         if (p.id == selectId)
             m_proxies->setCurrentItem(item);
     }
     if (!m_proxies->currentItem() && m_proxies->topLevelItemCount())
         m_proxies->setCurrentItem(m_proxies->topLevelItem(0));
+    updateDnsButton();
+}
+
+// The default DNS proxy is Name Resolution's resolver for direct connections.
+void ProxyServersDialog::toggleDnsProxy()
+{
+    const int id = selectedProxyId();
+    if (!id)
+        return;
+    m_profile.options.dnsDirectProxyId = id;   // one default: a proxy or a chain
+    rebuildProxies(id);
+    rebuildChains(selectedChainId());
+}
+
+void ProxyServersDialog::toggleChainDns()
+{
+    const int id = selectedChainId();
+    if (!id)
+        return;
+    m_profile.options.dnsDirectProxyId = id;
+    rebuildChains(id);
+    rebuildProxies(selectedProxyId());
+}
+
+void ProxyServersDialog::updateDnsButton()
+{
+    // There is always a default while there are proxies, so it is only
+    // moved, never cleared: the button is off for the current default.
+    const int dns = m_profile.defaultDnsId();
+    const int id = selectedProxyId();
+    ui->dnsButton->setEnabled(id != 0 && id != dns);
+    ui->dnsButton->setToolTip(tr("Use this proxy as the default DNS proxy: it resolves the host names of direct "
+                                 "connections while names are resolved through a proxy (Name Resolution)"));
+    const int chainId = selectedChainId();
+    ui->chainDnsButton->setEnabled(chainId != 0 && chainId != dns);
+    ui->chainDnsButton->setToolTip(tr("Use this chain as the default DNS proxy: it resolves the host names of direct "
+                                      "connections while names are resolved through a proxy (Name Resolution)"));
 }
 
 void ProxyServersDialog::rebuildChains(int selectChainId)
@@ -198,6 +251,9 @@ void ProxyServersDialog::rebuildChains(int selectChainId)
     for (const ProxyChain &c : m_profile.chains) {
         const QString typeName = c.type == ChainType::Simple ? QString() : c.type == ChainType::Redundancy ? tr(" (Redundancy)") : tr(" (Load Balancing)");
         auto *ci = new QTreeWidgetItem(m_chains, {c.name + typeName});
+        if (c.id == m_profile.defaultDnsId())
+            ci->setText(1, QStringLiteral("✓"));
+        ci->setTextAlignment(1, Qt::AlignCenter);
         ci->setIcon(0, icons::chain());
         ci->setData(0, RoleId, c.id);
         ci->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled);
@@ -217,6 +273,7 @@ void ProxyServersDialog::rebuildChains(int selectChainId)
             m_chains->setCurrentItem(ci);
     }
     m_chains->blockSignals(false);
+    updateDnsButton();
 }
 
 int ProxyServersDialog::selectedProxyId() const
@@ -362,6 +419,12 @@ void ProxyServersDialog::removeProxy()
     for (auto &c : m_profile.chains)
         c.members.removeIf([id](const ChainMember &m) { return m.proxyId == id; });
     m_profile.proxies.removeIf([id](const ProxyServer &s) { return s.id == id; });
+    // Nothing resolves names through a removed proxy any more.
+    if (m_profile.options.dnsDirectProxyId == id)
+        m_profile.options.dnsDirectProxyId = 0;
+    for (Rule &r : m_profile.rules)
+        if (r.resolveProxyId == id)
+            r.resolveProxyId = 0;
     rebuildProxies();
     rebuildChains();
 }
@@ -414,5 +477,10 @@ void ProxyServersDialog::removeChainOrMember()
     if (!c || !resolveRemoval(ActionType::Chain, chainId, c->name))
         return;
     m_profile.chains.removeIf([chainId](const ProxyChain &x) { return x.id == chainId; });
+    if (m_profile.options.dnsDirectProxyId == chainId)
+        m_profile.options.dnsDirectProxyId = 0;
+    for (Rule &r : m_profile.rules)
+        if (r.resolveProxyId == chainId)
+            r.resolveProxyId = 0;
     rebuildChains();
 }

@@ -99,6 +99,7 @@ private:
         QString hostname;          // resolved target host name, for the flow record
         bool fakeIp = false;       // destination was a fake-DNS address (host name only)
         RuleMatch match;           // the matched rule/action, for the flow record
+        NameResolver resolver;     // who resolves a fake-DNS name
     };
 
     // Decides proxy/direct/block for a connection (sets c.state), using c.pid and

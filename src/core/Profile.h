@@ -64,6 +64,13 @@ struct RuleAction {
     bool skipIfInterfaceDown = false;
 };
 
+// How a rule's host names are resolved (WinRoute extension).
+enum class DnsResolve {
+    Inherit,   // the profile's Name Resolution setting
+    Proxy,     // through a proxy: the rule's own (resolveProxyId 0) or a chosen one
+    Local,     // on this computer: real addresses, send the IP to the proxy
+};
+
 struct Rule {
     bool enabled = true;
     QString name;
@@ -71,6 +78,11 @@ struct Rule {
     QString targets;        // "*.example.com; 10.0.0.0-10.255.255.255"
     QString ports;          // "80; 443; 8000-9000"
     RuleAction action;
+    DnsResolve resolve = DnsResolve::Inherit;
+    // With resolve == Proxy: the proxy or chain (id) that resolves the names,
+    // or 0 for the rule's own exit (for a Direct rule: the profile's
+    // dnsDirectProxyId).
+    int resolveProxyId = 0;
 };
 
 enum class PasswordEncryption { Disabled, Basic, User, Master };
@@ -84,6 +96,11 @@ struct ProfileOptions {
     bool dnsOnlyFromList = false;    // false: "Do NOT resolve the following"
     QString dnsExclusionList = "%ComputerName%; localhost; *.local";
     int dnsUdpMode = 0;
+    // WinRoute: when names go through a proxy, proxy and chain rules use their
+    // own; Direct rules use the default DNS proxy: this id (a proxy or chain),
+    // see defaultDnsId() for when it is unset or gone.
+    int dnsDirectProxyId = 0;
+    QString dnsProxyServer = QStringLiteral("8.8.8.8");   // DNS server asked through a proxy
     bool logDns = false;             // WinRoute: log DNS queries and replies
 
     PasswordEncryption encryption = PasswordEncryption::Disabled;
@@ -110,6 +127,9 @@ public:
 
     const ProxyServer *proxyById(int id) const;
     const ProxyChain *chainById(int id) const;
+    // The default DNS proxy (options.dnsDirectProxyId) when it still exists,
+    // else the first proxy, else the first chain; 0 only without any.
+    int defaultDnsId() const;
     int nextId() const;   // ids are shared by proxies and chains (Proxifier uses 100+)
 
     QString actionDisplayName(const RuleAction &a) const;

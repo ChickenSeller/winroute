@@ -56,6 +56,14 @@ Click **Advanced...** in the Proxy Server window:
 
 When a new proxy is saved, WinRoute asks whether to use it by default. Selecting **Yes** sets the action of the Default rule to this proxy, so every connection that matches no other rule goes through it.
 
+## Default DNS proxy
+
+While there are upstream proxies, there is always a default DNS proxy: unless one is set, it is the first proxy in the list (the first chain when there is no proxy), and it falls back to the first one again when the chosen proxy or chain is removed. The **DNS** column of the proxy list and the chain list shows ✓ for it.
+
+To change it, select another proxy or chain and click **Default DNS**. The button is unavailable while the selected one is already the default DNS proxy.
+
+The default DNS proxy is the **Resolver for direct connections** in [Name Resolution](./dns#resolving-through-a-proxy); both places edit the same setting. While host names are set by hand to be resolved through a proxy, the names of direct connections are resolved through it.
+
 ## Removing a proxy
 
 When you remove a proxy that is used by rules, WinRoute lists the affected rules and lets you either:

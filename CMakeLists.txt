@@ -50,6 +50,8 @@ set(CORE_SOURCES
     src/core/TlsHello.h           src/core/TlsHello.cpp
     src/core/TlsMitm.h            src/core/TlsMitm.cpp
     src/core/ProxyConnector.h     src/core/ProxyConnector.cpp
+    src/core/ProxyDns.h           src/core/ProxyDns.cpp
+    src/core/NetworkWatcher.h     src/core/NetworkWatcher.cpp
     src/core/ProxyGateway.h       src/core/ProxyGateway.cpp
     src/core/Relay.h              src/core/Relay.cpp
     src/core/Capture.h            src/core/Capture.cpp

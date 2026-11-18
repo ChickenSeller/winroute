@@ -998,6 +998,10 @@ Continue?</source>
       <translation>DNS：%1 が %2 に %3（%4）を問い合わせ、直接</translation>
     </message>
     <message>
+      <source>%1 - UDP socket is not tunnelled, filtering disabled</source>
+      <translation>%1 - この UDP ソケットはトンネルされないため、フィルタリングを無効にしました</translation>
+    </message>
+    <message>
       <source>%1 - %2 matching %3 rule : blocked (UDP)</source>
       <translation>%1 - %2 がルール %3 に一致：ブロック（UDP）</translation>
     </message>
@@ -1058,6 +1062,10 @@ Continue?</source>
     <message>
       <source>%1 active connections</source>
       <translation>アクティブな接続 %1 件</translation>
+    </message>
+    <message>
+      <source>The network changed</source>
+      <translation>ネットワークが変更されました</translation>
     </message>
     <message>
       <source>&amp;New Profile</source>
@@ -1815,6 +1823,26 @@ Restart WinRoute now?</source>
 （ローカル DNS が利用できない場合は大きな遅延が発生することがあります！）</translation>
     </message>
     <message>
+      <source>Resolving through a proxy</source>
+      <translation>プロキシ経由の解決</translation>
+    </message>
+    <message>
+      <source>Resolver for direct connections:</source>
+      <translation>直接接続の解決に使うプロキシ：</translation>
+    </message>
+    <message>
+      <source>DNS server:</source>
+      <translation>DNS サーバー：</translation>
+    </message>
+    <message>
+      <source>8.8.8.8</source>
+      <translation>8.8.8.8</translation>
+    </message>
+    <message>
+      <source>Asked over TCP, through the chosen proxy or chain</source>
+      <translation>選択したプロキシまたはチェーン経由で、TCP で問い合わせます</translation>
+    </message>
+    <message>
       <source>Note</source>
       <translation>注意</translation>
     </message>
@@ -1841,6 +1869,22 @@ WinRoute は「仮想」IP アドレス（198.18.*.*）を割り当てます。�
 localhost; *.example.com; %ComputerName%; %SimpleHostnames%</source>
       <translation>例：
 localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
+    </message>
+    <message>
+      <source>(no proxy servers)</source>
+      <translation>（プロキシサーバーがありません）</translation>
+    </message>
+    <message>
+      <source>Direct connections have no proxy of their own: their host names are resolved through the chosen proxy or chain.</source>
+      <translation>直接接続には独自のプロキシがないため、ホスト名は選択したプロキシまたはチェーン経由で解決されます。</translation>
+    </message>
+    <message>
+      <source>The DNS server must be an IP address, optionally with a port, for example 8.8.8.8 or 8.8.8.8:53.</source>
+      <translation>DNS サーバーは IP アドレスで指定してください。ポートも指定できます（例：8.8.8.8、8.8.8.8:53）。</translation>
+    </message>
+    <message>
+      <source>This computer</source>
+      <translation>このコンピューター</translation>
     </message>
   </context>
   <context>
@@ -2232,6 +2276,49 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     </message>
   </context>
   <context>
+    <name>ProxyDns</name>
+    <message>
+      <source>proxy %1</source>
+      <translation>プロキシ %1</translation>
+    </message>
+    <message>
+      <source>chain %1</source>
+      <translation>チェーン %1</translation>
+    </message>
+    <message>
+      <source>proxy #%1</source>
+      <translation>プロキシ #%1</translation>
+    </message>
+    <message>
+      <source>invalid DNS server address %1</source>
+      <translation>DNS サーバーのアドレス %1 が無効です</translation>
+    </message>
+    <message>
+      <source>%1 does not exist or has no enabled proxy servers</source>
+      <translation>%1 が存在しないか、有効なプロキシサーバーがありません</translation>
+    </message>
+    <message>
+      <source>invalid DNS response</source>
+      <translation>DNS 応答が無効です</translation>
+    </message>
+    <message>
+      <source>host not found</source>
+      <translation>ホストが見つかりません</translation>
+    </message>
+    <message>
+      <source>no address in the DNS response</source>
+      <translation>DNS 応答にアドレスがありません</translation>
+    </message>
+    <message>
+      <source>DNS request timed out</source>
+      <translation>DNS 要求がタイムアウトしました</translation>
+    </message>
+    <message>
+      <source>connection closed by the DNS server</source>
+      <translation>DNS サーバーが接続を閉じました</translation>
+    </message>
+  </context>
+  <context>
     <name>ProxyGateway</name>
     <message>
       <source>Direct</source>
@@ -2603,6 +2690,10 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>チェック...</translation>
     </message>
     <message>
+      <source>Default DNS</source>
+      <translation>既定の DNS に設定</translation>
+    </message>
+    <message>
       <source>You can chain several proxy servers together:</source>
       <translation>複数のプロキシサーバーをチェーンとしてつなげられます：</translation>
     </message>
@@ -2625,6 +2716,18 @@ Use check boxes to enable/disable a proxy in a chain.</source>
 チェックボックスでチェーン内のプロキシを有効/無効にします。</translation>
     </message>
     <message>
+      <source>DNS</source>
+      <translation>DNS</translation>
+    </message>
+    <message>
+      <source>The default DNS proxy: resolves the host names of direct connections while names are resolved through a proxy (Name Resolution)</source>
+      <translation>既定の DNS プロキシ：プロキシ経由で名前を解決するとき、直接接続のホスト名を解決します（名前解決）</translation>
+    </message>
+    <message>
+      <source>Proxy Chains</source>
+      <translation>プロキシチェーン</translation>
+    </message>
+    <message>
       <source>Proxy Chain</source>
       <translation>プロキシチェーン</translation>
     </message>
@@ -2635,6 +2738,14 @@ Use check boxes to enable/disable a proxy in a chain.</source>
     <message>
       <source>Drag and Drop a proxy server from the list to add it into a chain.</source>
       <translation>リストからプロキシサーバーをドラッグ＆ドロップしてチェーンに追加します。</translation>
+    </message>
+    <message>
+      <source>Use this proxy as the default DNS proxy: it resolves the host names of direct connections while names are resolved through a proxy (Name Resolution)</source>
+      <translation>このプロキシを既定の DNS プロキシにします。プロキシ経由で名前を解決するとき、直接接続のホスト名を解決します（名前解決）</translation>
+    </message>
+    <message>
+      <source>Use this chain as the default DNS proxy: it resolves the host names of direct connections while names are resolved through a proxy (Name Resolution)</source>
+      <translation>このチェーンを既定の DNS プロキシにします。プロキシ経由で名前を解決するとき、直接接続のホスト名を解決します（名前解決）</translation>
     </message>
     <message>
       <source> (Redundancy)</source>
@@ -2783,6 +2894,14 @@ Default ルールが %1 を使用するように変更されます。
     <message>
       <source>direct connection</source>
       <translation>直接接続</translation>
+    </message>
+    <message>
+      <source>Could not resolve %1 through %2 - %3</source>
+      <translation>%2 経由で %1 を解決できません - %3</translation>
+    </message>
+    <message>
+      <source>%1 - %2 resolved through %3 as %4</source>
+      <translation>%1 - %2 を %3 経由で %4 に解決しました</translation>
     </message>
     <message>
       <source>%1 - %2 network adapter %3 is not available, connected through the system's default adapter</source>
@@ -2996,8 +3115,20 @@ Default ルールが %1 を使用するように変更されます。
       <translation>詳細設定...</translation>
     </message>
     <message>
+      <source>Resolve host names:</source>
+      <translation>ホスト名の解決：</translation>
+    </message>
+    <message>
       <source>Action:</source>
       <translation>アクション：</translation>
+    </message>
+    <message>
+      <source>As set in Name Resolution</source>
+      <translation>名前解決の設定に従う</translation>
+    </message>
+    <message>
+      <source>On this computer</source>
+      <translation>このコンピューターで解決</translation>
     </message>
     <message>
       <source>Select Applications</source>
@@ -3024,8 +3155,24 @@ Default ルールが %1 を使用するように変更されます。
       <translation>ネットワークインターフェイス：%1</translation>
     </message>
     <message>
-      <source>Rule Network Interface</source>
-      <translation>ルールのネットワークインターフェイス</translation>
+      <source>Host names: resolved on this computer</source>
+      <translation>ホスト名：このコンピューターで解決</translation>
+    </message>
+    <message>
+      <source>Host names: resolved through %1</source>
+      <translation>ホスト名：%1 経由で解決</translation>
+    </message>
+    <message>
+      <source>Host names: resolved through the rule's exit</source>
+      <translation>ホスト名：ルールの出口経由で解決</translation>
+    </message>
+    <message>
+      <source>Advanced Rule Settings</source>
+      <translation>ルールの詳細設定</translation>
+    </message>
+    <message>
+      <source>Network Interface</source>
+      <translation>ネットワークインターフェイス</translation>
     </message>
     <message>
       <source>Connections matching this rule leave through this network interface: direct connections to their target, proxied ones to the first proxy.</source>
@@ -3058,6 +3205,30 @@ Default ルールが %1 を使用するように変更されます。
     <message>
       <source>Ignore this rule (the next matching rule applies)</source>
       <translation>このルールを無視する（次に一致するルールを適用）</translation>
+    </message>
+    <message>
+      <source>Name Resolution</source>
+      <translation>名前解決</translation>
+    </message>
+    <message>
+      <source>How host names of this rule's connections are resolved. This overrides the profile's Name Resolution setting for this rule.</source>
+      <translation>このルールの接続でホスト名を解決する方法です。このルールでは、プロファイルの名前解決の設定より優先されます。</translation>
+    </message>
+    <message>
+      <source>Through a proxy</source>
+      <translation>プロキシ経由で解決</translation>
+    </message>
+    <message>
+      <source>Resolve through:</source>
+      <translation>解決に使うプロキシ：</translation>
+    </message>
+    <message>
+      <source>The rule's exit</source>
+      <translation>ルールの出口</translation>
+    </message>
+    <message>
+      <source>The rule's exit (Direct: the resolver for direct connections in Name Resolution)</source>
+      <translation>ルールの出口（直接接続：名前解決の「直接接続の解決に使うプロキシ」に従う）</translation>
     </message>
     <message>
       <source>Please enter the rule name.</source>

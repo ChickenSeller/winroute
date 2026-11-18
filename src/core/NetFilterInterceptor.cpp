@@ -781,13 +781,16 @@ void NetFilterInterceptor::onTcpConnectRequest(ENDPOINT_ID id, PNF_TCP_CONN_INFO
     if (!pinfo.path.isEmpty())
         pinfo.name = QFileInfo(pinfo.path).fileName();
     const bool isService = pid == 4 || pinfo.sessionId == 0;
-    if (isService && !opt.processServices)
-        return;
-    if (!isService && pinfo.sessionId != m_selfSession && !opt.processOtherUsers)
+    const bool skip = (isService && !opt.processServices)
+                      || (!isService && pinfo.sessionId != m_selfSession && !opt.processOtherUsers);
+    const bool fake = FakeDns::isFake(dst);
+    // Unhandled processes connect directly, except to a fake-DNS address (they
+    // share the system's DNS cache): that has no server behind it, so the relay
+    // connects directly to the name instead.
+    if (skip && !fake)
         return;
 
     QString host;
-    const bool fake = FakeDns::isFake(dst);
     if (fake) {
         host = m_ctx.fakeDns->hostnameFor(dst);
         if (host.isEmpty()) {
@@ -807,9 +810,12 @@ void NetFilterInterceptor::onTcpConnectRequest(ENDPOINT_ID id, PNF_TCP_CONN_INFO
     req.ip = fake ? QHostAddress() : dst;
     req.hostname = host;
     req.port = dport;
-    RuleMatch match = engine->match(req);
-    // A local proxy program's own connections must not go back into it.
-    loopguard::bypass(pid, pinfo.name, engine->profile(), &match);
+    RuleMatch match;
+    if (!skip) {
+        match = engine->match(req);
+        // A local proxy program's own connections must not go back into it.
+        loopguard::bypass(pid, pinfo.name, engine->profile(), &match);
+    }
     const QString target = host.isEmpty() ? util::formatEndpoint(dst, dport) : QString("%1:%2").arg(host).arg(dport);
 
     switch (match.action.type) {
@@ -858,6 +864,7 @@ void NetFilterInterceptor::onTcpConnectRequest(ENDPOINT_ID id, PNF_TCP_CONN_INFO
     info.hostname = host;
     info.fakeIp = fake;
     info.match = match;
+    info.resolver = engine->resolverFor(match, resolveViaProxy(opt));
     info.createdMs = QDateTime::currentMSecsSinceEpoch();
     m_ctx.flows->add(info);
 
@@ -893,7 +900,7 @@ bool NetFilterInterceptor::resolveViaProxy(const ProfileOptions &opt) const
 bool NetFilterInterceptor::shouldFakeResolve(const RuleEngine &engine, const QString &name) const
 {
     const ProfileOptions &opt = engine.profile().options;
-    if (!resolveViaProxy(opt) || name.isEmpty())
+    if (name.isEmpty())
         return false;
     const QString lower = name.toLower();
     if (lower.endsWith(".arpa") || lower == "localhost" || lower.endsWith(".localhost"))
@@ -903,8 +910,8 @@ bool NetFilterInterceptor::shouldFakeResolve(const RuleEngine &engine, const QSt
         if (m_proxyHosts.contains(lower))
             return false;
     }
-    const bool listed = RuleEngine::matchHostList(util::splitList(opt.dnsExclusionList), lower, QHostAddress());
-    return opt.dnsOnlyFromList ? listed : !listed;
+    // Rules may override the profile's setting, either way.
+    return engine.resolveNameViaProxy(lower, resolveViaProxy(opt));
 }
 
 void NetFilterInterceptor::onUdpCreated(ENDPOINT_ID id, PNF_UDP_CONN_INFO info)
@@ -945,7 +952,7 @@ void NetFilterInterceptor::onUdpSend(ENDPOINT_ID id, const unsigned char *remote
         const QByteArray query = QByteArray::fromRawData(buf, len);
         dns::Question q;
         const bool haveQuery = engine && dns::parseQuestion(query, &q) && !(q.flags & 0x8000) && q.qclass == 1;
-        if (engine && resolveViaProxy(engine->profile().options) && haveQuery && shouldFakeResolve(*engine, q.name)) {
+        if (engine && haveQuery && shouldFakeResolve(*engine, q.name)) {
             const bool blockOthers = engine->profile().options.dnsBlockNonATypes;
             QByteArray response;
             QString result;
@@ -1058,8 +1065,10 @@ void NetFilterInterceptor::handleUdpProxy(ENDPOINT_ID id, const unsigned char *r
             // whose rules are all direct) are released from filtering. Passing
             // every datagram of a long-lived tunnel (ZeroTier, WireGuard,
             // OpenVPN) through user mode and re-injecting it breaks its
-            // established path when WinRoute starts.
-            release = skip || !engine->mayDivertUdp(appPath, appName);
+            // established path when WinRoute starts. Not while names may be
+            // fake-resolved: datagrams to a fake address must reach the relay.
+            const bool fakeNames = resolveViaProxy(optns) || engine->anyRuleResolvesViaProxy();
+            release = !fakeNames && (skip || !engine->mayDivertUdp(appPath, appName));
         }
         RuleMatch match;
         if (!skip) {
@@ -1129,37 +1138,40 @@ int NetFilterInterceptor::decideUdp(const RuleMatch &match, bool skip, const Pro
 {
     *proxyId = 0;
     *interfaceId = match.action.interfaceId;
+    // A fake-DNS address has no server behind it: a datagram that would go
+    // straight out goes through the relay, which sends it to the name's address.
+    const int bypass = fake ? UdpProxy : UdpBypass;
     if (skip)
-        return UdpBypass;   // services / other users, when not handled
+        return bypass;   // services / other users, when not handled
     switch (match.action.type) {
     case ActionType::Block:
         logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : blocked (UDP)").arg(appName, target, match.ruleName));
         return UdpDrop;
     case ActionType::Direct:
         // Bound to an adapter: the relay sends it from there.
-        return match.action.interfaceId.isEmpty() ? UdpBypass : UdpProxy;
+        return match.action.interfaceId.isEmpty() ? bypass : UdpProxy;
     case ActionType::Proxy: {
         if (!fake && opt.loopDetection) {
             QMutexLocker lock(&m_rulesMutex);
             if (m_proxyEndpoints.contains(endpointKey(dst, dport)))
-                return UdpBypass;
+                return bypass;
         }
         const ProxyServer *p = profile.proxyById(match.action.id);
         if (!p)
-            return UdpBypass;
+            return bypass;
         if (p->type == ProxyType::Socks5) {
             *proxyId = p->id;
             return UdpProxy;
         }
         logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : %4 does not support UDP, sending directly")
                       .arg(appName, target, match.ruleName, proxyTypeToString(p->type)));
-        return UdpBypass;
+        return bypass;
     }
     case ActionType::Chain:
         logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : proxy chains do not support UDP, sending directly").arg(appName, target, match.ruleName));
-        return UdpBypass;
+        return bypass;
     }
-    return UdpBypass;
+    return bypass;
 }
 
 void NetFilterInterceptor::onUdpReceive(ENDPOINT_ID id, const unsigned char *remote, const char *buf, int len,

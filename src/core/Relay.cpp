@@ -1,4 +1,5 @@
 #include "Relay.h"
+#include "ProxyDns.h"
 #include "NetInterfaces.h"
 #include "Capture.h"
 #include "CertAuthority.h"
@@ -87,6 +88,27 @@ public:
         m_target.host = info.hostname;
         if (!info.fakeIp)
             m_target.ip = info.dstAddr;
+        // Who resolves the name (the rule's setting, else the profile's).
+        const ActionType act = info.match.action.type;
+        const bool viaProxy = act == ActionType::Proxy || act == ActionType::Chain;
+        switch (info.resolver.kind) {
+        case NameResolver::Exit:
+            // A rule set to resolve through its proxy always sends the name.
+            if (viaProxy && info.match.resolve == DnsResolve::Proxy && !m_target.host.isEmpty())
+                m_target.ip = QHostAddress();
+            break;
+        case NameResolver::Local:
+            m_resolveLocally = viaProxy;
+            if (!info.fakeIp && viaProxy && info.match.resolve != DnsResolve::Inherit)
+                m_target.host.clear();   // the address the application resolved
+            break;
+        case NameResolver::Proxy:
+            if (info.fakeIp && !m_target.host.isEmpty())
+                m_resolveVia = info.resolver.proxyId;   // looked up before connecting
+            else if (info.match.resolve != DnsResolve::Inherit)
+                m_target.host.clear();
+            break;
+        }
         m_targetText = info.hostname.isEmpty() ? util::formatEndpoint(info.dstAddr, info.dstPort)
                                                : QString("%1:%2").arg(info.hostname).arg(info.dstPort);
         connect(m_client, &QTcpSocket::readyRead, this, [this] { pump(m_client, m_upstream, &m_sent); });
@@ -195,7 +217,11 @@ public:
         // tunnel is up and the name is known.
         if (m_mitm)
             startMitm();
-        if (!m_finished)
+        if (m_finished)
+            return;
+        if (m_resolveVia)
+            resolveThroughProxy(profile);
+        else
             nextAttempt();
     }
 
@@ -209,6 +235,29 @@ public:
     }
 
 private:
+    // Looks the target's name up through the resolver proxy, then connects to
+    // the address it returned (directly, or with the address to the proxy).
+    void resolveThroughProxy(const Profile &profile)
+    {
+        const QString via = ProxyDns::resolverName(profile, m_resolveVia);
+        QPointer<RelaySession> self(this);
+        m_relay->proxyDns()->resolve(profile, m_resolveVia, profile.options.dnsProxyServer, m_target.host,
+                                     [self, via](const QList<QHostAddress> &addrs, const QString &err) {
+            if (!self || self->m_finished)
+                return;
+            if (addrs.isEmpty()) {
+                self->finishWithError(QCoreApplication::translate("Relay", "Could not resolve %1 through %2 - %3")
+                                          .arg(self->m_target.host, via, err));
+                return;
+            }
+            logVerbose(QCoreApplication::translate("Relay", "%1 - %2 resolved through %3 as %4")
+                           .arg(self->m_info.appName, self->m_targetText, via, addrs.first().toString()));
+            self->m_target.ip = addrs.first();
+            self->m_target.host.clear();   // the proxy gets the address
+            self->nextAttempt();
+        });
+    }
+
     void nextAttempt()
     {
         if (m_attemptIndex >= m_attempts.size()) {
@@ -223,6 +272,7 @@ private:
         m_upstream->setSocketOption(QAbstractSocket::LowDelayOption, 1);
         auto *connector = new ProxyConnector(m_upstream, a.hops, m_target, m_relay->dns(), a.timeoutMs, this);
         connector->setInterface(m_info.match.action.interfaceId);
+        connector->setResolveTargetLocally(m_resolveLocally && !a.hops.isEmpty());
         QObject::connect(connector, &ProxyConnector::connected, this, [this, connector, a](const QByteArray &leftover) {
             connector->deleteLater();
             const QString &iface = m_info.match.action.interfaceId;
@@ -460,6 +510,8 @@ private:
     QPointer<QTcpSocket> m_upstream;
     RedirectInfo m_info;
     Endpoint m_target;
+    bool m_resolveLocally = false;   // the rule resolves names on this computer
+    int m_resolveVia = 0;            // proxy or chain that resolves the name first
     QString m_targetText;
     QString m_actionText;
     QString m_lastError;
@@ -497,6 +549,7 @@ bool Relay::listen(QString *error)
     m_dns = new DnsClient(this);
     if (!m_dns->bind(0))
         logError(QCoreApplication::translate("Relay", "Cannot bind the DNS resolver socket"));
+    m_proxyDns = new ProxyDns(m_dns, this);
 
     m_server4 = new RelayServer(this, this);
     m_server4->setMaxPendingConnections(1024);

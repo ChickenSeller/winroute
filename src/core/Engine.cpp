@@ -1,4 +1,6 @@
 #include "Engine.h"
+#include "DnsClient.h"
+#include "Relay.h"
 #include "Logger.h"
 #include "NetFilterInterceptor.h"
 #include "Utils.h"
@@ -146,4 +148,13 @@ bool Engine::applyGatewayConfig(const ProxyGateway::Config &config, QString *err
     if (!ok && error)
         *error = err;
     return ok;
+}
+
+void Engine::networkChanged()
+{
+    Relay *relay = m_relay;
+    QMetaObject::invokeMethod(relay, [relay] {
+        if (DnsClient *dns = relay->dns())
+            dns->refreshServers();
+    }, Qt::QueuedConnection);
 }

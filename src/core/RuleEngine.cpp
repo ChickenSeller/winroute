@@ -18,6 +18,8 @@ RuleEngine::RuleEngine(const Profile &profile)
         c.result.ruleIndex = i;
         c.result.ruleName = r.name;
         c.result.action = r.action;
+        c.result.resolve = r.resolve;
+        c.result.resolveProxyId = r.resolveProxyId;
         m_rules.push_back(c);
     }
 }
@@ -73,6 +75,99 @@ bool RuleEngine::mayDivertUdp(const QString &appPath, const QString &appName) co
             return false;
     }
     return false;
+}
+
+bool RuleEngine::resolveNameViaProxy(const QString &name, bool globalViaProxy) const
+{
+    if (name.isEmpty())
+        return false;
+    // The profile's setting is the fallback, as before rules had their own:
+    // every name outside its list. A rule resolving on this computer still
+    // gets the real address, from the relay, when its connection is made.
+    const ProfileOptions &opt = m_profile.options;
+    if (globalViaProxy) {
+        const bool listed = matchHostList(util::splitList(opt.dnsExclusionList), name, QHostAddress());
+        if (opt.dnsOnlyFromList ? listed : !listed)
+            return true;
+    }
+    // Otherwise only names a rule resolving through the proxy may match.
+    for (const auto &c : m_rules) {
+        if (!c.enabled)
+            continue;
+        if (!c.targets.isEmpty() && !matchHostList(c.targets, name, QHostAddress()))
+            continue;
+        if (viaProxy(c.result))
+            return true;
+        // A rule for every application and port ends the search.
+        if (c.apps.isEmpty() && c.ports.trimmed().isEmpty())
+            return false;
+    }
+    return false;
+}
+
+bool RuleEngine::anyRuleResolvesViaProxy() const
+{
+    for (const auto &c : m_rules) {
+        if (c.enabled && viaProxy(c.result))
+            return true;
+    }
+    return false;
+}
+
+// A rule whose names a proxy resolves on its own account: its own proxy or
+// chain, or a chosen one. A Direct rule following its exit only uses the
+// profile's choice, which applies while the profile resolves through a proxy.
+bool RuleEngine::viaProxy(const RuleMatch &r) const
+{
+    if (r.resolve != DnsResolve::Proxy)
+        return false;
+    switch (r.action.type) {
+    case ActionType::Proxy:
+    case ActionType::Chain:
+        return true;
+    case ActionType::Direct:
+        return r.resolveProxyId != 0 || (!m_profile.options.dnsAutoDetect && m_profile.options.dnsViaProxy
+                                         && m_profile.defaultDnsId());
+    case ActionType::Block:
+        return false;
+    }
+    return false;
+}
+
+NameResolver RuleEngine::resolverFor(const RuleMatch &m, bool globalViaProxy) const
+{
+    const ProfileOptions &opt = m_profile.options;
+    const bool direct = m.action.type == ActionType::Direct || m.action.type == ActionType::Block;
+    DnsResolve mode = m.resolve;
+    int id = m.resolveProxyId;
+    if (mode == DnsResolve::Inherit) {
+        // The profile's setting: through the rule's own proxy (Direct rules:
+        // the profile's choice for them, below).
+        mode = globalViaProxy ? DnsResolve::Proxy : DnsResolve::Local;
+        id = 0;
+    }
+    NameResolver r;
+    if (mode == DnsResolve::Local) {
+        r.kind = NameResolver::Local;
+        return r;
+    }
+    // A resolver that no longer exists falls back to the exit.
+    if (id && !m_profile.proxyById(id) && !m_profile.chainById(id))
+        id = 0;
+    if (!id && direct) {
+        // The default DNS proxy, only while the profile is set to resolve
+        // through a proxy by hand.
+        id = globalViaProxy && !opt.dnsAutoDetect ? m_profile.defaultDnsId() : 0;
+        if (!id) {
+            r.kind = NameResolver::Local;
+            return r;
+        }
+    }
+    if (id) {
+        r.kind = NameResolver::Proxy;
+        r.proxyId = id;
+    }
+    return r;
 }
 
 bool RuleEngine::matchAppList(const QStringList &patterns, const QString &path, const QString &name)

@@ -60,6 +60,9 @@ bool ProxyConnector::hopAcceptsName(int hop) const
 void ProxyConnector::start()
 {
     m_timer.start();
+    // An address already known: the name is not passed on.
+    if (m_resolveTarget && !m_endpoints.last().ip.isNull())
+        m_endpoints.last().host.clear();
     resolveNext(0);
 }
 
@@ -72,7 +75,8 @@ void ProxyConnector::resolveNext(int index)
         Endpoint &e = m_endpoints[index];
         if (!e.ip.isNull())
             continue;
-        const bool needed = index == 0 || !hopAcceptsName(index - 1);
+        const bool last = index == m_endpoints.size() - 1;
+        const bool needed = index == 0 || !hopAcceptsName(index - 1) || (last && m_resolveTarget);
         if (!needed)
             continue;
         if (e.host.isEmpty()) {
@@ -85,7 +89,8 @@ void ProxyConnector::resolveNext(int index)
         }
         const QString host = e.host;
         QPointer<ProxyConnector> self(this);
-        m_dns->resolve(host, [self, index, host](const QList<QHostAddress> &addrs, const QString &err) {
+        const bool dropName = last && m_resolveTarget;
+        m_dns->resolve(host, [self, index, host, dropName](const QList<QHostAddress> &addrs, const QString &err) {
             if (!self || self->m_finished)
                 return;
             if (addrs.isEmpty()) {
@@ -104,6 +109,8 @@ void ProxyConnector::resolveNext(int index)
                 }
             }
             self->m_endpoints[index].ip = pick;
+            if (dropName)
+                self->m_endpoints[index].host.clear();
             self->resolveNext(index + 1);
         });
         return;

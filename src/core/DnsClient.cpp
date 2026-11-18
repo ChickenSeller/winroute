@@ -66,7 +66,13 @@ QList<QHostAddress> DnsClient::systemDnsServers()
     return out;
 }
 
-void DnsClient::resolve(const QString &hostname, Callback cb)
+void DnsClient::refreshServers()
+{
+    m_servers = systemDnsServers();
+    m_cache.clear();
+}
+
+void DnsClient::resolve(const QString &hostname, Callback cb, bool useCache)
 {
     const QHostAddress literal(hostname);
     if (!literal.isNull()) {
@@ -76,7 +82,7 @@ void DnsClient::resolve(const QString &hostname, Callback cb)
     const qint64 now = QDateTime::currentMSecsSinceEpoch();
     const QString key = hostname.toLower();
     auto c = m_cache.constFind(key);
-    if (c != m_cache.cend() && c->second > now) {
+    if (useCache && c != m_cache.cend() && c->second > now) {
         cb(c->first, {});
         return;
     }

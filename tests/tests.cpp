@@ -13,6 +13,7 @@
 #include "core/TlsHello.h"
 #include "core/Profile.h"
 #include "core/ProxyConnector.h"
+#include "core/ProxyDns.h"
 #include "core/ProxyGateway.h"
 #include "core/Relay.h"
 #include "core/RuleEngine.h"
@@ -246,6 +247,99 @@ static void testRules()
         CHECK(!RuleEngine(b).mayDivertUdp("C:\\Program Files\\Parsec\\parsecd.exe", "parsecd.exe"));
     }
 
+    // Per-rule name resolution: saved, and it overrides the profile's setting.
+    {
+        Profile r = p;   // rule 0 Localhost (direct), 1 parsecd (proxy 100), 2 Default (direct)
+        r.rules[1].resolve = DnsResolve::Proxy;
+        Profile back;
+        CHECK(back.fromXml(r.toXml()));
+        CHECK(back.rules[1].resolve == DnsResolve::Proxy && back.rules[2].resolve == DnsResolve::Inherit);
+        CHECK(!r.toXml().contains("<WinRouteResolve>local"));
+        r.rules[1].resolve = DnsResolve::Local;
+        CHECK(Profile().fromXml(r.toXml()) && r.toXml().contains("<WinRouteResolve>local</WinRouteResolve>"));
+
+        // The profile's setting is the fallback for every name outside its list.
+        r.rules[1].resolve = DnsResolve::Inherit;
+        CHECK(RuleEngine(r).resolveNameViaProxy("example.com", true));
+        CHECK(!RuleEngine(r).resolveNameViaProxy("example.com", false));
+        CHECK(!RuleEngine(r).resolveNameViaProxy("printer.local", true));   // profile exclusion list
+        r.rules[1].resolve = DnsResolve::Proxy;
+        CHECK(RuleEngine(r).resolveNameViaProxy("example.com", false));      // rule over profile
+        CHECK(RuleEngine(r).resolveNameViaProxy("printer.local", false));    // and over its list
+        CHECK(RuleEngine(r).anyRuleResolvesViaProxy());
+        r.rules[1].resolve = DnsResolve::Local;   // resolved locally by the relay later
+        CHECK(RuleEngine(r).resolveNameViaProxy("example.com", true));
+        CHECK(!RuleEngine(r).resolveNameViaProxy("example.com", false));
+        CHECK(!RuleEngine(r).anyRuleResolvesViaProxy());
+        CHECK(engine.match(req).resolve == DnsResolve::Inherit);
+        req.appName = "parsecd.exe";
+        CHECK(RuleEngine(r).match(req).resolve == DnsResolve::Local);
+
+        // Who resolves a connection's name: the rule first, the profile as fallback.
+        Profile v = p;   // proxy 100; rule 1 parsecd -> proxy 100; rule 2 Default direct
+        ProxyServer second = v.proxies[0];
+        second.id = 200;
+        v.proxies << second;
+        v.options.dnsAutoDetect = false;   // resolving through a proxy set by hand
+        RuleMatch viaRule;
+        viaRule.action = {ActionType::Proxy, 100};
+        RuleMatch viaDirect;   // Direct
+        auto kind = [](const NameResolver &n) { return n.kind; };
+        CHECK(kind(RuleEngine(v).resolverFor(viaRule, false)) == NameResolver::Local);
+        CHECK(kind(RuleEngine(v).resolverFor(viaRule, true)) == NameResolver::Exit);
+        // Unset: the default DNS proxy is the first proxy.
+        CHECK(RuleEngine(v).resolverFor(viaDirect, true).proxyId == 100);
+        v.options.dnsDirectProxyId = 200;   // direct connections resolve through proxy 200
+        CHECK(RuleEngine(v).resolverFor(viaDirect, true).proxyId == 200);
+        CHECK(kind(RuleEngine(v).resolverFor(viaRule, true)) == NameResolver::Exit);
+        {
+            Profile autoMode = v;   // automatic detection uses the defaults
+            autoMode.options.dnsAutoDetect = true;
+            CHECK(kind(RuleEngine(autoMode).resolverFor(viaRule, true)) == NameResolver::Exit);
+            CHECK(kind(RuleEngine(autoMode).resolverFor(viaDirect, true)) == NameResolver::Local);
+        }
+        v.options.dnsDirectProxyId = 999;    // gone: back to the first proxy
+        CHECK(RuleEngine(v).resolverFor(viaDirect, true).proxyId == 100);
+        {
+            Profile none = v;   // no proxy at all: this computer
+            none.proxies.clear();
+            CHECK(kind(RuleEngine(none).resolverFor(viaDirect, true)) == NameResolver::Local);
+        }
+        v.options.dnsDirectProxyId = 200;
+        viaRule.resolve = DnsResolve::Proxy;   // the rule's own exit, over the profile
+        CHECK(kind(RuleEngine(v).resolverFor(viaRule, false)) == NameResolver::Exit);
+        viaRule.resolveProxyId = 200;
+        CHECK(RuleEngine(v).resolverFor(viaRule, false).proxyId == 200);
+        viaRule.resolveProxyId = 999;          // removed: back to the exit
+        CHECK(kind(RuleEngine(v).resolverFor(viaRule, false)) == NameResolver::Exit);
+        viaRule.resolve = DnsResolve::Local;
+        CHECK(kind(RuleEngine(v).resolverFor(viaRule, true)) == NameResolver::Local);
+        viaDirect.resolve = DnsResolve::Proxy;   // a Direct rule following its exit:
+        CHECK(RuleEngine(v).resolverFor(viaDirect, true).proxyId == 200);   // the profile's choice
+        CHECK(kind(RuleEngine(v).resolverFor(viaDirect, false)) == NameResolver::Local);   // only while on
+        v.options.dnsDirectProxyId = 0;   // unset: the first proxy
+        CHECK(RuleEngine(v).resolverFor(viaDirect, true).proxyId == 100);
+
+        // Saved: the rule's resolver and the profile's choices.
+        v.rules[1].resolve = DnsResolve::Proxy;
+        v.rules[1].resolveProxyId = 200;
+        v.options.dnsDirectProxyId = 100;
+        v.options.dnsProxyServer = "1.1.1.1:53";
+        Profile w;
+        CHECK(w.fromXml(v.toXml()));
+        CHECK(w.rules[1].resolveProxyId == 200 && w.options.dnsDirectProxyId == 100
+              && w.options.dnsProxyServer == "1.1.1.1:53");
+        CHECK(!p.toXml().contains("WinRouteDns"));   // defaults are not written
+
+        // A rule for every application and port hides the rules after it.
+        Profile s = r;
+        s.rules[1].resolve = DnsResolve::Proxy;
+        s.rules[0].targets = "*.example.com";
+        s.rules[0].applications.clear();
+        CHECK(!RuleEngine(s).resolveNameViaProxy("www.example.com", false));
+        CHECK(RuleEngine(s).resolveNameViaProxy("www.example.org", false));
+    }
+
     // disabled rule is skipped
     p.rules[1].enabled = false;
     RuleEngine engine2(p);
@@ -470,10 +564,11 @@ static ProxyServer proxyFor(const TestProxy &p, ProxyType type, const QString &u
 }
 
 // Runs a tunnel and checks that an echo round-trip works; returns the error, if any.
-static QString runTunnel(const QList<ProxyServer> &hops, const Endpoint &target)
+static QString runTunnel(const QList<ProxyServer> &hops, const Endpoint &target, bool resolveLocally = false)
 {
     QTcpSocket sock;
     ProxyConnector conn(&sock, hops, target, nullptr, 5000);
+    conn.setResolveTargetLocally(resolveLocally);
     QString error;
     bool done = false, ok = false;
     QObject::connect(&conn, &ProxyConnector::connected, [&](const QByteArray &) {
@@ -516,6 +611,10 @@ static void testProxies()
     CHECK((e = runTunnel({proxyFor(socks5, ProxyType::Socks5)}, byIp)).isEmpty());
     CHECK((e = runTunnel({proxyFor(socks5, ProxyType::Socks5)}, nameOnly)).isEmpty());
     CHECK(socks5.requests.contains(QString("echo.test:%1").arg(echo.serverPort())));
+    // A rule that resolves names on this computer gives the proxy the address.
+    socks5.requests.clear();
+    CHECK((e = runTunnel({proxyFor(socks5, ProxyType::Socks5)}, byName, true)).isEmpty());
+    CHECK(socks5.requests.size() == 1 && !socks5.requests[0].contains("echo.test"));
     CHECK((e = runTunnel({proxyFor(socks5auth, ProxyType::Socks5, "bob", "secret")}, byIp)).isEmpty());
     e = runTunnel({proxyFor(socks5auth, ProxyType::Socks5, "bob", "wrong")}, byIp);
     CHECK(e.contains("authentication failed"));
@@ -687,6 +786,96 @@ static QByteArray readAtLeast(QTcpSocket &sock, int n, QByteArray *buf)
 
 // The proxy gateway: SOCKS5 and HTTP CONNECT tunnels to an echo server, with
 // data sent both together with the request and after the tunnel is open.
+// DNS over TCP: answers every A query with 203.0.113.7 (or NXDOMAIN for
+// "missing.test"), and counts the queries.
+class TcpDnsServer : public QTcpServer {
+public:
+    TcpDnsServer()
+    {
+        listen(QHostAddress::LocalHost);
+        connect(this, &QTcpServer::newConnection, this, [this] {
+            while (QTcpSocket *c = nextPendingConnection()) {
+                auto buf = std::make_shared<QByteArray>();
+                connect(c, &QTcpSocket::readyRead, c, [this, c, buf] {
+                    *buf += c->readAll();
+                    if (buf->size() < 2)
+                        return;
+                    const int len = qFromBigEndian<quint16>(reinterpret_cast<const uchar *>(buf->constData()));
+                    if (buf->size() < 2 + len)
+                        return;
+                    const QByteArray query = buf->mid(2, len);
+                    dns::Question q;
+                    if (!dns::parseQuestion(query, &q))
+                        return;
+                    ++queries;
+                    const bool missing = q.name == "missing.test";
+                    const QByteArray resp = dns::buildResponse(query, q, missing ? QList<QHostAddress>{} : QList<QHostAddress>{QHostAddress("203.0.113.7")},
+                                                               120, missing ? 3 : 0);
+                    QByteArray framed(2, '\0');
+                    qToBigEndian<quint16>(quint16(resp.size()), reinterpret_cast<uchar *>(framed.data()));
+                    c->write(framed + resp);
+                });
+                connect(c, &QTcpSocket::disconnected, c, &QObject::deleteLater);
+            }
+        });
+    }
+    int queries = 0;
+};
+
+static void testProxyDns()
+{
+    QHostAddress a;
+    quint16 port = 0;
+    CHECK(ProxyDns::parseServer("8.8.8.8", &a, &port) && a == QHostAddress("8.8.8.8") && port == 53);
+    CHECK(ProxyDns::parseServer(" 1.1.1.1:5353 ", &a, &port) && port == 5353);
+    CHECK(ProxyDns::parseServer("[2001:db8::1]:54", &a, &port) && a == QHostAddress("2001:db8::1") && port == 54);
+    CHECK(ProxyDns::parseServer("2001:db8::1", &a, &port) && port == 53);
+    CHECK(!ProxyDns::parseServer("dns.google", &a, &port));
+    CHECK(!ProxyDns::parseServer("8.8.8.8:0", &a, &port));
+
+    TcpDnsServer server;
+    TestProxy socks5(TestProxy::Socks5);
+    Profile profile;
+    ProxyServer px = proxyFor(socks5, ProxyType::Socks5);
+    px.id = 100;
+    profile.proxies << px;
+    ProxyChain chain;
+    chain.id = 101;
+    chain.name = "C";
+    chain.members << ChainMember{100, true};
+    profile.chains << chain;
+    const QString dnsServer = QString("127.0.0.1:%1").arg(server.serverPort());
+
+    ProxyDns resolver(nullptr);
+    auto lookup = [&](int id, const QString &name, QString *err) {
+        QList<QHostAddress> out;
+        bool done = false;
+        resolver.resolve(profile, id, dnsServer, name, [&](const QList<QHostAddress> &addrs, const QString &e) {
+            out = addrs;
+            *err = e;
+            done = true;
+        });
+        QElapsedTimer t;
+        t.start();
+        while (!done && t.elapsed() < 5000)
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+        return out;
+    };
+    QString err;
+    QList<QHostAddress> got = lookup(100, "www.example.com", &err);
+    CHECK(got.size() == 1 && got[0] == QHostAddress("203.0.113.7"));
+    CHECK(socks5.requests.contains(dnsServer));   // the query went through the proxy
+    CHECK(server.queries == 1);
+    got = lookup(100, "WWW.example.com", &err);   // cached
+    CHECK(got.size() == 1 && server.queries == 1);
+    got = lookup(101, "chain.example.com", &err);   // through a chain
+    CHECK(got.size() == 1 && server.queries == 2);
+    got = lookup(100, "missing.test", &err);
+    CHECK(got.isEmpty() && err == "host not found");
+    got = lookup(999, "www.example.com", &err);
+    CHECK(got.isEmpty() && err.contains("does not exist"));
+}
+
 static void testGateway()
 {
     EchoServer echo;
@@ -1946,6 +2135,7 @@ int main(int argc, char **argv)
     testRules();
     testDns();
     testProxies();
+    testProxyDns();
     testUdpProxy();
     testGateway();
     testInterfaces();

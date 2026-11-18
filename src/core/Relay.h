@@ -13,6 +13,7 @@
 #include <functional>
 
 class QTcpServer;
+class ProxyDns;
 class Capture;
 class CertAuthority;
 class DnsClient;
@@ -105,6 +106,7 @@ public:
     void setUdpInjector(UdpInjector injector) { m_udpInjector = std::move(injector); }
 
     DnsClient *dns() const { return m_dns; }
+    ProxyDns *proxyDns() const { return m_proxyDns; }
 
     // Optional packet capture. Set once from the relay thread before connections
     // arrive; nullptr means no capture is wired. Sessions feed it in pump().
@@ -143,6 +145,7 @@ private:
     RelayServer *m_server4 = nullptr;
     RelayServer *m_server6 = nullptr;
     DnsClient *m_dns = nullptr;
+    ProxyDns *m_proxyDns = nullptr;
     quint16 m_port = 0;
     bool m_hasV6 = false;
     quint64 m_nextId = 1;

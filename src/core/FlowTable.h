@@ -20,6 +20,7 @@ struct RedirectInfo {
     QString hostname;         // known target host name (DNS cache or fake DNS)
     bool fakeIp = false;      // dstAddr is a fake DNS address; the real IP is unknown
     RuleMatch match;
+    NameResolver resolver;    // who resolves hostname, for a fake-DNS address
     qint64 createdMs = 0;
 };
 

@@ -20,7 +20,11 @@ public:
 
     bool bind(quint16 port = 0);
     quint16 port() const { return m_port; }
-    void resolve(const QString &hostname, Callback cb);
+    // useCache false: always ask the servers (to test whether they answer).
+    void resolve(const QString &hostname, Callback cb, bool useCache = true);
+    // Reads the system's DNS servers again and forgets cached answers, after
+    // the network changed.
+    void refreshServers();
 
     static QList<QHostAddress> systemDnsServers();
 

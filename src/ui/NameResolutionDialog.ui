@@ -49,6 +49,42 @@
     </widget>
    </item>
    <item>
+    <widget class="QGroupBox" name="resolverGroup">
+     <property name="title">
+      <string>Resolving through a proxy</string>
+     </property>
+     <layout class="QFormLayout" name="resolverLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="directLabel">
+        <property name="text">
+         <string>Resolver for direct connections:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="directCombo"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="serverLabel">
+        <property name="text">
+         <string>DNS server:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="serverEdit">
+        <property name="placeholderText">
+         <string>8.8.8.8</string>
+        </property>
+        <property name="toolTip">
+         <string>Asked over TCP, through the chosen proxy or chain</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QGroupBox" name="noteGroup">
      <property name="title">
       <string>Note</string>
@@ -136,12 +172,6 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</string>
  </widget>
  <resources/>
  <connections>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>accepted()</signal>
-   <receiver>NameResolutionDialog</receiver>
-   <slot>accept()</slot>
-  </connection>
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>

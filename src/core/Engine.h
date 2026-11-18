@@ -51,6 +51,8 @@ public:
     void closeConnection(quint64 id) { m_relay->closeConnection(id); }
     void resetProxyFailures() { m_relay->resetProxyFailures(); }
     void setLocalDnsAvailable(bool available) { m_interceptor->setLocalDnsAvailable(available); }
+    // The network changed: the relay's resolver reads the DNS servers again.
+    void networkChanged();
 
 private:
     FlowTable m_flows;
