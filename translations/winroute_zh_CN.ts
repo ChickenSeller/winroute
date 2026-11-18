@@ -1512,16 +1512,28 @@ A process that does not exit within %1 seconds is terminated.</source>
 %1 秒内未退出的进程将被强制结束。</translation>
     </message>
     <message>
-      <source>Asked %1 (pid %2) to close</source>
-      <translation>已请求 %1（PID %2）关闭</translation>
+      <source>End Process: %1 has no window, terminating it</source>
+      <translation>结束进程：%1 没有窗口，正在强制结束</translation>
     </message>
     <message>
-      <source>%1 (pid %2) has exited</source>
-      <translation>%1（PID %2）已退出</translation>
+      <source>End Process: asked %1 to close its windows</source>
+      <translation>结束进程：已请求 %1 关闭窗口</translation>
     </message>
     <message>
-      <source>%1 (pid %2) did not exit, terminating it</source>
-      <translation>%1（PID %2）未退出，正在强制结束</translation>
+      <source>End Process: %1 closed its windows and exited</source>
+      <translation>结束进程：%1 已关闭窗口并退出</translation>
+    </message>
+    <message>
+      <source>End Process: %1 ended</source>
+      <translation>结束进程：%1 已结束</translation>
+    </message>
+    <message>
+      <source>End Process: %1 did not exit within %2 seconds, terminating it</source>
+      <translation>结束进程：%1 在 %2 秒内未退出，正在强制结束</translation>
+    </message>
+    <message>
+      <source>End Process: %1 terminated</source>
+      <translation>结束进程：%1 已强制结束</translation>
     </message>
     <message>
       <source>Signed by %1 — click for details</source>
@@ -1770,12 +1782,8 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
       <translation>拦截方式：%1</translation>
     </message>
     <message>
-      <source>Cannot terminate process %1: %2</source>
-      <translation>无法结束进程 %1：%2</translation>
-    </message>
-    <message>
-      <source>%1 (pid %2) terminated</source>
-      <translation>%1（PID %2）已强制结束</translation>
+      <source>End Process: cannot end %1: %2</source>
+      <translation>结束进程：无法结束 %1：%2</translation>
     </message>
     <message>
       <source>Down %1, Up %2</source>

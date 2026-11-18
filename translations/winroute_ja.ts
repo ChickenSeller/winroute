@@ -1512,16 +1512,28 @@ A process that does not exit within %1 seconds is terminated.</source>
 %1 秒以内に終了しないプロセスは強制終了されます。</translation>
     </message>
     <message>
-      <source>Asked %1 (pid %2) to close</source>
-      <translation>%1（PID %2）に終了を要求しました</translation>
+      <source>End Process: %1 has no window, terminating it</source>
+      <translation>プロセスの終了：%1 にはウィンドウがないため、強制終了します</translation>
     </message>
     <message>
-      <source>%1 (pid %2) has exited</source>
-      <translation>%1（PID %2）が終了しました</translation>
+      <source>End Process: asked %1 to close its windows</source>
+      <translation>プロセスの終了：%1 にウィンドウを閉じるよう要求しました</translation>
     </message>
     <message>
-      <source>%1 (pid %2) did not exit, terminating it</source>
-      <translation>%1（PID %2）が終了しないため、強制終了します</translation>
+      <source>End Process: %1 closed its windows and exited</source>
+      <translation>プロセスの終了：%1 はウィンドウを閉じて終了しました</translation>
+    </message>
+    <message>
+      <source>End Process: %1 ended</source>
+      <translation>プロセスの終了：%1 を終了しました</translation>
+    </message>
+    <message>
+      <source>End Process: %1 did not exit within %2 seconds, terminating it</source>
+      <translation>プロセスの終了：%1 は %2 秒以内に終了しなかったため、強制終了します</translation>
+    </message>
+    <message>
+      <source>End Process: %1 terminated</source>
+      <translation>プロセスの終了：%1 を強制終了しました</translation>
     </message>
     <message>
       <source>Signed by %1 — click for details</source>
@@ -1770,12 +1782,8 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
       <translation>捕捉方式：%1</translation>
     </message>
     <message>
-      <source>Cannot terminate process %1: %2</source>
-      <translation>プロセス %1 を終了できません：%2</translation>
-    </message>
-    <message>
-      <source>%1 (pid %2) terminated</source>
-      <translation>%1（PID %2）を強制終了しました</translation>
+      <source>End Process: cannot end %1: %2</source>
+      <translation>プロセスの終了：%1 を終了できません：%2</translation>
     </message>
     <message>
       <source>Down %1, Up %2</source>

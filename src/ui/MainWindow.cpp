@@ -1123,22 +1123,26 @@ void MainWindow::endProcessSelected()
         return;
     for (quint32 pid : pids) {
         const QString name = procinfo::lookup(pid).name;
+        const QString who = tr("%1 (pid %2)").arg(name).arg(pid);
         // Close its windows first, so it can save and clean up as when the
         // user closes it; a process without windows is terminated at once.
         if (!procinfo::requestClose(pid)) {
-            terminateProcess(pid, name);
+            logVerbose(tr("End Process: %1 has no window, terminating it").arg(who));
+            terminateProcess(pid, who);
             continue;
         }
-        logNormal(tr("Asked %1 (pid %2) to close").arg(name).arg(pid));
+        logVerbose(tr("End Process: asked %1 to close its windows").arg(who));
         auto *timer = new QTimer(this);
         auto elapsed = std::make_shared<QElapsedTimer>();
         elapsed->start();
-        connect(timer, &QTimer::timeout, this, [this, timer, elapsed, pid, name] {
+        connect(timer, &QTimer::timeout, this, [this, timer, elapsed, pid, who] {
             if (!procinfo::isRunning(pid)) {
-                logNormal(tr("%1 (pid %2) has exited").arg(name).arg(pid));
+                logVerbose(tr("End Process: %1 closed its windows and exited").arg(who));
+                logNormal(tr("End Process: %1 ended").arg(who));
             } else if (elapsed->elapsed() >= kEndProcessGraceMs) {
-                logNormal(tr("%1 (pid %2) did not exit, terminating it").arg(name).arg(pid));
-                terminateProcess(pid, name);
+                logVerbose(tr("End Process: %1 did not exit within %2 seconds, terminating it")
+                               .arg(who).arg(kEndProcessGraceMs / 1000));
+                terminateProcess(pid, who);
             } else {
                 return;
             }
@@ -1149,13 +1153,15 @@ void MainWindow::endProcessSelected()
     }
 }
 
-void MainWindow::terminateProcess(quint32 pid, const QString &name)
+void MainWindow::terminateProcess(quint32 pid, const QString &who)
 {
     QString err;
-    if (!procinfo::terminate(pid, &err))
-        logError(tr("Cannot terminate process %1: %2").arg(pid).arg(err));
-    else
-        logNormal(tr("%1 (pid %2) terminated").arg(name).arg(pid));
+    if (!procinfo::terminate(pid, &err)) {
+        logError(tr("End Process: cannot end %1: %2").arg(who, err));
+    } else {
+        logVerbose(tr("End Process: %1 terminated").arg(who));
+        logNormal(tr("End Process: %1 ended").arg(who));
+    }
 }
 
 void MainWindow::createRuleForSelected()
