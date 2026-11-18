@@ -242,6 +242,39 @@ QIcon endProcess()
     });
 }
 
+QIcon copy()
+{
+    return render([](QPainter &p, double s) {
+        const double u = qMax(1.0, s / 20);
+        p.setPen(QPen(QColor(90, 100, 115), u));
+        p.setBrush(QColor(245, 247, 250));
+        // Back sheet, then the front sheet overlapping it.
+        p.drawRoundedRect(QRectF(s * 0.26, s * 0.18, s * 0.42, s * 0.52), u, u);
+        p.setBrush(QColor(255, 255, 255));
+        p.drawRoundedRect(QRectF(s * 0.14, s * 0.30, s * 0.42, s * 0.52), u, u);
+    });
+}
+
+QIcon reset()
+{
+    return render([](QPainter &p, double s) {
+        const double u = qMax(1.2, s / 12);
+        QRectF r(s * 0.24, s * 0.24, s * 0.52, s * 0.52);
+        p.setPen(QPen(QColor(70, 120, 200), u, Qt::SolidLine, Qt::RoundCap));
+        p.setBrush(Qt::NoBrush);
+        // A circular arrow: an arc with an arrowhead at its start.
+        p.drawArc(r, 70 * 16, 250 * 16);
+        const double a = 70 * M_PI / 180;
+        const QPointF tip(r.center().x() + r.width() / 2 * std::cos(a),
+                          r.center().y() - r.height() / 2 * std::sin(a));
+        p.setBrush(QColor(70, 120, 200));
+        p.setPen(Qt::NoPen);
+        QPolygonF head;
+        head << tip << tip + QPointF(-s * 0.02, -s * 0.16) << tip + QPointF(s * 0.17, -s * 0.06);
+        p.drawPolygon(head);
+    });
+}
+
 QIcon endProcessTree()
 {
     return render([](QPainter &p, double s) {

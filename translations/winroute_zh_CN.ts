@@ -1512,22 +1512,6 @@ Continue?</source>
       <translation>结束进程树</translation>
     </message>
     <message>
-      <source>Close the selected process(es) and their child processes?
-
-</source>
-      <translation>要关闭所选进程及其子进程吗？
-
-</translation>
-    </message>
-    <message>
-      <source>Close the following process(es)?
-
-</source>
-      <translation>要关闭以下进程吗？
-
-</translation>
-    </message>
-    <message>
       <source>End Process: %1 has no window, terminating it</source>
       <translation>结束进程：%1 没有窗口，正在强制结束</translation>
     </message>
@@ -1796,6 +1780,18 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>Interception: %1</source>
       <translation>拦截方式：%1</translation>
+    </message>
+    <message>
+      <source>Close %1?</source>
+      <translation>要关闭 %1 吗？</translation>
+    </message>
+    <message>
+      <source>Close the selected process and the processes it launched:</source>
+      <translation>要关闭所选进程及其启动的进程：</translation>
+    </message>
+    <message>
+      <source>Close the following processes:</source>
+      <translation>要关闭以下进程：</translation>
     </message>
     <message>
       <source>End Process: cannot end %1: %2</source>

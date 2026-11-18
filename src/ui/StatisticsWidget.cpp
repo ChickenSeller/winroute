@@ -1,4 +1,5 @@
 #include "StatisticsWidget.h"
+#include "Icons.h"
 #include "core/ProcessInfo.h"
 #include "core/Utils.h"
 
@@ -32,13 +33,13 @@ StatisticsWidget::StatisticsWidget(IconFn iconFn, QWidget *parent)
         QTreeWidgetItem *app = item && !item->parent() ? item : nullptr;
         const QSet<quint32> pids = app ? runningPids(app) : QSet<quint32>();
         if (!pids.isEmpty()) {
-            menu.addAction(tr("&End Process"), this, [this, pids] { emit endProcessesRequested(pids, false); });
-            menu.addAction(tr("End Process &Tree"), this, [this, pids] { emit endProcessesRequested(pids, true); });
+            menu.addAction(icons::endProcess(), tr("&End Process"), this, [this, pids] { emit endProcessesRequested(pids, false); });
+            menu.addAction(icons::endProcessTree(), tr("End Process &Tree"), this, [this, pids] { emit endProcessesRequested(pids, true); });
             menu.addSeparator();
         }
-        menu.addAction(tr("&Copy"), this, &StatisticsWidget::copyAll);
+        menu.addAction(icons::copy(), tr("&Copy"), this, &StatisticsWidget::copyAll);
         menu.addSeparator();
-        menu.addAction(tr("&Reset Statistics"), this, &StatisticsWidget::resetStatistics);
+        menu.addAction(icons::reset(), tr("&Reset Statistics"), this, &StatisticsWidget::resetStatistics);
         menu.exec(viewport()->mapToGlobal(pos));
     });
     // A process can exit without any traffic, so poll the statuses too.

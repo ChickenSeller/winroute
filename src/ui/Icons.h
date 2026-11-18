@@ -26,5 +26,7 @@ QIcon profile();
 QIcon arrowUp();
 QIcon arrowDown();
 QIcon certificate();
+QIcon copy();
+QIcon reset();
 
 } // namespace icons

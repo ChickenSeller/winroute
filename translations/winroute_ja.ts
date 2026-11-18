@@ -1512,22 +1512,6 @@ Continue?</source>
       <translation>プロセスツリーの終了</translation>
     </message>
     <message>
-      <source>Close the selected process(es) and their child processes?
-
-</source>
-      <translation>選択したプロセスとその子プロセスを閉じますか？
-
-</translation>
-    </message>
-    <message>
-      <source>Close the following process(es)?
-
-</source>
-      <translation>次のプロセスを閉じますか？
-
-</translation>
-    </message>
-    <message>
       <source>End Process: %1 has no window, terminating it</source>
       <translation>プロセスの終了：%1 にはウィンドウがないため、強制終了します</translation>
     </message>
@@ -1796,6 +1780,18 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>Interception: %1</source>
       <translation>捕捉方式：%1</translation>
+    </message>
+    <message>
+      <source>Close %1?</source>
+      <translation>%1 を閉じますか？</translation>
+    </message>
+    <message>
+      <source>Close the selected process and the processes it launched:</source>
+      <translation>選択したプロセスと、それが起動したプロセスを閉じます：</translation>
+    </message>
+    <message>
+      <source>Close the following processes:</source>
+      <translation>次のプロセスを閉じます：</translation>
     </message>
     <message>
       <source>End Process: cannot end %1: %2</source>

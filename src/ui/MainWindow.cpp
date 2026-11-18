@@ -41,6 +41,7 @@
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QLabel>
+#include <QListWidget>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -56,6 +57,7 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QTreeView>
+#include <algorithm>
 #include <memory>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -208,7 +210,7 @@ void MainWindow::createActions()
     m_actEndProcessTree->setStatusTip(tr("Terminate the selected connection's process and its child processes"));
     m_actEndProcessTree->setIconText(tr("End Tree"));
     m_actCreateRule = act(tr("&Create Rule for this Application..."), &MainWindow::createRuleForSelected, {}, icons::rules());
-    m_actCopyConn = act(tr("&Copy"), &MainWindow::copyConnections, QKeySequence::Copy);
+    m_actCopyConn = act(tr("&Copy"), &MainWindow::copyConnections, QKeySequence::Copy, icons::copy());
     m_actCopyConn->setShortcutContext(Qt::WidgetShortcut);
 
     m_actLogCopy = act(tr("&Copy"), [this] { m_log->copy(); });
@@ -436,7 +438,8 @@ void MainWindow::createToolBar()
     m_toolBar->addSeparator();
     m_toolBar->addAction(m_actDisconnect);
     m_toolBar->addAction(m_actEndProcess);
-    m_toolBar->addAction(m_actEndProcessTree);
+    // End Process Tree is risky (it ends a whole launch chain), so it stays in
+    // the context menu only, not on the toolbar.
     m_toolBar->addSeparator();
     m_toolBar->addAction(checker);
     m_toolBar->addAction(capture);
@@ -1140,24 +1143,54 @@ void MainWindow::endProcessTreeSelected()
     endProcesses(pids, true);
 }
 
-// Closes each process (its windows first, then terminate) after one
-// confirmation. `tree` only changes the wording, as the caller already
-// expanded the selection to the descendants.
+// Closes each process (its windows first, then terminate) after confirmation.
+// `tree` only changes the wording; the caller already expanded the selection.
+// One process confirms with a message box; several let the user pick which.
 void MainWindow::endProcesses(const QSet<quint32> &pids, bool tree)
 {
     if (pids.isEmpty())
         return;
-    QStringList names;
-    for (quint32 pid : pids)
-        names << tr("%1 (pid %2)").arg(procinfo::lookup(pid).name).arg(pid);
-    names.sort(Qt::CaseInsensitive);
     const QString title = tree ? tr("End Process Tree") : tr("End Process");
-    const QString head = tree ? tr("Close the selected process(es) and their child processes?\n\n")
-                              : tr("Close the following process(es)?\n\n");
-    if (QMessageBox::question(this, title, head + names.join('\n')) != QMessageBox::Yes)
-        return;
-    for (quint32 pid : pids)
+    auto label = [](quint32 pid) { return tr("%1 (pid %2)").arg(procinfo::lookup(pid).name).arg(pid); };
+
+    if (pids.size() == 1) {
+        const quint32 pid = *pids.begin();
+        if (QMessageBox::question(this, title, tr("Close %1?").arg(label(pid))) != QMessageBox::Yes)
+            return;
         endProcess(pid);
+        return;
+    }
+
+    // Order by name, then pid, for a stable, readable list.
+    QList<quint32> list(pids.begin(), pids.end());
+    std::sort(list.begin(), list.end(), [&](quint32 a, quint32 b) {
+        const QString na = procinfo::lookup(a).name, nb = procinfo::lookup(b).name;
+        return na == nb ? a < b : na.compare(nb, Qt::CaseInsensitive) < 0;
+    });
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(title);
+    auto *layout = new QVBoxLayout(&dlg);
+    layout->addWidget(new QLabel(tree ? tr("Close the selected process and the processes it launched:")
+                                      : tr("Close the following processes:"), &dlg));
+    auto *listWidget = new QListWidget(&dlg);
+    for (quint32 pid : list) {
+        auto *it = new QListWidgetItem(label(pid), listWidget);
+        it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
+        it->setCheckState(Qt::Checked);   // all selected by default
+        it->setData(Qt::UserRole, pid);
+    }
+    layout->addWidget(listWidget);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    layout->addWidget(buttons);
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    dlg.resize(380, 360);
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+    for (int i = 0; i < listWidget->count(); ++i)
+        if (listWidget->item(i)->checkState() == Qt::Checked)
+            endProcess(listWidget->item(i)->data(Qt::UserRole).toUInt());
 }
 
 void MainWindow::endProcess(quint32 pid)
