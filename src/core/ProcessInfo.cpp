@@ -210,8 +210,30 @@ bool isRunning(quint32 pid)
     return running;
 }
 
+// Enables SeDebugPrivilege on our own token, so OpenProcess can reach
+// processes whose handle it otherwise could not (e.g. a process that stripped
+// PROCESS_TERMINATE from its DACL). Runs once; needs the elevated token to
+// hold the privilege, which it does when WinRoute runs as administrator.
+static void enableDebugPrivilege()
+{
+    static bool done = false;
+    if (done)
+        return;
+    done = true;
+    HANDLE token = nullptr;
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &token))
+        return;
+    TOKEN_PRIVILEGES tp{};
+    tp.PrivilegeCount = 1;
+    tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+    if (LookupPrivilegeValueW(nullptr, SE_DEBUG_NAME, &tp.Privileges[0].Luid))
+        AdjustTokenPrivileges(token, FALSE, &tp, sizeof(tp), nullptr, nullptr);
+    CloseHandle(token);
+}
+
 bool terminate(quint32 pid, QString *error)
 {
+    enableDebugPrivilege();
     HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
     if (!h || !TerminateProcess(h, 1)) {
         if (error)
