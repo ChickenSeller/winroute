@@ -204,6 +204,9 @@ void MainWindow::createActions()
     m_actEndProcess = act(tr("&End Process"), &MainWindow::endProcessSelected, {}, icons::endProcess());
     m_actEndProcess->setStatusTip(tr("Terminate parent process of the selected connection"));
     m_actEndProcess->setIconText(tr("End Process"));
+    m_actEndProcessTree = act(tr("End Process &Tree"), &MainWindow::endProcessTreeSelected, {}, icons::endProcessTree());
+    m_actEndProcessTree->setStatusTip(tr("Terminate the selected connection's process and its child processes"));
+    m_actEndProcessTree->setIconText(tr("End Tree"));
     m_actCreateRule = act(tr("&Create Rule for this Application..."), &MainWindow::createRuleForSelected, {}, icons::rules());
     m_actCopyConn = act(tr("&Copy"), &MainWindow::copyConnections, QKeySequence::Copy);
     m_actCopyConn->setShortcutContext(Qt::WidgetShortcut);
@@ -433,6 +436,7 @@ void MainWindow::createToolBar()
     m_toolBar->addSeparator();
     m_toolBar->addAction(m_actDisconnect);
     m_toolBar->addAction(m_actEndProcess);
+    m_toolBar->addAction(m_actEndProcessTree);
     m_toolBar->addSeparator();
     m_toolBar->addAction(checker);
     m_toolBar->addAction(capture);
@@ -470,6 +474,7 @@ void MainWindow::createCentral()
         QMenu menu;
         menu.addAction(m_actDisconnect);
         menu.addAction(m_actEndProcess);
+        menu.addAction(m_actEndProcessTree);
         menu.addSeparator();
         menu.addAction(m_actCreateRule);
         menu.addSeparator();
@@ -1111,46 +1116,69 @@ void MainWindow::endProcessSelected()
     QSet<quint32> pids;
     for (int row : selectedRows())
         pids.insert(m_connModel->pidAt(row));
+    endProcesses(pids, false);
+}
+
+void MainWindow::endProcessTreeSelected()
+{
+    QSet<quint32> pids;
+    for (int row : selectedRows())
+        for (quint32 pid : procinfo::descendants(m_connModel->pidAt(row)))
+            pids.insert(pid);
+    endProcesses(pids, true);
+}
+
+// Closes each process (its windows first, then terminate) after one
+// confirmation. `tree` only changes the wording, as the caller already
+// expanded the selection to the descendants.
+void MainWindow::endProcesses(const QSet<quint32> &pids, bool tree)
+{
     if (pids.isEmpty())
         return;
     QStringList names;
     for (quint32 pid : pids)
         names << tr("%1 (pid %2)").arg(procinfo::lookup(pid).name).arg(pid);
-    if (QMessageBox::question(this, tr("End Process"),
-                              tr("Close the following process(es)?\n\n") + names.join('\n')
+    names.sort(Qt::CaseInsensitive);
+    const QString title = tree ? tr("End Process Tree") : tr("End Process");
+    const QString head = tree ? tr("Close the selected process(es) and their child processes?\n\n")
+                              : tr("Close the following process(es)?\n\n");
+    if (QMessageBox::question(this, title, head + names.join('\n')
                                   + tr("\n\nA process that does not exit within %1 seconds is terminated.").arg(kEndProcessGraceMs / 1000))
         != QMessageBox::Yes)
         return;
-    for (quint32 pid : pids) {
-        const QString name = procinfo::lookup(pid).name;
-        const QString who = tr("%1 (pid %2)").arg(name).arg(pid);
-        // Close its windows first, so it can save and clean up as when the
-        // user closes it; a process without windows is terminated at once.
-        if (!procinfo::requestClose(pid)) {
-            logVerbose(tr("End Process: %1 has no window, terminating it").arg(who));
-            terminateProcess(pid, who);
-            continue;
-        }
-        logVerbose(tr("End Process: asked %1 to close its windows").arg(who));
-        auto *timer = new QTimer(this);
-        auto elapsed = std::make_shared<QElapsedTimer>();
-        elapsed->start();
-        connect(timer, &QTimer::timeout, this, [this, timer, elapsed, pid, who] {
-            if (!procinfo::isRunning(pid)) {
-                logVerbose(tr("End Process: %1 closed its windows and exited").arg(who));
-                logNormal(tr("End Process: %1 ended").arg(who));
-            } else if (elapsed->elapsed() >= kEndProcessGraceMs) {
-                logVerbose(tr("End Process: %1 did not exit within %2 seconds, terminating it")
-                               .arg(who).arg(kEndProcessGraceMs / 1000));
-                terminateProcess(pid, who);
-            } else {
-                return;
-            }
-            timer->stop();
-            timer->deleteLater();
-        });
-        timer->start(250);
+    for (quint32 pid : pids)
+        endProcess(pid);
+}
+
+void MainWindow::endProcess(quint32 pid)
+{
+    const QString who = tr("%1 (pid %2)").arg(procinfo::lookup(pid).name).arg(pid);
+    // Close its windows first, so it can save and clean up as when the user
+    // closes it; a process without windows is terminated at once.
+    if (!procinfo::requestClose(pid)) {
+        logVerbose(tr("End Process: %1 has no window, terminating it").arg(who));
+        terminateProcess(pid, who);
+        return;
     }
+    logVerbose(tr("End Process: asked %1 to close its windows").arg(who));
+    auto *timer = new QTimer(this);
+    auto elapsed = std::make_shared<QElapsedTimer>();
+    elapsed->start();
+    connect(timer, &QTimer::timeout, this, [this, timer, elapsed, pid, who] {
+        if (!procinfo::isRunning(pid)) {
+            logVerbose(tr("End Process: %1 closed its windows and exited").arg(who));
+            logNormal(tr("End Process: %1 ended").arg(who));
+        } else if (elapsed->elapsed() >= kEndProcessGraceMs) {
+            logVerbose(tr("End Process: %1 did not exit within %2 seconds, terminating it")
+                           .arg(who).arg(kEndProcessGraceMs / 1000));
+            terminateProcess(pid, who);
+        } else {
+            return;
+        }
+        timer->stop();
+        timer->deleteLater();
+    });
+    timer->start(250);
 }
 
 void MainWindow::terminateProcess(quint32 pid, const QString &who)

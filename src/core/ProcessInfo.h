@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QHostAddress>
+#include <QList>
 #include <QString>
 
 namespace procinfo {
@@ -25,6 +26,9 @@ quint32 udpOwnerPid(const QHostAddress &localAddr, quint16 localPort);
 quint32 currentSessionId();
 bool isElevated();
 bool terminate(quint32 pid, QString *error = nullptr);
+// The process and all its descendants (children, their children, ...), from a
+// single snapshot, the process itself first. For ending a whole process tree.
+QList<quint32> descendants(quint32 pid);
 // Asks the process to quit as if the user closed it: WM_CLOSE to each of its
 // visible top-level windows. False when it has no such window.
 bool requestClose(quint32 pid);

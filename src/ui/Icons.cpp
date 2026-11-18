@@ -242,6 +242,33 @@ QIcon endProcess()
     });
 }
 
+QIcon endProcessTree()
+{
+    return render([](QPainter &p, double s) {
+        QPolygonF oct;
+        for (int i = 0; i < 8; ++i) {
+            const double a = (22.5 + i * 45) * M_PI / 180;
+            oct << QPointF(s * 0.5 + std::cos(a) * s * 0.42, s * 0.5 + std::sin(a) * s * 0.42);
+        }
+        p.setPen(QPen(QColor(120, 20, 20), qMax(1.0, s / 32)));
+        p.setBrush(QColor(200, 40, 40));
+        p.drawPolygon(oct);
+        // A small tree: a parent node branching to two children, in white.
+        p.setPen(QPen(Qt::white, qMax(1.0, s * 0.07)));
+        const QPointF top(s * 0.5, s * 0.3);
+        const QPointF left(s * 0.34, s * 0.64), right(s * 0.66, s * 0.64);
+        p.drawLine(top, QPointF(s * 0.5, s * 0.47));
+        p.drawLine(QPointF(s * 0.34, s * 0.47), QPointF(s * 0.66, s * 0.47));
+        p.drawLine(QPointF(s * 0.34, s * 0.47), left);
+        p.drawLine(QPointF(s * 0.66, s * 0.47), right);
+        p.setPen(Qt::NoPen);
+        p.setBrush(Qt::white);
+        const double r = s * 0.075;
+        for (const QPointF &c : {top, left, right})
+            p.drawEllipse(c, r, r);
+    });
+}
+
 QIcon chain()
 {
     return render([](QPainter &p, double s) {

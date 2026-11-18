@@ -1180,6 +1180,18 @@ Continue?</source>
       <translation>選択した接続の親プロセスを終了します</translation>
     </message>
     <message>
+      <source>End Process &amp;Tree</source>
+      <translation>プロセスツリーの終了(&amp;T)</translation>
+    </message>
+    <message>
+      <source>Terminate the selected connection's process and its child processes</source>
+      <translation>選択した接続のプロセスとその子プロセスを終了します</translation>
+    </message>
+    <message>
+      <source>End Tree</source>
+      <translation>ツリーを終了</translation>
+    </message>
+    <message>
       <source>&amp;Create Rule for this Application...</source>
       <translation>このアプリケーションのルールを作成(&amp;C)...</translation>
     </message>
@@ -1494,6 +1506,18 @@ Continue?</source>
     <message>
       <source>The network driver is installed but not running</source>
       <translation>ネットワークドライバーはインストール済みですが実行されていません</translation>
+    </message>
+    <message>
+      <source>End Process Tree</source>
+      <translation>プロセスツリーの終了</translation>
+    </message>
+    <message>
+      <source>Close the selected process(es) and their child processes?
+
+</source>
+      <translation>選択したプロセスとその子プロセスを閉じますか？
+
+</translation>
     </message>
     <message>
       <source>Close the following process(es)?

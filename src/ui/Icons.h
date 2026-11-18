@@ -16,6 +16,7 @@ QIcon pause();
 QIcon lock();
 QIcon disconnect();
 QIcon endProcess();
+QIcon endProcessTree();
 QIcon chain();
 QIcon proxy();
 QIcon proxyService();

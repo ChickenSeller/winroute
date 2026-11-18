@@ -4,11 +4,13 @@
 #include <QFileInfo>
 #include <QHash>
 #include <QMutex>
+#include <QSet>
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <iphlpapi.h>
+#include <tlhelp32.h>
 #include <vector>
 
 namespace procinfo {
@@ -181,6 +183,35 @@ bool isElevated()
     const bool ok = GetTokenInformation(token, TokenElevation, &e, sizeof(e), &len) && e.TokenIsElevated;
     CloseHandle(token);
     return ok;
+}
+
+QList<quint32> descendants(quint32 pid)
+{
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snap == INVALID_HANDLE_VALUE)
+        return {pid};
+    // parent pid -> its child pids, from one consistent snapshot.
+    QHash<quint32, QList<quint32>> children;
+    PROCESSENTRY32W e{};
+    e.dwSize = sizeof(e);
+    for (BOOL ok = Process32FirstW(snap, &e); ok; ok = Process32NextW(snap, &e))
+        if (e.th32ProcessID != e.th32ParentProcessID)   // pid 0 is its own parent
+            children[e.th32ParentProcessID] << e.th32ProcessID;
+    CloseHandle(snap);
+
+    QList<quint32> out;
+    QList<quint32> queue{pid};
+    QSet<quint32> seen{pid};
+    for (int i = 0; i < queue.size(); ++i) {
+        const quint32 cur = queue[i];
+        out << cur;
+        for (quint32 child : children.value(cur))
+            if (!seen.contains(child)) {   // guard against a parent-pid cycle
+                seen.insert(child);
+                queue << child;
+            }
+    }
+    return out;
 }
 
 bool requestClose(quint32 pid)

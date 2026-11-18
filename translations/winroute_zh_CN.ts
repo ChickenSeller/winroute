@@ -1180,6 +1180,18 @@ Continue?</source>
       <translation>结束所选连接所属的进程</translation>
     </message>
     <message>
+      <source>End Process &amp;Tree</source>
+      <translation>结束进程树(&amp;T)</translation>
+    </message>
+    <message>
+      <source>Terminate the selected connection's process and its child processes</source>
+      <translation>结束所选连接的进程及其子进程</translation>
+    </message>
+    <message>
+      <source>End Tree</source>
+      <translation>结束进程树</translation>
+    </message>
+    <message>
       <source>&amp;Create Rule for this Application...</source>
       <translation>为此应用程序创建规则(&amp;C)...</translation>
     </message>
@@ -1494,6 +1506,18 @@ Continue?</source>
     <message>
       <source>The network driver is installed but not running</source>
       <translation>网络驱动已安装但未运行</translation>
+    </message>
+    <message>
+      <source>End Process Tree</source>
+      <translation>结束进程树</translation>
+    </message>
+    <message>
+      <source>Close the selected process(es) and their child processes?
+
+</source>
+      <translation>要关闭所选进程及其子进程吗？
+
+</translation>
     </message>
     <message>
       <source>Close the following process(es)?
