@@ -41,6 +41,8 @@ const NetFilterApi *NetFilterApi::load(QString *error)
     get(api.getProcessNameFromKernel, "nf_getProcessNameFromKernel");
     get(api.adjustProcessPriviledges, "nf_adjustProcessPriviledges");
     get(api.getDriverType, "nf_getDriverType");
+    api.udpDisableFiltering = reinterpret_cast<decltype(api.udpDisableFiltering)>(
+        reinterpret_cast<void *>(GetProcAddress(h, "nf_udpDisableFiltering")));
     if (!missing.isEmpty()) {
         if (error)
             *error = QCoreApplication::translate("Interceptor", "nfapi.dll is missing exports: ") + missing.join(", ") + QCoreApplication::translate("Interceptor", " (the C API build is required)");

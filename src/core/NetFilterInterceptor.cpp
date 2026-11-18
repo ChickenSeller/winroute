@@ -1035,6 +1035,7 @@ void NetFilterInterceptor::handleUdpProxy(ENDPOINT_ID id, const unsigned char *r
         return;
     }
 
+    bool release = false;   // hand the whole socket back to the kernel
     if (!decided) {
         bool skip = false;
         if (!haveProc) {
@@ -1053,6 +1054,12 @@ void NetFilterInterceptor::handleUdpProxy(ENDPOINT_ID id, const unsigned char *r
             sock.appName = appName;
             sock.appPath = appPath;
             sock.haveProc = true;
+            // Sockets that are never tunnelled (services, other users, apps
+            // whose rules are all direct) are released from filtering. Passing
+            // every datagram of a long-lived tunnel (ZeroTier, WireGuard,
+            // OpenVPN) through user mode and re-injecting it breaks its
+            // established path when WinRoute starts.
+            release = skip || !engine->mayDivertUdp(appPath, appName);
         }
         RuleMatch match;
         if (!skip) {
@@ -1107,6 +1114,11 @@ void NetFilterInterceptor::handleUdpProxy(ENDPOINT_ID id, const unsigned char *r
         break;
     }
     m_api->udpPostSend(id, remote, buf, len, opt);
+    if (release && m_api->udpDisableFiltering) {
+        const NF_STATUS st = m_api->udpDisableFiltering(id);
+        if (st == NF_STATUS_SUCCESS)
+            logDebug(QCoreApplication::translate("Interceptor", "%1 - UDP socket is not tunnelled, filtering disabled").arg(appName));
+    }
 }
 
 // Decides what to do with a UDP flow (one target of one socket). Logs the

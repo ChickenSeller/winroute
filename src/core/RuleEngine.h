@@ -29,6 +29,11 @@ public:
 
     RuleMatch match(const ConnectionRequest &req) const;
 
+    // Whether any target could send this application's UDP somewhere other
+    // than straight out: through a SOCKS5 proxy, into a block rule, or out of
+    // a bound adapter. When it cannot, its sockets need no filtering at all.
+    bool mayDivertUdp(const QString &appPath, const QString &appName) const;
+
     const Profile &profile() const { return m_profile; }
 
     // Exposed for tests and for the DNS exclusion list.

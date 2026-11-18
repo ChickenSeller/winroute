@@ -44,6 +44,37 @@ RuleMatch RuleEngine::match(const ConnectionRequest &req) const
     return none;
 }
 
+bool RuleEngine::mayDivertUdp(const QString &appPath, const QString &appName) const
+{
+    for (const auto &c : m_rules) {
+        if (!c.enabled)
+            continue;
+        if (!c.apps.isEmpty() && !matchAppList(c.apps, appPath, appName))
+            continue;
+        const RuleAction &a = c.result.action;
+        switch (a.type) {
+        case ActionType::Block:
+            return true;
+        case ActionType::Direct:
+            if (!a.interfaceId.isEmpty())
+                return true;
+            break;
+        case ActionType::Proxy: {
+            const ProxyServer *p = m_profile.proxyById(a.id);
+            if (p && p->type == ProxyType::Socks5)
+                return true;
+            break;
+        }
+        case ActionType::Chain:
+            break;   // chains carry no UDP
+        }
+        // A rule for every target ends the search; later rules are unreachable.
+        if (c.targets.isEmpty() && c.ports.trimmed().isEmpty())
+            return false;
+    }
+    return false;
+}
+
 bool RuleEngine::matchAppList(const QStringList &patterns, const QString &path, const QString &name)
 {
     const QString nativePath = QString(path).replace(u'/', u'\\');

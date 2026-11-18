@@ -233,6 +233,19 @@ static void testRules()
     m = engine.match(req);
     CHECK(m.ruleIndex == 2 && m.ruleName == "Default" && m.action.type == ActionType::Direct);
 
+    // UDP of an app with only direct rules is never diverted, so its sockets
+    // can be released from filtering; a SOCKS5 or block rule keeps them.
+    CHECK(engine.mayDivertUdp("C:\\Program Files\\Parsec\\parsecd.exe", "parsecd.exe"));
+    CHECK(!engine.mayDivertUdp("C:\\ZeroTier\\zerotier-one_x64.exe", "zerotier-one_x64.exe"));
+    {
+        Profile b = p;
+        b.rules[2].action.type = ActionType::Block;   // the Default rule
+        CHECK(RuleEngine(b).mayDivertUdp("C:\\x\\chrome.exe", "chrome.exe"));
+        b.rules[1].action.type = ActionType::Chain;   // chains carry no UDP
+        b.rules[2].action.type = ActionType::Direct;
+        CHECK(!RuleEngine(b).mayDivertUdp("C:\\Program Files\\Parsec\\parsecd.exe", "parsecd.exe"));
+    }
+
     // disabled rule is skipped
     p.rules[1].enabled = false;
     RuleEngine engine2(p);
