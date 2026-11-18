@@ -21,7 +21,7 @@ Make sure that [Connection Loop Detection](./advanced#connection-loop-detection)
 
 ## The proxy server accepts host names only, not IP addresses
 
-Select [Use target hostname in proxy request if available](./proxies#advanced-settings) in the proxy's **Advanced...** settings, or enable [Resolve hostnames through proxy](./dns#resolve-hostnames-through-proxy).
+Select [Use target hostname in proxy request if available](./proxies#advanced-settings) in the proxy's **Advanced...** settings, or enable [Resolve hostnames through proxy](./dns#resolve-hostnames-through-proxy). You can also choose **Through a proxy** in that rule's [Host name resolution](./rules#host-name-resolution) only.
 
 ## Browsers report a certificate error after HTTPS decryption is enabled
 
@@ -30,6 +30,14 @@ The device does not trust the WinRoute root certificate. On this computer, click
 ## Other devices cannot connect to the proxy gateway
 
 Make sure that Windows Firewall allows the gateway ports, that the device is on the same network as this computer, and that the router does not isolate clients. See [Proxy Gateway](./gateway#using-the-gateway-from-other-devices).
+
+## Only some rules should resolve host names through a proxy
+
+Leave the profile's **Resolve hostnames through proxy** off, and set **Resolve host names** to **Through a proxy** under **Advanced...** of the rules that need it. A specific proxy or chain can also be chosen to resolve the names; see [Host name resolution](./rules#host-name-resolution).
+
+## A VPN (such as ZeroTier or WireGuard) disconnects when WinRoute starts
+
+Since 0.9.1, UDP connections that are never forwarded (unhandled services, programs with only Direct rules) are handed back to the system after their first packet and no longer pass through WinRoute. If the VPN still disconnects, restart its service; if [Route UDP through SOCKS5](./advanced#route-udp-through-socks5) is on, you can also turn it off for a while to narrow the problem down.
 
 ## Can WinRoute be used together with Proxifier?
 
