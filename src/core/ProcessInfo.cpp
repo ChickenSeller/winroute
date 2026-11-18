@@ -183,6 +183,33 @@ bool isElevated()
     return ok;
 }
 
+bool requestClose(quint32 pid)
+{
+    struct Ctx { DWORD pid; bool sent; } ctx{pid, false};
+    EnumWindows([](HWND w, LPARAM p) -> BOOL {
+        auto *c = reinterpret_cast<Ctx *>(p);
+        DWORD owner = 0;
+        GetWindowThreadProcessId(w, &owner);
+        // Visible, unowned top-level windows: the ones a user would close.
+        if (owner == c->pid && IsWindowVisible(w) && !GetWindow(w, GW_OWNER)) {
+            PostMessageW(w, WM_CLOSE, 0, 0);
+            c->sent = true;
+        }
+        return TRUE;
+    }, reinterpret_cast<LPARAM>(&ctx));
+    return ctx.sent;
+}
+
+bool isRunning(quint32 pid)
+{
+    HANDLE h = OpenProcess(SYNCHRONIZE, FALSE, pid);
+    if (!h)
+        return false;
+    const bool running = WaitForSingleObject(h, 0) == WAIT_TIMEOUT;
+    CloseHandle(h);
+    return running;
+}
+
 bool terminate(quint32 pid, QString *error)
 {
     HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, pid);

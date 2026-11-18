@@ -1496,6 +1496,34 @@ Continue?</source>
       <translation>ネットワークドライバーはインストール済みですが実行されていません</translation>
     </message>
     <message>
+      <source>Close the following process(es)?
+
+</source>
+      <translation>次のプロセスを閉じますか？
+
+</translation>
+    </message>
+    <message>
+      <source>
+
+A process that does not exit within %1 seconds is terminated.</source>
+      <translation>
+
+%1 秒以内に終了しないプロセスは強制終了されます。</translation>
+    </message>
+    <message>
+      <source>Asked %1 (pid %2) to close</source>
+      <translation>%1（PID %2）に終了を要求しました</translation>
+    </message>
+    <message>
+      <source>%1 (pid %2) has exited</source>
+      <translation>%1（PID %2）が終了しました</translation>
+    </message>
+    <message>
+      <source>%1 (pid %2) did not exit, terminating it</source>
+      <translation>%1（PID %2）が終了しないため、強制終了します</translation>
+    </message>
+    <message>
       <source>Signed by %1 — click for details</source>
       <translation>署名者：%1 — クリックで詳細</translation>
     </message>
@@ -1742,16 +1770,12 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
       <translation>捕捉方式：%1</translation>
     </message>
     <message>
-      <source>Terminate the following process(es)?
-
-</source>
-      <translation>次のプロセスを終了しますか？
-
-</translation>
-    </message>
-    <message>
       <source>Cannot terminate process %1: %2</source>
       <translation>プロセス %1 を終了できません：%2</translation>
+    </message>
+    <message>
+      <source>%1 (pid %2) terminated</source>
+      <translation>%1（PID %2）を強制終了しました</translation>
     </message>
     <message>
       <source>Down %1, Up %2</source>

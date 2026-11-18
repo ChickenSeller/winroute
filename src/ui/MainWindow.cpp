@@ -35,6 +35,7 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QHeaderView>
@@ -55,6 +56,7 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QTreeView>
+#include <memory>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -1101,6 +1103,9 @@ void MainWindow::disconnectSelected()
         m_engine->closeConnection(m_connModel->idAt(row));
 }
 
+// How long a process asked to close may take before it is terminated.
+static constexpr int kEndProcessGraceMs = 5000;
+
 void MainWindow::endProcessSelected()
 {
     QSet<quint32> pids;
@@ -1111,13 +1116,46 @@ void MainWindow::endProcessSelected()
     QStringList names;
     for (quint32 pid : pids)
         names << tr("%1 (pid %2)").arg(procinfo::lookup(pid).name).arg(pid);
-    if (QMessageBox::question(this, tr("End Process"), tr("Terminate the following process(es)?\n\n") + names.join('\n')) != QMessageBox::Yes)
+    if (QMessageBox::question(this, tr("End Process"),
+                              tr("Close the following process(es)?\n\n") + names.join('\n')
+                                  + tr("\n\nA process that does not exit within %1 seconds is terminated.").arg(kEndProcessGraceMs / 1000))
+        != QMessageBox::Yes)
         return;
     for (quint32 pid : pids) {
-        QString err;
-        if (!procinfo::terminate(pid, &err))
-            logError(tr("Cannot terminate process %1: %2").arg(pid).arg(err));
+        const QString name = procinfo::lookup(pid).name;
+        // Close its windows first, so it can save and clean up as when the
+        // user closes it; a process without windows is terminated at once.
+        if (!procinfo::requestClose(pid)) {
+            terminateProcess(pid, name);
+            continue;
+        }
+        logNormal(tr("Asked %1 (pid %2) to close").arg(name).arg(pid));
+        auto *timer = new QTimer(this);
+        auto elapsed = std::make_shared<QElapsedTimer>();
+        elapsed->start();
+        connect(timer, &QTimer::timeout, this, [this, timer, elapsed, pid, name] {
+            if (!procinfo::isRunning(pid)) {
+                logNormal(tr("%1 (pid %2) has exited").arg(name).arg(pid));
+            } else if (elapsed->elapsed() >= kEndProcessGraceMs) {
+                logNormal(tr("%1 (pid %2) did not exit, terminating it").arg(name).arg(pid));
+                terminateProcess(pid, name);
+            } else {
+                return;
+            }
+            timer->stop();
+            timer->deleteLater();
+        });
+        timer->start(250);
     }
+}
+
+void MainWindow::terminateProcess(quint32 pid, const QString &name)
+{
+    QString err;
+    if (!procinfo::terminate(pid, &err))
+        logError(tr("Cannot terminate process %1: %2").arg(pid).arg(err));
+    else
+        logNormal(tr("%1 (pid %2) terminated").arg(name).arg(pid));
 }
 
 void MainWindow::createRuleForSelected()

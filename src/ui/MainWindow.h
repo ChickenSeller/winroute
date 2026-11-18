@@ -83,6 +83,7 @@ private:
     QList<int> selectedRows() const;
     void disconnectSelected();
     void endProcessSelected();
+    void terminateProcess(quint32 pid, const QString &name);
     void createRuleForSelected();
     void copyConnections();
 

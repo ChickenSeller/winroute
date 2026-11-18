@@ -25,5 +25,10 @@ quint32 udpOwnerPid(const QHostAddress &localAddr, quint16 localPort);
 quint32 currentSessionId();
 bool isElevated();
 bool terminate(quint32 pid, QString *error = nullptr);
+// Asks the process to quit as if the user closed it: WM_CLOSE to each of its
+// visible top-level windows. False when it has no such window.
+bool requestClose(quint32 pid);
+// Whether the process is still running (false once it has exited).
+bool isRunning(quint32 pid);
 
 } // namespace procinfo

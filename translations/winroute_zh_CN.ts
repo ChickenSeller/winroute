@@ -1496,6 +1496,34 @@ Continue?</source>
       <translation>网络驱动已安装但未运行</translation>
     </message>
     <message>
+      <source>Close the following process(es)?
+
+</source>
+      <translation>要关闭以下进程吗？
+
+</translation>
+    </message>
+    <message>
+      <source>
+
+A process that does not exit within %1 seconds is terminated.</source>
+      <translation>
+
+%1 秒内未退出的进程将被强制结束。</translation>
+    </message>
+    <message>
+      <source>Asked %1 (pid %2) to close</source>
+      <translation>已请求 %1（PID %2）关闭</translation>
+    </message>
+    <message>
+      <source>%1 (pid %2) has exited</source>
+      <translation>%1（PID %2）已退出</translation>
+    </message>
+    <message>
+      <source>%1 (pid %2) did not exit, terminating it</source>
+      <translation>%1（PID %2）未退出，正在强制结束</translation>
+    </message>
+    <message>
       <source>Signed by %1 — click for details</source>
       <translation>签名者：%1 — 点击查看详情</translation>
     </message>
@@ -1742,16 +1770,12 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
       <translation>拦截方式：%1</translation>
     </message>
     <message>
-      <source>Terminate the following process(es)?
-
-</source>
-      <translation>要结束以下进程吗？
-
-</translation>
-    </message>
-    <message>
       <source>Cannot terminate process %1: %2</source>
       <translation>无法结束进程 %1：%2</translation>
+    </message>
+    <message>
+      <source>%1 (pid %2) terminated</source>
+      <translation>%1（PID %2）已强制结束</translation>
     </message>
     <message>
       <source>Down %1, Up %2</source>
