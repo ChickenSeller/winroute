@@ -166,10 +166,30 @@ void ProxyConnector::beginHop()
     }
 }
 
+// A proxy reached over a VPN (ZeroTier, WireGuard, ...) can briefly have no
+// route while the VPN reconnects; connecting then fails at once with "network
+// unreachable". Retry the same proxy a few times before giving up, so a short
+// route gap does not fail the whole connection.
+static constexpr int kMaxConnectRetries = 3;
+static constexpr int kConnectRetryMs = 1500;
+
 void ProxyConnector::onError()
 {
     if (m_finished || !m_socket)
         return;
+    if (m_stage == Stage::Connecting
+        && m_socket->error() == QAbstractSocket::NetworkError
+        && m_connectRetries < kMaxConnectRetries) {
+        ++m_connectRetries;
+        m_socket->disconnect(this);   // drop this attempt's signal handlers
+        m_socket->abort();
+        QPointer<ProxyConnector> self(this);
+        QTimer::singleShot(kConnectRetryMs, this, [self] {
+            if (self && !self->m_finished && self->m_socket)
+                self->connectFirst();   // the overall timer still bounds the total
+        });
+        return;
+    }
     const QString err = m_socket->errorString();
     if (m_stage == Stage::Connecting) {
         if (m_hops.isEmpty())

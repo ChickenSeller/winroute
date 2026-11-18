@@ -79,6 +79,7 @@ private:
     bool m_resolveTarget = false;
     QString m_boundIface;
     int m_hop = 0;
+    int m_connectRetries = 0;   // retries so far of a transient route failure to the proxy
     Stage m_stage = Stage::Resolving;
     QByteArray m_buf;
     QTimer m_timer;
