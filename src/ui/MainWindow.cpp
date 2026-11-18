@@ -1123,7 +1123,7 @@ void MainWindow::endProcessTreeSelected()
 {
     QSet<quint32> pids;
     for (int row : selectedRows())
-        for (quint32 pid : procinfo::descendants(m_connModel->pidAt(row)))
+        for (quint32 pid : procinfo::processTree(m_connModel->pidAt(row)))
             pids.insert(pid);
     endProcesses(pids, true);
 }

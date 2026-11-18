@@ -185,23 +185,75 @@ bool isElevated()
     return ok;
 }
 
-QList<quint32> descendants(quint32 pid)
+static quint32 sessionOf(quint32 pid)
+{
+    DWORD s = 0;
+    return ProcessIdToSessionId(pid, &s) ? s : DWORD(-1);
+}
+
+// Process creation time (100-ns ticks), or -1. For the pid-reuse guard: a real
+// parent is created no later than its child.
+static qint64 createTime(quint32 pid)
+{
+    HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    if (!h)
+        return -1;
+    FILETIME c{}, x{}, k{}, u{};
+    qint64 t = -1;
+    if (GetProcessTimes(h, &c, &x, &k, &u))
+        t = (qint64(c.dwHighDateTime) << 32) | c.dwLowDateTime;
+    CloseHandle(h);
+    return t;
+}
+
+QList<quint32> processTree(quint32 pid)
 {
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snap == INVALID_HANDLE_VALUE)
         return {pid};
-    // parent pid -> its child pids, from one consistent snapshot.
+    // From one consistent snapshot: parent of each pid, children of each pid,
+    // and the (lower-case) image name.
+    QHash<quint32, quint32> parent;
     QHash<quint32, QList<quint32>> children;
+    QHash<quint32, QString> name;
     PROCESSENTRY32W e{};
     e.dwSize = sizeof(e);
-    for (BOOL ok = Process32FirstW(snap, &e); ok; ok = Process32NextW(snap, &e))
-        if (e.th32ProcessID != e.th32ParentProcessID)   // pid 0 is its own parent
+    for (BOOL ok = Process32FirstW(snap, &e); ok; ok = Process32NextW(snap, &e)) {
+        name[e.th32ProcessID] = QString::fromWCharArray(e.szExeFile).toLower();
+        if (e.th32ProcessID != e.th32ParentProcessID) {   // pid 0 is its own parent
+            parent[e.th32ProcessID] = e.th32ParentProcessID;
             children[e.th32ParentProcessID] << e.th32ProcessID;
+        }
+    }
     CloseHandle(snap);
 
+    // Climb to the top ancestor, stopping before a system process, a different
+    // session, the desktop shell or logon chain, or a reused parent pid.
+    static const QSet<QString> stop = {QStringLiteral("explorer.exe"), QStringLiteral("userinit.exe"),
+                                       QStringLiteral("winlogon.exe"), QStringLiteral("wininit.exe"),
+                                       QStringLiteral("services.exe"), QStringLiteral("svchost.exe")};
+    const quint32 session = sessionOf(pid);
+    quint32 root = pid;
+    QSet<quint32> climbed{pid};
+    while (session != 0 && session != DWORD(-1)) {
+        const auto it = parent.constFind(root);
+        if (it == parent.constEnd())
+            break;
+        const quint32 par = it.value();
+        if (par <= 4 || !name.contains(par) || climbed.contains(par))
+            break;
+        if (stop.contains(name.value(par)) || sessionOf(par) != session)
+            break;
+        if (createTime(par) > createTime(root))   // par younger than its "child": reused pid
+            break;
+        climbed.insert(par);
+        root = par;
+    }
+
+    // The whole subtree under that root, the root first.
     QList<quint32> out;
-    QList<quint32> queue{pid};
-    QSet<quint32> seen{pid};
+    QList<quint32> queue{root};
+    QSet<quint32> seen{root};
     for (int i = 0; i < queue.size(); ++i) {
         const quint32 cur = queue[i];
         out << cur;
