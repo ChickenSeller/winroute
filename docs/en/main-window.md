@@ -16,6 +16,7 @@ The upper part of the main window contains several tabs; the lower part shows th
 | Proxy Gateway | Let other devices reach the network through this computer. See [Proxy Gateway](./gateway) |
 | Disconnect | Close the selected connection |
 | End Process | End the process that owns the selected connection |
+| End Process Tree | End the selected connection's process and all its child processes |
 | Proxy Checker | Test whether a proxy server works. See [Proxy Checker](./checker) |
 | Packet Capture | Open the capture tab. See [Packet Capture](./capture) |
 
@@ -42,6 +43,7 @@ Right-click a connection for the following commands:
 
 - **Disconnect**: close the connection immediately.
 - **End Process**: end the process that opened the connection, after confirmation. WinRoute first closes the process's windows so it exits normally, as when the user closes it; a process that has not exited within 5 seconds, or has no window, is terminated.
+- **End Process Tree**: end the process that opened the connection together with all its descendants, the same way as End Process. Useful for programs that spawn several child processes.
 - **Create Rule for this Application...**: create a new rule with this application as its condition.
 - **Copy**: copy the connection details.
 
