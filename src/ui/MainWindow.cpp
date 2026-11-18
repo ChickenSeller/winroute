@@ -486,6 +486,18 @@ void MainWindow::createCentral()
     m_traffic = new TrafficWidget;
     m_tabs->addTab(m_traffic, tr("Traffic"));
     m_stats = new StatisticsWidget([this](const QString &path) { return m_connModel->appIcon(path); });
+    connect(m_stats, &StatisticsWidget::endProcessesRequested, this,
+            [this](const QSet<quint32> &pids, bool tree) {
+        if (!tree) {
+            endProcesses(pids, false);
+            return;
+        }
+        QSet<quint32> all;
+        for (quint32 pid : pids)
+            for (quint32 p : procinfo::processTree(pid))
+                all.insert(p);
+        endProcesses(all, true);
+    });
     m_tabs->addTab(m_stats, tr("Statistics"));
     m_captureTab = new CaptureTab(m_engine->capture(), m_engine->certAuthority(), this);
     m_tabs->addTab(m_captureTab, tr("Capture"));
@@ -1142,9 +1154,7 @@ void MainWindow::endProcesses(const QSet<quint32> &pids, bool tree)
     const QString title = tree ? tr("End Process Tree") : tr("End Process");
     const QString head = tree ? tr("Close the selected process(es) and their child processes?\n\n")
                               : tr("Close the following process(es)?\n\n");
-    if (QMessageBox::question(this, title, head + names.join('\n')
-                                  + tr("\n\nA process that does not exit within %1 seconds is terminated.").arg(kEndProcessGraceMs / 1000))
-        != QMessageBox::Yes)
+    if (QMessageBox::question(this, title, head + names.join('\n')) != QMessageBox::Yes)
         return;
     for (quint32 pid : pids)
         endProcess(pid);

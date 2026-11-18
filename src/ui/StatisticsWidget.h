@@ -3,6 +3,7 @@
 #include "core/Relay.h"
 
 #include <QHash>
+#include <QSet>
 #include <QTreeWidget>
 #include <functional>
 
@@ -19,6 +20,11 @@ public:
     void traffic(const QList<TrafficSample> &samples);
     void resetStatistics();
     void copyAll();
+
+signals:
+    // The running pids of the right-clicked application, to end (as a tree when
+    // tree is true). Connected to the main window's End Process handler.
+    void endProcessesRequested(const QSet<quint32> &pids, bool tree);
 
 private:
     struct Stat {
@@ -37,9 +43,12 @@ private:
     QTreeWidgetItem *targetItem(QTreeWidgetItem *app, const QString &target);
     void addBytes(Conn &c, qint64 sent, qint64 received);
     void refresh(QTreeWidgetItem *item);
+    void updateStatuses();                 // running / ended, for every app row
+    QSet<quint32> runningPids(QTreeWidgetItem *app) const;
 
     IconFn m_iconFn;
     QHash<QString, QTreeWidgetItem *> m_apps;
     QHash<QTreeWidgetItem *, Stat> m_stats;
+    QHash<QTreeWidgetItem *, QSet<quint32>> m_appPids;   // pids seen for each app row
     QHash<quint64, Conn> m_conns;
 };

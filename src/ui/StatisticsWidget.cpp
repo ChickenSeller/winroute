@@ -1,4 +1,5 @@
 #include "StatisticsWidget.h"
+#include "core/ProcessInfo.h"
 #include "core/Utils.h"
 
 #include <QApplication>
@@ -6,13 +7,15 @@
 #include <QDateTime>
 #include <QHeaderView>
 #include <QMenu>
+#include <QTimer>
 
-enum { ColName, ColConnections, ColActive, ColSent, ColReceived, ColLast };
+enum { ColName, ColConnections, ColActive, ColStatus, ColSent, ColReceived, ColLast };
 
 StatisticsWidget::StatisticsWidget(IconFn iconFn, QWidget *parent)
     : QTreeWidget(parent), m_iconFn(std::move(iconFn))
 {
-    setHeaderLabels({tr("Application / Target"), tr("Connections"), tr("Active"), tr("Sent"), tr("Received"), tr("Last Activity")});
+    setHeaderLabels({tr("Application / Target"), tr("Connections"), tr("Active"), tr("Status"),
+                     tr("Sent"), tr("Received"), tr("Last Activity")});
     setRootIsDecorated(true);
     setUniformRowHeights(true);
     setSortingEnabled(true);
@@ -20,15 +23,47 @@ StatisticsWidget::StatisticsWidget(IconFn iconFn, QWidget *parent)
     header()->setSectionResizeMode(ColName, QHeaderView::Stretch);
     header()->setStretchLastSection(false);
     for (int c = ColConnections; c <= ColLast; ++c)
-        header()->resizeSection(c, c == ColLast ? 130 : 95);
+        header()->resizeSection(c, c == ColLast ? 130 : c == ColStatus ? 80 : 95);
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, &QWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
+        QTreeWidgetItem *item = itemAt(pos);
         QMenu menu;
+        // An application row whose process is still running can be ended here.
+        QTreeWidgetItem *app = item && !item->parent() ? item : nullptr;
+        const QSet<quint32> pids = app ? runningPids(app) : QSet<quint32>();
+        if (!pids.isEmpty()) {
+            menu.addAction(tr("&End Process"), this, [this, pids] { emit endProcessesRequested(pids, false); });
+            menu.addAction(tr("End Process &Tree"), this, [this, pids] { emit endProcessesRequested(pids, true); });
+            menu.addSeparator();
+        }
         menu.addAction(tr("&Copy"), this, &StatisticsWidget::copyAll);
         menu.addSeparator();
         menu.addAction(tr("&Reset Statistics"), this, &StatisticsWidget::resetStatistics);
         menu.exec(viewport()->mapToGlobal(pos));
     });
+    // A process can exit without any traffic, so poll the statuses too.
+    auto *timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, &StatisticsWidget::updateStatuses);
+    timer->start(2000);
+}
+
+QSet<quint32> StatisticsWidget::runningPids(QTreeWidgetItem *app) const
+{
+    QSet<quint32> running;
+    for (quint32 pid : m_appPids.value(app))
+        if (pid && procinfo::isRunning(pid))
+            running.insert(pid);
+    return running;
+}
+
+void StatisticsWidget::updateStatuses()
+{
+    for (auto it = m_apps.constBegin(); it != m_apps.constEnd(); ++it) {
+        QTreeWidgetItem *app = it.value();
+        const bool running = !runningPids(app).isEmpty();
+        app->setText(ColStatus, running ? tr("Running") : tr("Ended"));
+        app->setForeground(ColStatus, running ? QColor(30, 140, 60) : QColor(150, 150, 150));
+    }
 }
 
 QTreeWidgetItem *StatisticsWidget::appItem(const ConnectionEvent &ev)
@@ -62,8 +97,9 @@ void StatisticsWidget::refresh(QTreeWidgetItem *item)
     item->setText(ColSent, util::formatBytes(s.sent));
     item->setText(ColReceived, util::formatBytes(s.received));
     item->setText(ColLast, QDateTime::currentDateTime().toString("MM.dd HH:mm:ss"));
-    for (int c = ColConnections; c <= ColReceived; ++c)
+    for (int c : {ColConnections, ColActive, ColSent, ColReceived})
         item->setTextAlignment(c, Qt::AlignRight | Qt::AlignVCenter);
+    item->setTextAlignment(ColStatus, Qt::AlignCenter);
 }
 
 void StatisticsWidget::opened(const ConnectionEvent &ev)
@@ -83,6 +119,10 @@ void StatisticsWidget::opened(const ConnectionEvent &ev)
         ++s.active;
         refresh(it);
     }
+    if (ev.pid)
+        m_appPids[app].insert(ev.pid);
+    app->setText(ColStatus, tr("Running"));
+    app->setForeground(ColStatus, QColor(30, 140, 60));
     m_conns.insert(ev.id, Conn{app, target});
 }
 
@@ -129,6 +169,7 @@ void StatisticsWidget::resetStatistics()
     clear();
     m_apps.clear();
     m_stats.clear();
+    m_appPids.clear();
     m_conns.clear();
 }
 

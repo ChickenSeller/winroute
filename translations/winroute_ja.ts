@@ -1528,14 +1528,6 @@ Continue?</source>
 </translation>
     </message>
     <message>
-      <source>
-
-A process that does not exit within %1 seconds is terminated.</source>
-      <translation>
-
-%1 秒以内に終了しないプロセスは強制終了されます。</translation>
-    </message>
-    <message>
       <source>End Process: %1 has no window, terminating it</source>
       <translation>プロセスの終了：%1 にはウィンドウがないため、強制終了します</translation>
     </message>
@@ -3431,6 +3423,10 @@ Click to show or hide this line</source>
       <translation>アクティブ</translation>
     </message>
     <message>
+      <source>Status</source>
+      <translation>状態</translation>
+    </message>
+    <message>
       <source>Sent</source>
       <translation>送信</translation>
     </message>
@@ -3443,12 +3439,28 @@ Click to show or hide this line</source>
       <translation>最終アクティビティ</translation>
     </message>
     <message>
+      <source>&amp;End Process</source>
+      <translation>プロセスの終了(&amp;E)</translation>
+    </message>
+    <message>
+      <source>End Process &amp;Tree</source>
+      <translation>プロセスツリーの終了(&amp;T)</translation>
+    </message>
+    <message>
       <source>&amp;Copy</source>
       <translation>コピー(&amp;C)</translation>
     </message>
     <message>
       <source>&amp;Reset Statistics</source>
       <translation>統計のリセット(&amp;R)</translation>
+    </message>
+    <message>
+      <source>Running</source>
+      <translation>実行中</translation>
+    </message>
+    <message>
+      <source>Ended</source>
+      <translation>終了済み</translation>
     </message>
   </context>
   <context>

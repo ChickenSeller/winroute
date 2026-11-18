@@ -1528,14 +1528,6 @@ Continue?</source>
 </translation>
     </message>
     <message>
-      <source>
-
-A process that does not exit within %1 seconds is terminated.</source>
-      <translation>
-
-%1 秒内未退出的进程将被强制结束。</translation>
-    </message>
-    <message>
       <source>End Process: %1 has no window, terminating it</source>
       <translation>结束进程：%1 没有窗口，正在强制结束</translation>
     </message>
@@ -3431,6 +3423,10 @@ Click to show or hide this line</source>
       <translation>活动</translation>
     </message>
     <message>
+      <source>Status</source>
+      <translation>状态</translation>
+    </message>
+    <message>
       <source>Sent</source>
       <translation>发送</translation>
     </message>
@@ -3443,12 +3439,28 @@ Click to show or hide this line</source>
       <translation>最近活动</translation>
     </message>
     <message>
+      <source>&amp;End Process</source>
+      <translation>结束进程(&amp;E)</translation>
+    </message>
+    <message>
+      <source>End Process &amp;Tree</source>
+      <translation>结束进程树(&amp;T)</translation>
+    </message>
+    <message>
       <source>&amp;Copy</source>
       <translation>复制(&amp;C)</translation>
     </message>
     <message>
       <source>&amp;Reset Statistics</source>
       <translation>重置统计(&amp;R)</translation>
+    </message>
+    <message>
+      <source>Running</source>
+      <translation>运行中</translation>
+    </message>
+    <message>
+      <source>Ended</source>
+      <translation>已结束</translation>
     </message>
   </context>
   <context>

@@ -64,7 +64,7 @@ The legend above the graph is arranged in groups, with download above upload in 
 
 ## Statistics
 
-Summarizes, per application and target, the number of connections, active connections, data sent and received, and the time of last activity, so that applications with heavy traffic can be identified. Right-click to **Copy** or **Reset Statistics**.
+Summarizes, per application and target, the number of connections, active connections, data sent and received, and the time of last activity, so that applications with heavy traffic can be identified, and shows in the **Status** column whether each application is currently **Running** or **Ended**. Right-click to **Copy** or **Reset Statistics**; for a running application, also to **End Process** or **End Process Tree**.
 
 ## Capture
 
