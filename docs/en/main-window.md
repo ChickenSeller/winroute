@@ -41,7 +41,7 @@ While the proxy gateway is running, connections made by other devices through it
 Right-click a connection for the following commands:
 
 - **Disconnect**: close the connection immediately.
-- **End Process**: end the process that opened the connection, after confirmation. WinRoute first closes the process's windows so it exits normally, as when the user closes it; a process that has not exited within 5 seconds, or has no window, is terminated.
+- **End Process**: end the process that opened the connection, after confirmation. WinRoute first closes the process's windows so it exits normally, as when the user closes it; a process that does not exit shortly, or has no window, is terminated.
 - **End Process Tree** (context menu only): end the process that opened the connection together with every process on its launch chain. Because several processes are involved, the dialog lists them with a check box each, all selected by default, so some can be left out before ending. Useful for programs that spawn several child processes.
 - **Create Rule for this Application...**: create a new rule with this application as its condition.
 - **Copy**: copy the connection details.
