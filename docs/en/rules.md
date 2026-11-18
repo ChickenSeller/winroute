@@ -70,7 +70,7 @@ Single ports or port ranges:
 
 Click **Advanced...** in the rule window to send connections matching the rule out through a specific network adapter:
 
-![Rule Network Interface](/images/en/rule-interface.png){width=443}
+![Advanced Rule Settings](/images/en/rule-interface.png){width=443}
 
 - For a direct connection, the adapter connects to the target host;
 - for a proxied connection, the adapter connects to the first proxy server.
