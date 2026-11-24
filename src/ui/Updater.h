@@ -45,12 +45,19 @@ public:
     // made is never overwritten.
     static void setDefaultMode(Mode mode);
 
-    // Checks once, as the settings say.
-    void checkAtStartup();
+    // Whether automatic update checks go through a proxy (the caller supplies
+    // which one to checkAtStartup); off by default, so they go directly.
+    static bool viaProxy();
+    static void setViaProxy(bool on);
+
+    // Checks once, as the settings say. The check and any download it leads to
+    // use `proxy` (direct by default): the caller passes the proxy only when
+    // "check through a proxy" is on.
+    void checkAtStartup(const QNetworkProxy &proxy = QNetworkProxy(QNetworkProxy::NoProxy));
     // Checks now on the user's request, whatever the settings: offers a newer
-    // version, or says that there is none or that the check failed. The manual
-    // check and any download it leads to use the given connection (direct by
-    // default, or a proxy the user picked); automatic checks always go direct.
+    // version, or says that there is none or that the check failed. The check
+    // and any download it leads to use the given connection (direct by default,
+    // or a proxy the user picked).
     void checkNow(const QNetworkProxy &proxy = QNetworkProxy(QNetworkProxy::NoProxy));
 
 signals:
@@ -79,6 +86,6 @@ private:
     QNetworkAccessManager *m_network;
     QSaveFile *m_file = nullptr;
     QPointer<QProgressDialog> m_progress;
-    // Connection for the current manual check and its download (direct by default).
-    QNetworkProxy m_manualProxy{QNetworkProxy::NoProxy};
+    // Connection for the current check and its download (direct by default).
+    QNetworkProxy m_proxy{QNetworkProxy::NoProxy};
 };

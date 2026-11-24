@@ -1384,6 +1384,14 @@ Continue?</source>
       <translation>从不检查</translation>
     </message>
     <message>
+      <source>Check Through a Pro&amp;xy</source>
+      <translation>通过代理检查(&amp;X)</translation>
+    </message>
+    <message>
+      <source>Route automatic update checks and downloads through a proxy instead of connecting directly.</source>
+      <translation>自动更新的检查和下载通过代理进行，而不是直接连接。</translation>
+    </message>
+    <message>
       <source>Send Anonymous Usage &amp;Statistics</source>
       <translation>发送匿名使用统计(&amp;S)</translation>
     </message>
@@ -3211,6 +3219,14 @@ Default 规则将改为使用 %1。
       <translation>主机名：通过规则的出口解析</translation>
     </message>
     <message>
+      <source>UDP: tunnelled through the proxy</source>
+      <translation>UDP：通过代理转发</translation>
+    </message>
+    <message>
+      <source>UDP: sent directly</source>
+      <translation>UDP：直接发送</translation>
+    </message>
+    <message>
       <source>Advanced Rule Settings</source>
       <translation>规则高级设置</translation>
     </message>
@@ -3273,6 +3289,30 @@ Default 规则将改为使用 %1。
     <message>
       <source>The rule's exit (Direct: the resolver for direct connections in Name Resolution)</source>
       <translation>规则的出口（直连规则：按域名解析中的“直接连接的解析代理”）</translation>
+    </message>
+    <message>
+      <source>UDP</source>
+      <translation>UDP</translation>
+    </message>
+    <message>
+      <source>Whether this rule's UDP is tunnelled through its proxy. This overrides the global UDP setting for this rule.</source>
+      <translation>本规则的 UDP 是否通过其代理转发。本规则的这项设置优先于全局 UDP 设置。</translation>
+    </message>
+    <message>
+      <source>As set globally</source>
+      <translation>跟随全局设置</translation>
+    </message>
+    <message>
+      <source>Tunnel through the proxy</source>
+      <translation>通过代理转发</translation>
+    </message>
+    <message>
+      <source>Send directly</source>
+      <translation>直接发送</translation>
+    </message>
+    <message>
+      <source>UDP datagrams:</source>
+      <translation>UDP 数据报：</translation>
     </message>
     <message>
       <source>Please enter the rule name.</source>

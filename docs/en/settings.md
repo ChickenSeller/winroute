@@ -32,6 +32,7 @@ The **Help** menu provides these update commands:
 | Check for Updates... | Check for a new version now. After confirmation, WinRoute downloads, verifies and installs it, then restarts |
 | Check for Updates via Proxy... | If the update server cannot be reached directly, check and download through a proxy of the profile |
 | Automatic Updates | Install All Updates Automatically, Install Required Updates Automatically, Ask Before Updating, or Never Check |
+| Automatic Updates > Check Through a Proxy | Check for and download automatic updates through a proxy instead of connecting directly, for networks where the update server cannot be reached directly. The proxy used is the profile's default DNS proxy, or the first proxy if none is set |
 
 Downloaded installers are verified with SHA-256; a file that fails verification is not installed.
 

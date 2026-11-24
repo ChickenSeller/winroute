@@ -109,6 +109,18 @@ The setting does not apply to Block rules.
 
 Applications' DNS queries are all sent by the Windows DNS Client service, so the application is not known when a name is queried. A name therefore receives a fake IP address when the profile's **Resolve hostnames through proxy** is on and the name is not excluded by its domain list, or, when that setting is off, when the name may match a rule set to resolve through a proxy. When the connection is made, the rule it actually matches decides who resolves the name.
 
+## UDP
+
+Under **UDP** in the **Advanced...** dialog, a rule can set whether its UDP is tunnelled through its proxy, overriding the global [Route UDP through SOCKS5](./advanced#route-udp-through-socks5) setting:
+
+| Option | Meaning |
+| --- | --- |
+| As set globally (default) | Follow the profile's global UDP setting |
+| Tunnel through the proxy | This rule's UDP is forwarded through its SOCKS5 proxy, even if the global setting is off |
+| Send directly | This rule's UDP is sent directly, even if the global setting is on |
+
+Only a single SOCKS5 proxy can carry UDP: proxy chains and SOCKS4 or HTTPS proxies do not, so a rule set to tunnel through such a proxy still goes directly and the log notes it once. As soon as one rule is set to tunnel UDP, WinRoute filters all outgoing UDP; sockets that are not tunnelled are handed back to the kernel after their first datagram. The setting does not apply to Block rules.
+
 ## Troubleshooting rules
 
 The log records the rule matched by each connection and the adapter actually used:

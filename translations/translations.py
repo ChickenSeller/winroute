@@ -536,6 +536,16 @@ T = {
     "As set in Name Resolution": ("跟随域名解析设置", "名前解決の設定に従う"),
     "Through a proxy": ("通过代理解析", "プロキシ経由で解決"),
     "On this computer": ("在本机解析", "このコンピューターで解決"),
+    "UDP": ("UDP", "UDP"),
+    "Whether this rule's UDP is tunnelled through its proxy. This overrides the global UDP setting for this rule.":
+        ("本规则的 UDP 是否通过其代理转发。本规则的这项设置优先于全局 UDP 设置。",
+         "このルールの UDP をプロキシ経由で転送するかどうかです。このルールでは、グローバルの UDP 設定より優先されます。"),
+    "As set globally": ("跟随全局设置", "グローバル設定に従う"),
+    "Tunnel through the proxy": ("通过代理转发", "プロキシ経由で転送"),
+    "Send directly": ("直接发送", "直接送信"),
+    "UDP datagrams:": ("UDP 数据报：", "UDP データグラム："),
+    "UDP: tunnelled through the proxy": ("UDP：通过代理转发", "UDP：プロキシ経由で転送"),
+    "UDP: sent directly": ("UDP：直接发送", "UDP：直接送信"),
     "%1 - UDP socket is not tunnelled, filtering disabled": ("%1 - 该 UDP 套接字不走代理，已停止过滤", "%1 - この UDP ソケットはトンネルされないため、フィルタリングを無効にしました"),
     "Try to resolve via local DNS service first\n(may cause significant delays if local DNS is unavailable!)":
         ("先尝试使用本地 DNS 服务解析\n（本地 DNS 不可用时可能导致明显延迟！）", "最初にローカル DNS サービスで解決を試みる\n（ローカル DNS が利用できない場合は大きな遅延が発生することがあります！）"),
@@ -927,6 +937,10 @@ T = {
     "Check for and download updates through:":
         ("检查并下载更新时使用：", "更新の確認とダウンロードに使用する接続："),
     "Automatic U&pdates": ("自动更新(&P)", "自動更新(&P)"),
+    "Check Through a Pro&xy": ("通过代理检查(&X)", "プロキシ経由で確認(&X)"),
+    "Route automatic update checks and downloads through a proxy instead of connecting directly.":
+        ("自动更新的检查和下载通过代理进行，而不是直接连接。",
+         "自動更新の確認とダウンロードを、直接接続ではなくプロキシ経由で行います。"),
     "Install All Updates Automatically": ("自动安装所有更新", "すべての更新を自動でインストール"),
     "Install Required Updates Automatically": ("自动安装必须的更新", "必須の更新を自動でインストール"),
     "Ask Before Updating": ("更新前询问", "更新前に確認"),

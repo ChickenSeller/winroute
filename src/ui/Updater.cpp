@@ -25,6 +25,7 @@
 namespace {
 
 const char *kModeKey = "updates/mode";
+const char *kViaProxyKey = "updates/viaProxy";
 
 QString updateDirectory()
 {
@@ -60,23 +61,34 @@ void Updater::setDefaultMode(Mode mode)
         settings.setValue(kModeKey, int(mode));
 }
 
-void Updater::checkAtStartup()
+bool Updater::viaProxy()
 {
+    return util::appSettings().value(kViaProxyKey, false).toBool();
+}
+
+void Updater::setViaProxy(bool on)
+{
+    util::appSettings().setValue(kViaProxyKey, on);
+}
+
+void Updater::checkAtStartup(const QNetworkProxy &proxy)
+{
+    m_proxy = proxy;
     if (mode() != Mode::Never)
         requestManifest(false);
 }
 
 void Updater::checkNow(const QNetworkProxy &proxy)
 {
-    m_manualProxy = proxy;
+    m_proxy = proxy;
     requestManifest(true);
 }
 
 void Updater::requestManifest(bool interactive)
 {
-    // A manual check uses the connection the user picked; automatic checks,
-    // which run unattended in the background, always go directly.
-    m_network->setProxy(interactive ? m_manualProxy : QNetworkProxy(QNetworkProxy::NoProxy));
+    // The check uses the connection chosen for it: a proxy for a manual check,
+    // or for an automatic one when "check through a proxy" is on, else direct.
+    m_network->setProxy(m_proxy);
     QNetworkRequest request{QUrl(QStringLiteral(WINROUTE_UPDATE_URL))};
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::AlwaysNetwork);
@@ -177,9 +189,8 @@ void Updater::download(const Release &release, bool interactive)
         return;
     }
 
-    // Download over the same connection the check used: the chosen proxy for a
-    // manual update, direct for an automatic one.
-    m_network->setProxy(interactive ? m_manualProxy : QNetworkProxy(QNetworkProxy::NoProxy));
+    // Download over the same connection the check used.
+    m_network->setProxy(m_proxy);
     QNetworkRequest request(release.url);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(60000);

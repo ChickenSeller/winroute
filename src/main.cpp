@@ -9,6 +9,7 @@
 
 #include <QApplication>
 #include <QLocalServer>
+#include <QNetworkProxyFactory>
 #include <QSettings>
 #include <QLocalSocket>
 #include <QMessageBox>
@@ -31,6 +32,12 @@ int main(int argc, char *argv[])
     // not the registry; the organization name is kept only for Qt's own use.
     QApplication::setOrganizationName("WinRoute");
     QApplication::setQuitOnLastWindowClosed(false);
+    // WinRoute does its own proxying at the driver and SOCKS/HTTP layers, so its
+    // own outgoing sockets (relay, gateway, DNS, the proxy checker) must connect
+    // directly. Qt otherwise reads the Windows system proxy for every socket with
+    // a default proxy, which breaks those connections when another tool has set a
+    // system-wide proxy (e.g. "The proxy type is invalid for this operation").
+    QNetworkProxyFactory::setUseSystemConfiguration(false);
     // Bring settings over from the registry on the first run after upgrading
     // from a version that still used it; harmless on a fresh install.
     util::migrateLegacySettings();

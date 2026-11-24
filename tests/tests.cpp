@@ -22,6 +22,7 @@
 #include "core/WinDivertPacket.h"
 
 #include <QCoreApplication>
+#include <QNetworkProxyFactory>
 #include <QElapsedTimer>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -235,9 +236,21 @@ static void testRules()
     CHECK(m.ruleIndex == 2 && m.ruleName == "Default" && m.action.type == ActionType::Direct);
 
     // UDP of an app with only direct rules is never diverted, so its sockets
-    // can be released from filtering; a SOCKS5 or block rule keeps them.
-    CHECK(engine.mayDivertUdp("C:\\Program Files\\Parsec\\parsecd.exe", "parsecd.exe"));
-    CHECK(!engine.mayDivertUdp("C:\\ZeroTier\\zerotier-one_x64.exe", "zerotier-one_x64.exe"));
+    // can be released from filtering. A SOCKS5 rule keeps them only when it
+    // tunnels UDP: in the default bypass mode an inheriting rule does not, so
+    // the global proxy mode or the rule's own UDP setting turns tunnelling on.
+    CHECK(!engine.mayDivertUdp("C:\\Program Files\\Parsec\\parsecd.exe", "parsecd.exe"));
+    {
+        Profile q = p;
+        q.options.udpMode = "mode_proxy";
+        CHECK(RuleEngine(q).mayDivertUdp("C:\\Program Files\\Parsec\\parsecd.exe", "parsecd.exe"));
+        CHECK(!RuleEngine(q).mayDivertUdp("C:\\ZeroTier\\zerotier-one_x64.exe", "zerotier-one_x64.exe"));
+    }
+    {
+        Profile q = p;
+        q.rules[1].udp = UdpControl::Enable;   // this rule tunnels UDP on its own
+        CHECK(RuleEngine(q).mayDivertUdp("C:\\Program Files\\Parsec\\parsecd.exe", "parsecd.exe"));
+    }
     {
         Profile b = p;
         b.rules[2].action.type = ActionType::Block;   // the Default rule
@@ -245,6 +258,26 @@ static void testRules()
         b.rules[1].action.type = ActionType::Chain;   // chains carry no UDP
         b.rules[2].action.type = ActionType::Direct;
         CHECK(!RuleEngine(b).mayDivertUdp("C:\\Program Files\\Parsec\\parsecd.exe", "parsecd.exe"));
+    }
+
+    // Per-rule UDP control: saved, carried into the match, and only Enable
+    // forces filtering regardless of the global mode.
+    {
+        Profile r = p;
+        r.rules[1].udp = UdpControl::Enable;
+        Profile back;
+        CHECK(back.fromXml(r.toXml()));
+        CHECK(back.rules[1].udp == UdpControl::Enable && back.rules[2].udp == UdpControl::Inherit);
+        CHECK(r.toXml().contains("<WinRouteUdp>enable</WinRouteUdp>"));
+        CHECK(RuleEngine(r).anyRuleEnablesUdp());
+        req.appName = "parsecd.exe";
+        CHECK(RuleEngine(r).match(req).udp == UdpControl::Enable);
+        r.rules[1].udp = UdpControl::Disable;
+        CHECK(Profile().fromXml(r.toXml()) && r.toXml().contains("<WinRouteUdp>disable</WinRouteUdp>"));
+        CHECK(!RuleEngine(r).anyRuleEnablesUdp());
+        r.rules[1].udp = UdpControl::Inherit;
+        CHECK(!r.toXml().contains("WinRouteUdp"));
+        req.appName = "chrome.exe";
     }
 
     // Per-rule name resolution: saved, and it overrides the profile's setting.
@@ -2131,6 +2164,10 @@ static void testCertAuthority()
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
+    // WinRoute's own sockets never use the Windows system proxy (main.cpp does
+    // the same); without this, a system proxy set on the test machine makes Qt
+    // reject bind()/connect() on these sockets ("proxy type is invalid").
+    QNetworkProxyFactory::setUseSystemConfiguration(false);
     testProfile();
     testRules();
     testDns();

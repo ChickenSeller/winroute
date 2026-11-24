@@ -44,6 +44,8 @@ By default, UDP traffic is passed through unchanged. When enabled, UDP traffic (
 - Proxy chains and SOCKS4 or HTTPS proxies do not support UDP; such traffic is sent directly, and the log notes this once.
 - If the proxy server does not support UDP, the traffic is also sent directly. Use the [Proxy Checker](./checker) to find out whether a proxy server supports UDP.
 
+This is the global default; a rule can override it, see [Proxification Rules > UDP](./rules#udp).
+
 ## Log DNS Activity
 
 Records DNS lookups in the log, which helps when troubleshooting host-name-based rules.

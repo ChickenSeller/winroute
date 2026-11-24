@@ -20,6 +20,7 @@ RuleEngine::RuleEngine(const Profile &profile)
         c.result.action = r.action;
         c.result.resolve = r.resolve;
         c.result.resolveProxyId = r.resolveProxyId;
+        c.result.udp = r.udp;
         m_rules.push_back(c);
     }
 }
@@ -63,7 +64,10 @@ bool RuleEngine::mayDivertUdp(const QString &appPath, const QString &appName) co
             break;
         case ActionType::Proxy: {
             const ProxyServer *p = m_profile.proxyById(a.id);
-            if (p && p->type == ProxyType::Socks5)
+            // Only a SOCKS5 rule that actually tunnels UDP (enabled, or inheriting
+            // while the global mode is proxy) diverts it; a disabled rule does not.
+            if (p && p->type == ProxyType::Socks5
+                && udpTunnels(c.result.udp, m_profile.options.udpMode == QLatin1String("mode_proxy")))
                 return true;
             break;
         }
@@ -109,6 +113,15 @@ bool RuleEngine::anyRuleResolvesViaProxy() const
 {
     for (const auto &c : m_rules) {
         if (c.enabled && viaProxy(c.result))
+            return true;
+    }
+    return false;
+}
+
+bool RuleEngine::anyRuleEnablesUdp() const
+{
+    for (const auto &c : m_rules) {
+        if (c.enabled && c.result.udp == UdpControl::Enable)
             return true;
     }
     return false;

@@ -71,6 +71,20 @@ enum class DnsResolve {
     Local,     // on this computer: real addresses, send the IP to the proxy
 };
 
+// Whether a rule's UDP is tunnelled through its proxy (WinRoute extension).
+enum class UdpControl {
+    Inherit,   // follow the profile's global UDP setting (options.udpMode)
+    Enable,    // tunnel this rule's UDP through its SOCKS5 proxy
+    Disable,   // send this rule's UDP directly, even in global proxy mode
+};
+
+// Whether a rule whose UDP control is `udp` tunnels its UDP, given whether the
+// profile's global UDP setting is "mode_proxy" (globalProxy).
+inline bool udpTunnels(UdpControl udp, bool globalProxy)
+{
+    return udp == UdpControl::Enable || (udp == UdpControl::Inherit && globalProxy);
+}
+
 struct Rule {
     bool enabled = true;
     QString name;
@@ -83,6 +97,7 @@ struct Rule {
     // or 0 for the rule's own exit (for a Direct rule: the profile's
     // dnsDirectProxyId).
     int resolveProxyId = 0;
+    UdpControl udp = UdpControl::Inherit;   // WinRoute: per-rule UDP tunnelling
 };
 
 enum class PasswordEncryption { Disabled, Basic, User, Master };

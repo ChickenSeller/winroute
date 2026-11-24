@@ -24,7 +24,7 @@ Relay (独立线程, 0.0.0.0/:: 随机端口)
 - **自动检测 DNS**：每 60 秒检测一次本地 DNS（每次重读系统 DNS 服务器、不用缓存），网卡连接/断开或地址变化时（`NetworkWatcher`，`NotifyIpInterfaceChange` / `NotifyUnicastIpAddressChange`）也立即重测，中继自己的解析器同时换用新的 DNS 服务器。自动检测时域名解析窗口里“通过代理解析”一组置灰，切到代理解析时按默认方式处理。
 - **自身流量**：驱动规则放行 WinRoute 自己的进程，不会形成环路；连接目标就是代理服务器本身时，“连接环路检测”会改为直连；代理服务器在本机时（如 127.0.0.1:1080 的代理客户端），监听该端口的程序自己的连接也会自动直连，不会再被送回它自己。
 - **代理链**：简单链、冗余（失败切换下一个，可设重检间隔和全部失败时直连）、负载均衡（随机，或同一 PID 固定用一个代理）。
-- **UDP**：默认直接放行（`mode_bypass`）。在“配置 > 高级 > 通过 SOCKS5 转发 UDP”开启后，命中规则且代理是单个 SOCKS5 的 UDP 会通过 SOCKS5 UDP ASSOCIATE 转发（驱动改为过滤全部出站 UDP，中继线程为每个 UDP 套接字建一个关联，回包用 `nf_udpPostReceive` 注回）。代理链或非 SOCKS5（SOCKS4/HTTPS）不支持 UDP，会直接放行并在日志提示一次；关联失败也回退为直连。永远不会被转发的 UDP 套接字（未处理的服务和其他用户的进程、规则全为直连的程序）在第一个数据报之后用 `nf_udpDisableFiltering` 交还内核，之后的数据报不再经过用户态，避免 ZeroTier、WireGuard 等长连接隧道在 WinRoute 启动时断线；可能出现假 IP 时（启用了代理解析）不交还。
+- **UDP**：默认直接放行（`mode_bypass`）。在“配置 > 高级 > 通过 SOCKS5 转发 UDP”开启后，命中规则且代理是单个 SOCKS5 的 UDP 会通过 SOCKS5 UDP ASSOCIATE 转发（驱动改为过滤全部出站 UDP，中继线程为每个 UDP 套接字建一个关联，回包用 `nf_udpPostReceive` 注回）。代理链或非 SOCKS5（SOCKS4/HTTPS）不支持 UDP，会直接放行并在日志提示一次；关联失败也回退为直连。永远不会被转发的 UDP 套接字（未处理的服务和其他用户的进程、规则全为直连的程序）在第一个数据报之后用 `nf_udpDisableFiltering` 交还内核，之后的数据报不再经过用户态，避免 ZeroTier、WireGuard 等长连接隧道在 WinRoute 启动时断线；可能出现假 IP 时（启用了代理解析）不交还。每条规则可在“高级...”里单独设置 UDP（跟随全局 / 通过代理转发 / 直接发送，`<WinRouteUdp>` 扩展），覆盖全局设置；只要有一条规则设为“通过代理转发”，就按全局开启处理（过滤全部出站 UDP）。`RuleEngine::anyRuleEnablesUdp()` 与 `decideUdp` 据此判定，`udpTunnels(udp, globalProxy)` 给出某规则是否隧道其 UDP。
 - **指定网卡**：规则的“高级...”里可以选一块网卡（同 Proxifier 4 的规则网卡），匹配的连接从这块网卡发出：直连时连目标，走代理时连第一个代理。做法是把出站套接字的源地址绑定到该网卡的 IP，Windows 按强主机模型只在这块网卡上查路由，所以该网卡没有通往目标的路由时连接会失败，而不是改走别的网卡。绑定了网卡的直连规则也会经过中转。网卡断开时可选“使用系统默认网卡”或“忽略此规则”（交给下一条匹配的规则，适合只在某个网络下生效的规则）。网卡按 GUID 记录，和 Proxifier 4 一样存成 .ppx 里 `<Rule>` 的 `interfaceId`、`skipIfInterfaceDown` 属性，两边的配置可以互相读取。UDP 在开启“通过 SOCKS5 转发 UDP”时同样从该网卡发出；代理网关按规则转发时也遵循规则的网卡。在本机解析主机名时（含直连连接的假 IP）仍走系统默认路由。
 
 ### 拦截后端
@@ -41,6 +41,10 @@ Relay (独立线程, 0.0.0.0/:: 随机端口)
 **DNS 与 UDP**：两个拦截后端看到的 DNS 查询与应答（UDP 53）也记入抓包（`Capture::dnsMessage`），按“进程 + 本地端口 + DNS 服务器”归为一条，目标显示为“查询名 @ 服务器”，详情里解码成问题、应答码和记录；抓包过滤按查询的域名匹配。开启“通过代理解析主机名”时，程序收到的是 WinRoute 合成的假 IP 应答（状态列显示“本地应答”），真实解析发生在代理端，本机看不到。经 SOCKS5 转发的 UDP（`UdpRelaySession`）同样按“进程 + 目标”归为一条，记录发出和收回的每个数据报；代理无法关联而改为直连时，只能看到发出的一侧。不走代理的普通 UDP 不经过 WinRoute，抓不到。导出 PCAPNG 时 UDP 写成真实的 UDP 包（无握手），Wireshark 直接按 DNS 等协议解析；HAR 只含 HTTP，不含这些条目。WinRoute 自身的 DNS 查询不记录。
 
 **解密 HTTPS（MITM）**：抓包标签页的“解密 HTTPS”复选框（默认关，状态存 `capture/decrypt`）开启后，WinRoute 对经中继且命中抓包过滤的 443 端口连接做中间人——用自建根 CA（`src/core/CertAuthority.*`，基于 OpenSSL，密钥存 `%APPDATA%\WinRoute\ca`，不入 git）按主机名临时签发叶证书，在 client 侧做 TLS 服务端、对真实服务器做 TLS 客户端（校验其证书，校验失败则断开），于是抓包里看到明文。首次开启解密且还没有根证书时，会先让你填写证书主题（通用名称、组织、有效期），按此生成并安装，不会静默套用默认值。“根证书…”按钮显示当前证书的详情（主题、有效期、序列号、SHA-256 指纹），并可重新生成、安装到 Windows 受信任根（供 Chrome/Edge；Firefox 需手动导入导出的证书）、移除和导出根证书；安装、检测和移除都按证书本身匹配，自定义名称也能正确识别。界面需走 Qt 的 OpenSSL 后端（启动时 `QSslSocket::setActiveBackend("openssl")`），安装包随附 `libcrypto`/`libssl` 运行期 DLL。已知限制：仅解密 TCP 443；v1 把 ALPN 降到 http/1.1，不解密 HTTP/2 与 QUIC（UDP）；证书固定的应用需用抓包过滤排除。
+
+**不走系统代理**：WinRoute 自己在驱动层和 SOCKS/HTTP 层做代理，所有出站套接字（中继上行、网关、ProxyDns、代理检测）都必须直连。启动时 `QNetworkProxyFactory::setUseSystemConfiguration(false)`（`src/main.cpp`，测试 `main` 同样设置），避免 Qt 对这些套接字套用 Windows 系统代理——否则在装了系统代理（如其他代理客户端开了“设置系统代理”、或 PAC/WPAD）的机器上，`QNativeSocketEngine` 会以“对于这个操作代理类型是无效的”拒绝 `bind`/`connect`（代理检测与转发都会中招）。
+
+**自动更新走代理**：`帮助 > 自动更新 > 通过代理检查`（`updates/viaProxy`，有代理时才可勾）开启后，自动检查和下载经一个代理进行而非直连，用于无法直接访问更新服务器的网络。所用代理为配置文件的默认 DNS 代理（`defaultDnsId()`），没有则为第一个代理。手动的“通过代理检查更新...”仍让用户临时选代理。
 
 **导出**：导出用 Windows 原生保存对话框，之前先弹一个选项框——默认导出全部连接（只导出选中的连接需显式勾选，表格里选了行不会悄悄缩小导出范围），并选择解密后的 HTTPS 在 Wireshark（PCAPNG）里如何呈现：
 

@@ -18,6 +18,7 @@ class QAction;
 class QActionGroup;
 class QLabel;
 class QMenu;
+class QNetworkProxy;
 class QPlainTextEdit;
 class QSortFilterProxyModel;
 class QTabWidget;
@@ -115,6 +116,9 @@ private:
     // proxies, then checks (and, if they accept, downloads) over it. The plain
     // Check for Updates action stays a direct check.
     void checkForUpdatesViaProxy();
+    // The proxy for automatic update checks: a proxy when "check through a
+    // proxy" is on, else direct (NoProxy).
+    QNetworkProxy autoUpdateProxy() const;
 
     Engine *m_engine;
     Profile m_profile;
@@ -150,6 +154,7 @@ private:
     QAction *m_actLogCopy, *m_actLogSelectAll, *m_actLogClear;
     QAction *m_actTrayIcon, *m_actToolbar, *m_actStatusBar;
     QAction *m_actChecker, *m_actDriver, *m_actCapture, *m_actAbout, *m_actCheckUpdates, *m_actCheckUpdatesProxy;
+    QAction *m_actUpdateViaProxy = nullptr;   // "check through a proxy" (only in non-forum builds)
     Updater *m_updater = nullptr;
     QActionGroup *m_logLevelGroup = nullptr;
     QActionGroup *m_logFileGroup = nullptr;

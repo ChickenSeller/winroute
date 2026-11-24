@@ -1384,6 +1384,14 @@ Continue?</source>
       <translation>確認しない</translation>
     </message>
     <message>
+      <source>Check Through a Pro&amp;xy</source>
+      <translation>プロキシ経由で確認(&amp;X)</translation>
+    </message>
+    <message>
+      <source>Route automatic update checks and downloads through a proxy instead of connecting directly.</source>
+      <translation>自動更新の確認とダウンロードを、直接接続ではなくプロキシ経由で行います。</translation>
+    </message>
+    <message>
       <source>Send Anonymous Usage &amp;Statistics</source>
       <translation>匿名の使用統計を送信(&amp;S)</translation>
     </message>
@@ -3211,6 +3219,14 @@ Default ルールが %1 を使用するように変更されます。
       <translation>ホスト名：ルールの出口経由で解決</translation>
     </message>
     <message>
+      <source>UDP: tunnelled through the proxy</source>
+      <translation>UDP：プロキシ経由で転送</translation>
+    </message>
+    <message>
+      <source>UDP: sent directly</source>
+      <translation>UDP：直接送信</translation>
+    </message>
+    <message>
       <source>Advanced Rule Settings</source>
       <translation>ルールの詳細設定</translation>
     </message>
@@ -3273,6 +3289,30 @@ Default ルールが %1 を使用するように変更されます。
     <message>
       <source>The rule's exit (Direct: the resolver for direct connections in Name Resolution)</source>
       <translation>ルールの出口（直接接続：名前解決の「直接接続の解決に使うプロキシ」に従う）</translation>
+    </message>
+    <message>
+      <source>UDP</source>
+      <translation>UDP</translation>
+    </message>
+    <message>
+      <source>Whether this rule's UDP is tunnelled through its proxy. This overrides the global UDP setting for this rule.</source>
+      <translation>このルールの UDP をプロキシ経由で転送するかどうかです。このルールでは、グローバルの UDP 設定より優先されます。</translation>
+    </message>
+    <message>
+      <source>As set globally</source>
+      <translation>グローバル設定に従う</translation>
+    </message>
+    <message>
+      <source>Tunnel through the proxy</source>
+      <translation>プロキシ経由で転送</translation>
+    </message>
+    <message>
+      <source>Send directly</source>
+      <translation>直接送信</translation>
+    </message>
+    <message>
+      <source>UDP datagrams:</source>
+      <translation>UDP データグラム：</translation>
     </message>
     <message>
       <source>Please enter the rule name.</source>

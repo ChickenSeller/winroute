@@ -430,6 +430,12 @@ bool Profile::fromXml(const QByteArray &xml, QString *error)
                         rule.resolve = v == QLatin1String("proxy") ? DnsResolve::Proxy
                                      : v == QLatin1String("local") ? DnsResolve::Local
                                                                    : DnsResolve::Inherit;
+                    } else if (n == QLatin1String("WinRouteUdp")) {
+                        // WinRoute extension; Proxifier ignores unknown elements.
+                        const QString v = r.readElementText().trimmed();
+                        rule.udp = v == QLatin1String("enable") ? UdpControl::Enable
+                                 : v == QLatin1String("disable") ? UdpControl::Disable
+                                                                 : UdpControl::Inherit;
                     } else if (n == QLatin1String("Action")) {
                         const QString t = r.attributes().value("type").toString();
                         const QString val = r.readElementText();
@@ -630,6 +636,9 @@ QByteArray Profile::toXml() const
                 w.writeAttribute("proxy", QString::number(rule.resolveProxyId));
             w.writeCharacters(rule.resolve == DnsResolve::Proxy ? "proxy" : "local");
             w.writeEndElement();
+        }
+        if (rule.udp != UdpControl::Inherit) {   // WinRoute extension
+            w.writeTextElement("WinRouteUdp", rule.udp == UdpControl::Enable ? "enable" : "disable");
         }
         w.writeEndElement();
     }

@@ -9,6 +9,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QNetworkProxy>
 #include <QPushButton>
 #include <QRandomGenerator>
 #include <QSpinBox>
@@ -95,6 +96,7 @@ void ProxyCheckerDialog::step1()
     out(tr("<b>Connection Test</b>"));
     out(tr("Connecting to %1:%2 ...").arg(m_hops[0].address.toHtmlEscaped()).arg(m_hops[0].port));
     m_socket = new QTcpSocket(this);
+    m_socket->setProxy(QNetworkProxy::NoProxy);
     m_timer.start();
     m_connector = new ProxyConnector(m_socket, {}, Endpoint{QHostAddress(m_hops[0].address).isNull() ? m_hops[0].address : QString(),
                                                             QHostAddress(m_hops[0].address), m_hops[0].port},
@@ -124,6 +126,7 @@ void ProxyCheckerDialog::step2()
     out(tr("<b>Connection through the Proxy Server Test</b>"));
     out(tr("Connecting to %1:%2 through the proxy ...").arg(host.toHtmlEscaped()).arg(port));
     m_socket = new QSslSocket(this);
+    m_socket->setProxy(QNetworkProxy::NoProxy);
     m_timer.start();
     Endpoint target;
     target.host = host;
@@ -269,6 +272,7 @@ void ProxyCheckerDialog::udpTest()
     m_udpStage = 0;
     m_udpPending = true;
     m_udpCtrl = new QTcpSocket(this);
+    m_udpCtrl->setProxy(QNetworkProxy::NoProxy);
     connect(m_udpCtrl, &QTcpSocket::connected, this, [this] {
         const ProxyServer &p = m_hops[0];
         QByteArray g("\x05", 1);
@@ -390,6 +394,7 @@ void ProxyCheckerDialog::udpCtrlReadyRead()
 void ProxyCheckerDialog::udpProbe()
 {
     m_udp = new QUdpSocket(this);
+    m_udp->setProxy(QNetworkProxy::NoProxy);
     if (!m_udp->bind(QHostAddress(QHostAddress::AnyIPv4), 0)) {
         udpDone(false, tr("cannot open a local UDP socket"));
         return;

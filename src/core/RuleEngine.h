@@ -21,6 +21,7 @@ struct RuleMatch {
     RuleAction action;
     DnsResolve resolve = DnsResolve::Inherit;
     int resolveProxyId = 0;
+    UdpControl udp = UdpControl::Inherit;
 };
 
 // Who resolves the host name of a connection to a fake-DNS address.
@@ -58,6 +59,10 @@ public:
 
     // Whether any enabled rule asks for its names to be resolved through the proxy.
     bool anyRuleResolvesViaProxy() const;
+
+    // Whether any enabled rule turns UDP tunnelling on (udp == Enable). When one
+    // does, all outgoing UDP must be filtered even if the global mode is bypass.
+    bool anyRuleEnablesUdp() const;
 
     // Who resolves names for a connection that matched `m`. The rule's own
     // setting comes first; the profile's (on when globalViaProxy) is the

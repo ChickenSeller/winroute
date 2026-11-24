@@ -38,6 +38,7 @@ private:
     bool m_skipIfInterfaceDown = false;
     DnsResolve m_resolve = DnsResolve::Inherit;   // the rule's name resolution
     int m_resolveProxyId = 0;                     // and the proxy that does it (0: the exit)
+    UdpControl m_udp = UdpControl::Inherit;       // the rule's UDP tunnelling
     Profile m_profile;                            // for the proxy and chain names
     std::unique_ptr<Ui::RuleDialog> ui;
 };

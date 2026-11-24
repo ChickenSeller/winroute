@@ -612,7 +612,10 @@ void NetFilterInterceptor::setRules(RuleEnginePtr rules)
     bool udpProxy = false;
     bool loopResolve = true;
     if (rules) {
-        udpProxy = rules->profile().options.udpMode == QLatin1String("mode_proxy");
+        // Filter all outgoing UDP when the global mode tunnels it, or when any
+        // rule turns UDP on for itself (those sockets must reach the relay).
+        udpProxy = rules->profile().options.udpMode == QLatin1String("mode_proxy")
+                   || rules->anyRuleEnablesUdp();
         loopResolve = rules->profile().options.loopDetectionResolve;
         for (const ProxyServer &p : rules->profile().proxies) {
             const QHostAddress literal(p.address);
@@ -1151,6 +1154,10 @@ int NetFilterInterceptor::decideUdp(const RuleMatch &match, bool skip, const Pro
         // Bound to an adapter: the relay sends it from there.
         return match.action.interfaceId.isEmpty() ? bypass : UdpProxy;
     case ActionType::Proxy: {
+        // The rule's own UDP setting decides whether to tunnel; Inherit follows
+        // the global mode. A rule set to send UDP directly bypasses the proxy.
+        if (!udpTunnels(match.udp, opt.udpMode == QLatin1String("mode_proxy")))
+            return bypass;
         if (!fake && opt.loopDetection) {
             QMutexLocker lock(&m_rulesMutex);
             if (m_proxyEndpoints.contains(endpointKey(dst, dport)))
@@ -1168,7 +1175,8 @@ int NetFilterInterceptor::decideUdp(const RuleMatch &match, bool skip, const Pro
         return bypass;
     }
     case ActionType::Chain:
-        logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : proxy chains do not support UDP, sending directly").arg(appName, target, match.ruleName));
+        if (udpTunnels(match.udp, opt.udpMode == QLatin1String("mode_proxy")))
+            logNormal(QCoreApplication::translate("Interceptor", "%1 - %2 matching %3 rule : proxy chains do not support UDP, sending directly").arg(appName, target, match.ruleName));
         return bypass;
     }
     return bypass;

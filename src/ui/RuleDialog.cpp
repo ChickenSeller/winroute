@@ -127,6 +127,7 @@ RuleDialog::RuleDialog(const Rule &rule, const Profile &profile, bool isDefault,
     connect(ui->actionCombo, &QComboBox::currentIndexChanged, this, &RuleDialog::updateAdvancedButton);
     m_resolve = rule.resolve;
     m_resolveProxyId = rule.resolveProxyId;
+    m_udp = rule.udp;
     m_profile = profile;
     updateAdvancedButton();
 
@@ -190,6 +191,10 @@ void RuleDialog::updateAdvancedButton()
                                           : m_resolveProxyId ? tr("Host names: resolved through %1").arg(m_profile.actionDisplayName(
                                                                    {m_profile.proxyById(m_resolveProxyId) ? ActionType::Proxy : ActionType::Chain, m_resolveProxyId}))
                                                              : tr("Host names: resolved through the rule's exit")));
+    if (m_udp != UdpControl::Inherit && !block)
+        ui->advancedButton->setToolTip(ui->advancedButton->toolTip() + u'\n'
+                                       + (m_udp == UdpControl::Enable ? tr("UDP: tunnelled through the proxy")
+                                                                      : tr("UDP: sent directly")));
 }
 
 void RuleDialog::editInterface()
@@ -287,6 +292,26 @@ void RuleDialog::editInterface()
     dnsBox->setEnabled(type != ActionType::Block);
     outer->addWidget(dnsBox);
 
+    // UDP for this rule, over the profile's global UDP setting. Only a SOCKS5
+    // proxy can carry UDP, so this matters for proxy rules.
+    auto *udpBox = new QGroupBox(tr("UDP"), &dlg);
+    auto *udpLayout = new QVBoxLayout(udpBox);
+    auto *udpIntro = new QLabel(tr("Whether this rule's UDP is tunnelled through its proxy. "
+                                   "This overrides the global UDP setting for this rule."),
+                                &dlg);
+    udpIntro->setWordWrap(true);
+    udpLayout->addWidget(udpIntro);
+    auto *udpCombo = new QComboBox(&dlg);
+    udpCombo->addItem(tr("As set globally"), int(UdpControl::Inherit));
+    udpCombo->addItem(tr("Tunnel through the proxy"), int(UdpControl::Enable));
+    udpCombo->addItem(tr("Send directly"), int(UdpControl::Disable));
+    udpCombo->setCurrentIndex(qMax(0, udpCombo->findData(int(m_udp))));
+    auto *udpForm = new QFormLayout;
+    udpForm->addRow(tr("UDP datagrams:"), udpCombo);
+    udpLayout->addLayout(udpForm);
+    udpBox->setEnabled(type != ActionType::Block);
+    outer->addWidget(udpBox);
+
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
     connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
@@ -299,6 +324,7 @@ void RuleDialog::editInterface()
     m_skipIfInterfaceDown = !m_interfaceId.isEmpty() && ignore->isChecked();
     m_resolve = DnsResolve(resolveCombo->currentData().toInt());
     m_resolveProxyId = m_resolve == DnsResolve::Proxy ? resolverCombo->currentData().toInt() : 0;
+    m_udp = UdpControl(udpCombo->currentData().toInt());
     updateAdvancedButton();
 }
 
@@ -327,6 +353,7 @@ Rule RuleDialog::rule() const
     }
     r.resolve = m_resolve;
     r.resolveProxyId = m_resolve == DnsResolve::Proxy ? m_resolveProxyId : 0;
+    r.udp = m_udp;
     return r;
 }
 

@@ -266,7 +266,7 @@ void MainWindow::createActions()
     Updater::setDefaultMode(Updater::Mode::Never);
     UsageStats::setDefaultEnabled(false);
 #else
-    QTimer::singleShot(5000, m_updater, &Updater::checkAtStartup);
+    QTimer::singleShot(5000, m_updater, [this] { m_updater->checkAtStartup(autoUpdateProxy()); });
 #endif
 }
 
@@ -392,6 +392,13 @@ void MainWindow::createMenus()
         updateGroup->addAction(a);
         connect(a, &QAction::triggered, this, [mode] { Updater::setMode(mode); });
     }
+    updates->addSeparator();
+    m_actUpdateViaProxy = updates->addAction(tr("Check Through a Pro&xy"));
+    m_actUpdateViaProxy->setStatusTip(tr("Route automatic update checks and downloads through a proxy instead of connecting directly."));
+    m_actUpdateViaProxy->setCheckable(true);
+    m_actUpdateViaProxy->setChecked(Updater::viaProxy());
+    m_actUpdateViaProxy->setEnabled(!m_profile.proxies.isEmpty());
+    connect(m_actUpdateViaProxy, &QAction::toggled, this, [](bool on) { Updater::setViaProxy(on); });
 #endif
     if (UsageStats::isAvailable()) {
         QAction *stats = help->addAction(tr("Send Anonymous Usage &Statistics"));
@@ -751,6 +758,8 @@ void MainWindow::updateTitle()
     m_actLogDns->setChecked(m_profile.options.logDns);
     // Checking through a proxy needs at least one proxy in the profile.
     m_actCheckUpdatesProxy->setEnabled(!m_profile.proxies.isEmpty());
+    if (m_actUpdateViaProxy)
+        m_actUpdateViaProxy->setEnabled(!m_profile.proxies.isEmpty());
 }
 
 void MainWindow::updateTrayIcon()
@@ -1081,6 +1090,27 @@ void MainWindow::showAbout()
     QMessageBox::about(this, tr("About WinRoute"), motto + header + desc + links + footer);
 }
 
+// Qt has no SOCKS4 proxy; SOCKS4/SOCKS5 both use Socks5Proxy (a SOCKS4-only
+// server would fail, which the user sees as a failed update).
+static QNetworkProxy netProxyFor(const ProxyServer &p)
+{
+    const QNetworkProxy::ProxyType type =
+        (p.type == ProxyType::Http || p.type == ProxyType::Https) ? QNetworkProxy::HttpProxy
+                                                                  : QNetworkProxy::Socks5Proxy;
+    return QNetworkProxy(type, p.address, p.port, p.authEnabled ? p.username : QString(),
+                         p.authEnabled ? p.password : QString());
+}
+
+QNetworkProxy MainWindow::autoUpdateProxy() const
+{
+    // Automatic checks go through a proxy only when the option is on; the proxy
+    // used is the default DNS proxy when that is a single proxy, else the first.
+    if (!Updater::viaProxy() || m_profile.proxies.isEmpty())
+        return QNetworkProxy(QNetworkProxy::NoProxy);
+    const ProxyServer *p = m_profile.proxyById(m_profile.defaultDnsId());
+    return netProxyFor(p ? *p : m_profile.proxies.first());
+}
+
 void MainWindow::checkForUpdatesViaProxy()
 {
     if (m_profile.proxies.isEmpty())
@@ -1097,14 +1127,7 @@ void MainWindow::checkForUpdatesViaProxy()
     if (!ok || index < 0)
         return;
 
-    const ProxyServer &p = m_profile.proxies.at(index);
-    // Qt has no SOCKS4 proxy; SOCKS4/SOCKS5 both use Socks5Proxy (a SOCKS4-only
-    // server would fail, which the user sees as a failed download).
-    const QNetworkProxy::ProxyType type =
-        (p.type == ProxyType::Http || p.type == ProxyType::Https) ? QNetworkProxy::HttpProxy
-                                                                  : QNetworkProxy::Socks5Proxy;
-    m_updater->checkNow(QNetworkProxy(type, p.address, p.port, p.authEnabled ? p.username : QString(),
-                                      p.authEnabled ? p.password : QString()));
+    m_updater->checkNow(netProxyFor(m_profile.proxies.at(index)));
 }
 
 // ---- connections ------------------------------------------------------------------
