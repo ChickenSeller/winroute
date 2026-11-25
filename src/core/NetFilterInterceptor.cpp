@@ -1068,10 +1068,11 @@ void NetFilterInterceptor::handleUdpProxy(ENDPOINT_ID id, const unsigned char *r
             // whose rules are all direct) are released from filtering. Passing
             // every datagram of a long-lived tunnel (ZeroTier, WireGuard,
             // OpenVPN) through user mode and re-injecting it breaks its
-            // established path when WinRoute starts. Not while names may be
-            // fake-resolved: datagrams to a fake address must reach the relay.
-            const bool fakeNames = resolveViaProxy(optns) || engine->anyRuleResolvesViaProxy();
-            release = !fakeNames && (skip || !engine->mayDivertUdp(appPath, appName));
+            // established path when WinRoute starts. Never release on a datagram
+            // bound for a fake-DNS address: that one has to reach the relay to be
+            // translated, so a socket using fake addresses stays filtered. A
+            // tunnel's transport talks to real peer IPs, so it is still released.
+            release = !fake && (skip || !engine->mayDivertUdp(appPath, appName));
         }
         RuleMatch match;
         if (!skip) {
