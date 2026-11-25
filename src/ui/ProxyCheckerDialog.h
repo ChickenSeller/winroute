@@ -13,6 +13,7 @@ namespace Ui {
 class ProxyCheckerDialog;
 }
 
+class QCheckBox;
 class QComboBox;
 class QLineEdit;
 class QPushButton;
@@ -50,11 +51,39 @@ private:
     void udpProbe();
     void onUdpDatagram();
     void udpDone(bool ok, const QString &detail = {});
+    void cleanupUdp();
+
+    // Enhanced UDP probe. The DNS test above only proves the relay can carry a
+    // single small round-trip to a universally reachable server (8.8.8.8:53).
+    // Real game traffic needs UDP to arbitrary hosts on arbitrary ports, often
+    // many flows at once, and a cone NAT at the exit. STUN exercises exactly
+    // that: two public STUN servers on non-53 ports, probed concurrently; a
+    // reply proves arbitrary-host reachability, and comparing the public
+    // address each server reports classifies the exit's NAT mapping
+    // (endpoint-independent / full-cone vs address/port-dependent / symmetric).
+    void saveStunSettings();
+    void udpDnsOk();
+    void stunTest();
+    void startStunProbes();
+    void sendStun(int idx);
+    void handleStunDatagram(const QByteArray &payload);
+    void stunFinish();
+
+    struct StunTarget {
+        QString name;
+        quint16 port = 0;
+        QHostAddress ip;
+        QByteArray txid;        // 12-byte transaction id
+        bool replied = false;
+        QHostAddress mappedAddr;
+        quint16 mappedPort = 0;
+    };
 
     std::unique_ptr<Ui::ProxyCheckerDialog> ui;
     QList<QPair<QString, QList<ProxyServer>>> m_choices;
     QComboBox *m_choice = nullptr;
     QLineEdit *m_host = nullptr;
+    QLineEdit *m_stunEdit = nullptr;
     QSpinBox *m_port = nullptr;
     QTextEdit *m_output = nullptr;
     QPushButton *m_start = nullptr;
@@ -81,4 +110,11 @@ private:
     QHostAddress m_relayAddr;
     quint16 m_relayPort = 0;
     quint16 m_dnsId = 0;
+    int m_udpPhase = 0;          // 0 DNS probe, 1 STUN probe
+
+    // STUN probe state.
+    QList<QPair<QCheckBox *, QString>> m_stunPresets;   // checkbox -> "host:port"
+    QList<StunTarget> m_stun;
+    int m_stunReplies = 0;
+    int m_stunResolving = 0;
 };

@@ -2024,6 +2024,18 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>ポート：</translation>
     </message>
     <message>
+      <source>UDP Reachability and NAT Test (STUN)</source>
+      <translation>UDP 到達性・NAT テスト（STUN）</translation>
+    </message>
+    <message>
+      <source>Custom:</source>
+      <translation>カスタム：</translation>
+    </message>
+    <message>
+      <source>Extra STUN servers in addition to the ticked presets, as host:port, separated by ; or spaces.</source>
+      <translation>チェックしたプリセットに加えて使う STUN サーバー。host:port 形式で、; またはスペースで区切ります。</translation>
+    </message>
+    <message>
       <source>Target host:</source>
       <translation>接続先ホスト：</translation>
     </message>
@@ -2178,6 +2190,58 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     <message>
       <source>UDP ASSOCIATE: %1 not available%2</source>
       <translation>UDP ASSOCIATE：%1 利用不可%2</translation>
+    </message>
+    <message>
+      <source>&lt;b&gt;UDP Reachability and NAT Test (STUN)&lt;/b&gt;</source>
+      <translation>&lt;b&gt;UDP 到達性・NAT テスト（STUN）&lt;/b&gt;</translation>
+    </message>
+    <message>
+      <source>STUN test skipped: no STUN server selected.</source>
+      <translation>STUN テストをスキップ：STUN サーバーが選択されていません。</translation>
+    </message>
+    <message>
+      <source>Resolving %1 ...</source>
+      <translation>%1 を解決しています ...</translation>
+    </message>
+    <message>
+      <source>Could not resolve %1%2</source>
+      <translation>%1 を解決できません%2</translation>
+    </message>
+    <message>
+      <source>STUN test skipped: could not resolve any STUN server.</source>
+      <translation>STUN テストをスキップ：STUN サーバーを解決できませんでした。</translation>
+    </message>
+    <message>
+      <source>Sending a STUN request to %1:%2 (%3) through the relay ...</source>
+      <translation>リレー経由で %1:%2（%3）に STUN リクエストを送信しています ...</translation>
+    </message>
+    <message>
+      <source>%1 replied %2 - the exit is seen as %3:%4</source>
+      <translation>%1 が応答 %2 —— 出口は %3:%4 として見えています</translation>
+    </message>
+    <message>
+      <source>%1 - no reply</source>
+      <translation>%1 —— 応答なし</translation>
+    </message>
+    <message>
+      <source>UDP to an arbitrary host: %1 (0/%2 replied) - datagrams relayed, no reply. DNS may pass, but P2P/relay traffic (e.g. Steam) will not work.</source>
+      <translation>任意ホストへの UDP：%1（0/%2 応答）—— データグラムは転送、応答なし。DNS は通っても P2P/リレー通信（Steam など）は機能しません。</translation>
+    </message>
+    <message>
+      <source>UDP to an arbitrary host: %1 (%2/%3 replied).</source>
+      <translation>任意ホストへの UDP：%1（%2/%3 応答）。</translation>
+    </message>
+    <message>
+      <source>NAT mapping: %1 - endpoint-independent (full-cone), %2:%3. P2P-capable.</source>
+      <translation>NAT マッピング：%1 —— エンドポイント非依存（フルコーン）、%2:%3。P2P 対応。</translation>
+    </message>
+    <message>
+      <source>NAT mapping: %1 - address/port-dependent (symmetric), %2:%3 vs %4:%5. P2P unsupported.</source>
+      <translation>NAT マッピング：%1 —— アドレス/ポート依存（対称型）、%2:%3 ≠ %4:%5。P2P 非対応。</translation>
+    </message>
+    <message>
+      <source>NAT mapping: single reply; type undetermined.</source>
+      <translation>NAT マッピング：応答 1 件のみ、種類は判定不可。</translation>
     </message>
     <message>
       <source>&lt;b&gt;Testing Finished.&lt;/b&gt; Proxy server is working correctly!</source>

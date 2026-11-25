@@ -2024,6 +2024,18 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
       <translation>端口：</translation>
     </message>
     <message>
+      <source>UDP Reachability and NAT Test (STUN)</source>
+      <translation>UDP 可达性与 NAT 测试（STUN）</translation>
+    </message>
+    <message>
+      <source>Custom:</source>
+      <translation>自定义：</translation>
+    </message>
+    <message>
+      <source>Extra STUN servers in addition to the ticked presets, as host:port, separated by ; or spaces.</source>
+      <translation>在勾选的预置服务器之外额外添加的 STUN 服务器,格式为 host:port,用 ; 或空格分隔。</translation>
+    </message>
+    <message>
       <source>Target host:</source>
       <translation>目标主机：</translation>
     </message>
@@ -2178,6 +2190,58 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     <message>
       <source>UDP ASSOCIATE: %1 not available%2</source>
       <translation>UDP ASSOCIATE：%1 不可用%2</translation>
+    </message>
+    <message>
+      <source>&lt;b&gt;UDP Reachability and NAT Test (STUN)&lt;/b&gt;</source>
+      <translation>&lt;b&gt;UDP 可达性与 NAT 测试（STUN）&lt;/b&gt;</translation>
+    </message>
+    <message>
+      <source>STUN test skipped: no STUN server selected.</source>
+      <translation>跳过 STUN 测试：未选择 STUN 服务器。</translation>
+    </message>
+    <message>
+      <source>Resolving %1 ...</source>
+      <translation>正在解析 %1 ...</translation>
+    </message>
+    <message>
+      <source>Could not resolve %1%2</source>
+      <translation>无法解析 %1%2</translation>
+    </message>
+    <message>
+      <source>STUN test skipped: could not resolve any STUN server.</source>
+      <translation>跳过 STUN 测试：无法解析任何 STUN 服务器。</translation>
+    </message>
+    <message>
+      <source>Sending a STUN request to %1:%2 (%3) through the relay ...</source>
+      <translation>正在通过中继向 %1:%2（%3）发送 STUN 请求 ...</translation>
+    </message>
+    <message>
+      <source>%1 replied %2 - the exit is seen as %3:%4</source>
+      <translation>%1 已回复 %2 —— 出口被看到为 %3:%4</translation>
+    </message>
+    <message>
+      <source>%1 - no reply</source>
+      <translation>%1 —— 无回包</translation>
+    </message>
+    <message>
+      <source>UDP to an arbitrary host: %1 (0/%2 replied) - datagrams relayed, no reply. DNS may pass, but P2P/relay traffic (e.g. Steam) will not work.</source>
+      <translation>到任意主机的 UDP：%1（0/%2 回复）—— 数据报已转发,无回包。DNS 可通,但 P2P/中继流量(如 Steam)无法工作。</translation>
+    </message>
+    <message>
+      <source>UDP to an arbitrary host: %1 (%2/%3 replied).</source>
+      <translation>到任意主机的 UDP：%1（%2/%3 回复）。</translation>
+    </message>
+    <message>
+      <source>NAT mapping: %1 - endpoint-independent (full-cone), %2:%3. P2P-capable.</source>
+      <translation>NAT 映射:%1 —— 端点无关(full-cone),%2:%3。支持 P2P。</translation>
+    </message>
+    <message>
+      <source>NAT mapping: %1 - address/port-dependent (symmetric), %2:%3 vs %4:%5. P2P unsupported.</source>
+      <translation>NAT 映射:%1 —— 地址/端口相关(对称型),%2:%3 ≠ %4:%5。不支持 P2P。</translation>
+    </message>
+    <message>
+      <source>NAT mapping: single reply; type undetermined.</source>
+      <translation>NAT 映射:仅单台响应,无法判定类型。</translation>
     </message>
     <message>
       <source>&lt;b&gt;Testing Finished.&lt;/b&gt; Proxy server is working correctly!</source>

@@ -67,6 +67,42 @@
     </layout>
    </item>
    <item>
+    <widget class="QGroupBox" name="stunGroup">
+     <property name="title">
+      <string>UDP Reachability and NAT Test (STUN)</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QVBoxLayout" name="stunLayout">
+      <item>
+       <layout class="QHBoxLayout" name="stunPresetRow"/>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="stunCustomRow">
+        <item>
+         <widget class="QLabel" name="stunCustomLabel">
+          <property name="text">
+           <string>Custom:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="stunEdit">
+          <property name="toolTip">
+           <string>Extra STUN servers in addition to the ticked presets, as host:port, separated by ; or spaces.</string>
+          </property>
+          <property name="placeholderText">
+           <string notr="true">stun.example.com:3478; 1.2.3.4:3478</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QTextEdit" name="outputEdit">
      <property name="font">
       <font>

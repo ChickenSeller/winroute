@@ -3,15 +3,19 @@
 
 #include "core/DnsClient.h"
 #include "core/ProxyConnector.h"
+#include "core/Utils.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QFormLayout>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QNetworkProxy>
 #include <QPushButton>
 #include <QRandomGenerator>
+#include <QRegularExpression>
 #include <QSpinBox>
 #include <QSslError>
 #include <QSslSocket>
@@ -24,6 +28,29 @@
 
 static const char *kOk = "<span style='color:#1a8a2a;font-weight:bold'>OK</span>";
 static const char *kFailed = "<span style='color:#c0201a;font-weight:bold'>FAILED</span>";
+
+// STUN servers for the UDP reachability and NAT test. The user ticks presets
+// and/or types custom ones; at least two different operators are needed so their
+// public-endpoint reports can be compared for NAT type. Google is offered but off
+// by default, as it is unreachable from mainland China.
+static const char *kStunEnabledKey = "proxyChecker/stunEnabled";
+// Versioned: the preset list changed (dead servers replaced), so an old saved
+// selection must not pin the stale set; a fresh key gives the new defaults.
+static const char *kStunPresetsKey = "proxyChecker/stunPresets2";
+static const char *kStunCustomKey = "proxyChecker/stunCustom";
+
+struct StunPreset {
+    const char *name;   // short label on the checkbox
+    const char *addr;   // host:port, shown in the tooltip
+    bool defOn;         // ticked by default
+};
+static const StunPreset kStunPresetList[] = {
+    {"Xiaomi", "stun.miwifi.com:3478", true},
+    {"Bilibili", "stun.chat.bilibili.com:3478", true},
+    {"Cloudflare", "stun.cloudflare.com:3478", true},
+    {"Google", "stun.l.google.com:19302", true},
+    {"Blackberry", "stun.voip.blackberry.com:3478", true},
+};
 
 ProxyCheckerDialog::ProxyCheckerDialog(const QList<ProxyServer> &proxies, QWidget *parent)
     : QDialog(parent)
@@ -46,9 +73,27 @@ void ProxyCheckerDialog::build()
     // test logic below is unchanged.
     m_choice = ui->choiceCombo;
     m_host = ui->hostEdit;
+    m_stunEdit = ui->stunEdit;
     m_port = ui->portSpin;
     m_output = ui->outputEdit;
     m_start = ui->startButton;
+
+    // STUN group: a master enable (the group's own checkbox), a row of preset
+    // servers (name on the box, address in the tooltip), and a custom field.
+    const QSettings s = util::appSettings();
+    ui->stunGroup->setChecked(s.value(kStunEnabledKey, true).toBool());
+    const bool havePresetPref = s.contains(kStunPresetsKey);
+    const QStringList saved = s.value(kStunPresetsKey).toString().split(';', Qt::SkipEmptyParts);
+    for (const StunPreset &p : kStunPresetList) {
+        const QString addr = QString::fromUtf8(p.addr);
+        auto *cb = new QCheckBox(QString::fromUtf8(p.name), this);
+        cb->setToolTip(addr);
+        cb->setChecked(havePresetPref ? saved.contains(addr) : p.defOn);
+        ui->stunPresetRow->addWidget(cb);
+        m_stunPresets.append(qMakePair(cb, addr));
+    }
+    ui->stunPresetRow->addStretch(1);
+    m_stunEdit->setText(s.value(kStunCustomKey).toString());
 
     m_dns = new DnsClient(this);
     m_dns->bind(0);
@@ -73,6 +118,7 @@ void ProxyCheckerDialog::startTest()
         return;
     m_running = true;
     ++m_run;
+    saveStunSettings();
     m_start->setEnabled(false);
     m_output->clear();
     m_hops = m_choices[qMax(0, m_choice->currentIndex())].second;
@@ -270,6 +316,8 @@ void ProxyCheckerDialog::udpTest()
     out(tr("Requesting a UDP relay from %1:%2 ...").arg(p.address.toHtmlEscaped()).arg(p.port));
     m_udpBuf.clear();
     m_udpStage = 0;
+    m_udpPhase = 0;
+    m_relayPort = 0;
     m_udpPending = true;
     m_udpCtrl = new QTcpSocket(this);
     m_udpCtrl->setProxy(QNetworkProxy::NoProxy);
@@ -293,7 +341,9 @@ void ProxyCheckerDialog::udpTest()
     });
     m_udpCtrl->connectToHost(p.address, p.port);
     QTimer::singleShot(12000, this, [this, run = m_run] {
-        if (run == m_run)
+        // Only fires while we are still waiting for the ASSOCIATE reply; once
+        // the relay is granted m_relayPort is set and the probes take over.
+        if (run == m_run && m_relayPort == 0)
             udpDone(false, tr("the proxy did not grant a UDP relay in time"));
     });
 }
@@ -430,7 +480,7 @@ void ProxyCheckerDialog::udpProbe()
     out(tr("Sending a DNS query to 8.8.8.8:53 through the relay ..."));
     m_udp->writeDatagram(pkt, m_relayAddr, m_relayPort);
     QTimer::singleShot(5000, this, [this, run = m_run] {
-        if (run == m_run)
+        if (run == m_run && m_udpPending && m_udpPhase == 0)
             udpDone(false, tr("no reply from the relay within 5 seconds (UDP may be blocked)"));
     });
 }
@@ -452,15 +502,36 @@ void ProxyCheckerDialog::onUdpDatagram()
             off = 4 + 1 + quint8(d[4]) + 2;
         else
             continue;
-        if (d.size() < off + 4)
+        if (d.size() <= off)
             continue;
         const QByteArray payload = d.mid(off);
-        const quint16 id = (quint8(payload[0]) << 8) | quint8(payload[1]);
-        const bool isResponse = quint8(payload[2]) & 0x80;
-        if (id == m_dnsId && isResponse) {
-            udpDone(true);
-            return;
+        if (m_udpPhase == 0) {   // DNS reply to the associate probe
+            if (payload.size() < 3)
+                continue;
+            const quint16 id = (quint8(payload[0]) << 8) | quint8(payload[1]);
+            const bool isResponse = quint8(payload[2]) & 0x80;
+            if (id == m_dnsId && isResponse) {
+                udpDnsOk();
+                return;
+            }
+        } else {                 // STUN reply
+            handleStunDatagram(payload);
+            if (!m_udpPending)   // stunFinish() ran
+                return;
         }
+    }
+}
+
+void ProxyCheckerDialog::cleanupUdp()
+{
+    if (m_udp) {
+        m_udp->abort();
+        m_udp->deleteLater();
+    }
+    if (m_udpCtrl) {
+        m_udpCtrl->disconnect(this);
+        m_udpCtrl->abort();
+        m_udpCtrl->deleteLater();
     }
 }
 
@@ -474,15 +545,266 @@ void ProxyCheckerDialog::udpDone(bool ok, const QString &detail)
     else
         out(tr("UDP ASSOCIATE: %1 not available%2")
                 .arg(kFailed, detail.isEmpty() ? QString() : " - " + detail.toHtmlEscaped()));
-    if (m_udp) {
-        m_udp->abort();
-        m_udp->deleteLater();
+    cleanupUdp();
+    finish(true);
+}
+
+// The associate probe (DNS to 8.8.8.8:53) succeeded. Rather than finishing here,
+// go on to the STUN probe, which tests what the DNS round-trip does not: reaching
+// an arbitrary host on a non-53 port, and the exit's NAT mapping type. The relay
+// (m_udpCtrl) and the local UDP socket (m_udp) stay open for it.
+void ProxyCheckerDialog::saveStunSettings()
+{
+    QStringList checked;
+    for (const auto &pr : m_stunPresets)
+        if (pr.first->isChecked())
+            checked << pr.second;
+    QSettings s = util::appSettings();
+    s.setValue(kStunEnabledKey, ui->stunGroup->isChecked());
+    s.setValue(kStunPresetsKey, checked.join(';'));
+    s.setValue(kStunCustomKey, m_stunEdit->text());
+}
+
+void ProxyCheckerDialog::udpDnsOk()
+{
+    out(tr("UDP ASSOCIATE: %1 supported (a DNS reply came back through the relay)").arg(kOk));
+    if (!ui->stunGroup->isChecked()) {
+        // The STUN test is switched off; the associate test above is enough.
+        m_udpPending = false;
+        cleanupUdp();
+        finish(true);
+        return;
     }
-    if (m_udpCtrl) {
-        m_udpCtrl->disconnect(this);
-        m_udpCtrl->abort();
-        m_udpCtrl->deleteLater();
+    stunTest();
+}
+
+void ProxyCheckerDialog::stunTest()
+{
+    out("");
+    out(tr("<b>UDP Reachability and NAT Test (STUN)</b>"));
+    m_udpPhase = 1;
+    m_stun.clear();
+    m_stunReplies = 0;
+
+    // Servers = the ticked presets plus any custom entries (host:port, separated
+    // by ; , or whitespace).
+    QStringList addrs;
+    for (const auto &pr : m_stunPresets)
+        if (pr.first->isChecked())
+            addrs << pr.second;
+    addrs += m_stunEdit->text().trimmed().split(QRegularExpression("[;,\\s]+"), Qt::SkipEmptyParts);
+
+    for (const QString &tok : addrs) {
+        StunTarget t;
+        const int colon = tok.lastIndexOf(':');
+        if (colon > 0) {
+            t.name = tok.left(colon).trimmed();
+            bool okp = false;
+            const uint pv = tok.mid(colon + 1).trimmed().toUInt(&okp);
+            t.port = (okp && pv >= 1 && pv <= 65535) ? quint16(pv) : 3478;
+        } else {
+            t.name = tok;
+            t.port = 3478;
+        }
+        if (!t.name.isEmpty())
+            m_stun << t;
     }
+
+    if (m_stun.isEmpty()) {
+        out(tr("STUN test skipped: no STUN server selected."));
+        stunFinish();
+        return;
+    }
+
+    m_stunResolving = m_stun.size();
+    for (int i = 0; i < m_stun.size(); ++i) {
+        out(tr("Resolving %1 ...").arg(m_stun[i].name));
+        m_dns->resolve(m_stun[i].name, [this, i, run = m_run](const QList<QHostAddress> &addrs, const QString &error) {
+            if (run != m_run || i >= m_stun.size())
+                return;
+            for (const QHostAddress &h : addrs)
+                if (h.protocol() == QAbstractSocket::IPv4Protocol) {
+                    m_stun[i].ip = h;
+                    break;
+                }
+            if (m_stun[i].ip.isNull())
+                out(tr("Could not resolve %1%2")
+                        .arg(m_stun[i].name, error.isEmpty() ? QString() : " - " + error.toHtmlEscaped()));
+            if (--m_stunResolving == 0)
+                startStunProbes();
+        }, false);
+    }
+}
+
+void ProxyCheckerDialog::startStunProbes()
+{
+    if (!m_udpPending)
+        return;
+    int sent = 0;
+    for (int i = 0; i < m_stun.size(); ++i)
+        if (!m_stun[i].ip.isNull()) {
+            sendStun(i);
+            ++sent;
+        }
+    if (sent == 0) {
+        out(tr("STUN test skipped: could not resolve any STUN server."));
+        stunFinish();
+        return;
+    }
+    QTimer::singleShot(6000, this, [this, run = m_run] {
+        if (run == m_run && m_udpPending && m_udpPhase == 1)
+            stunFinish();
+    });
+}
+
+void ProxyCheckerDialog::sendStun(int idx)
+{
+    StunTarget &t = m_stun[idx];
+    t.txid.resize(12);
+    for (int k = 0; k < 12; ++k)
+        t.txid[k] = char(QRandomGenerator::global()->bounded(256));
+
+    // STUN Binding Request: type 0x0001, length 0, magic cookie, transaction id.
+    QByteArray msg;
+    auto be16 = [&msg](quint16 v) { msg.append(char(v >> 8)); msg.append(char(v & 0xff)); };
+    be16(0x0001);
+    be16(0);
+    be16(0x2112);
+    be16(0xA442);
+    msg.append(t.txid);
+
+    // Wrap it in a SOCKS5 UDP header targeting the STUN server (ATYP=IPv4).
+    QByteArray pkt("\x00\x00\x00\x01", 4);
+    const quint32 dst = qToBigEndian<quint32>(t.ip.toIPv4Address());
+    pkt.append(reinterpret_cast<const char *>(&dst), 4);
+    const quint16 dport = qToBigEndian<quint16>(t.port);
+    pkt.append(reinterpret_cast<const char *>(&dport), 2);
+    pkt.append(msg);
+
+    out(tr("Sending a STUN request to %1:%2 (%3) through the relay ...")
+            .arg(t.name)
+            .arg(t.port)
+            .arg(t.ip.toString()));
+    m_udp->writeDatagram(pkt, m_relayAddr, m_relayPort);
+}
+
+void ProxyCheckerDialog::handleStunDatagram(const QByteArray &p)
+{
+    if (p.size() < 20)
+        return;
+    if (((quint8(p[0]) << 8) | quint8(p[1])) != 0x0101)   // Binding success response
+        return;
+    if (quint8(p[4]) != 0x21 || quint8(p[5]) != 0x12 || quint8(p[6]) != 0xA4 || quint8(p[7]) != 0x42)
+        return;
+    const QByteArray txid = p.mid(8, 12);
+    int idx = -1;
+    for (int i = 0; i < m_stun.size(); ++i)
+        if (m_stun[i].txid == txid) {
+            idx = i;
+            break;
+        }
+    if (idx < 0 || m_stun[idx].replied)
+        return;
+
+    // Walk the attributes for XOR-MAPPED-ADDRESS (0x0020), falling back to the
+    // legacy MAPPED-ADDRESS (0x0001). Both carry the public endpoint the server
+    // saw, i.e. the proxy exit's address as the outside world sees it.
+    QHostAddress mapped;
+    quint16 mport = 0;
+    const int end = qMin(int(p.size()), 20 + ((quint8(p[2]) << 8) | quint8(p[3])));
+    for (int o = 20; o + 4 <= end;) {
+        const quint16 at = (quint8(p[o]) << 8) | quint8(p[o + 1]);
+        const quint16 al = (quint8(p[o + 2]) << 8) | quint8(p[o + 3]);
+        const int av = o + 4;
+        if (av + al > p.size())
+            break;
+        if ((at == 0x0020 || at == 0x0001) && al >= 8 && quint8(p[av + 1]) == 0x01) {
+            quint16 rport = (quint8(p[av + 2]) << 8) | quint8(p[av + 3]);
+            quint32 raddr = (quint32(quint8(p[av + 4])) << 24) | (quint32(quint8(p[av + 5])) << 16)
+                | (quint32(quint8(p[av + 6])) << 8) | quint32(quint8(p[av + 7]));
+            if (at == 0x0020) {
+                rport ^= 0x2112;
+                raddr ^= 0x2112A442u;
+            }
+            mapped = QHostAddress(raddr);
+            mport = rport;
+            if (at == 0x0020)
+                break;   // prefer XOR-MAPPED-ADDRESS
+        }
+        o = av + ((al + 3) & ~3);   // attributes are padded to 4 bytes
+    }
+
+    m_stun[idx].replied = true;
+    m_stun[idx].mappedAddr = mapped;
+    m_stun[idx].mappedPort = mport;
+    ++m_stunReplies;
+    out(tr("%1 replied %2 - the exit is seen as %3:%4")
+            .arg(m_stun[idx].name, kOk)
+            .arg(mapped.toString())
+            .arg(mport));
+
+    int resolved = 0;
+    for (const StunTarget &s : m_stun)
+        if (!s.ip.isNull())
+            ++resolved;
+    if (m_stunReplies >= resolved)
+        stunFinish();
+}
+
+void ProxyCheckerDialog::stunFinish()
+{
+    if (!m_udpPending)
+        return;
+    m_udpPending = false;
+
+    int resolved = 0;
+    QList<int> ok;
+    for (int i = 0; i < m_stun.size(); ++i)
+        if (!m_stun[i].ip.isNull()) {
+            ++resolved;
+            if (m_stun[i].replied)
+                ok << i;
+        }
+
+    // A few STUN servers being unreachable is common; list them but do not fail
+    // on them. Reachability counts as proven if any server answered.
+    for (int i = 0; i < m_stun.size(); ++i)
+        if (!m_stun[i].ip.isNull() && !m_stun[i].replied)
+            out(tr("%1 - no reply").arg(m_stun[i].name));
+
+    if (resolved == 0) {
+        // Resolution failures were already reported in stunTest().
+    } else if (ok.isEmpty()) {
+        out(tr("UDP to an arbitrary host: %1 (0/%2 replied) - datagrams relayed, no reply. DNS may "
+               "pass, but P2P/relay traffic (e.g. Steam) will not work.")
+                .arg(kFailed)
+                .arg(resolved));
+    } else {
+        out(tr("UDP to an arbitrary host: %1 (%2/%3 replied).")
+                .arg(kOk)
+                .arg(ok.size())
+                .arg(resolved));
+        if (ok.size() >= 2) {
+            const StunTarget &a = m_stun[ok[0]];
+            const StunTarget &b = m_stun[ok[1]];
+            if (a.mappedAddr == b.mappedAddr && a.mappedPort == b.mappedPort)
+                out(tr("NAT mapping: %1 - endpoint-independent (full-cone), %2:%3. P2P-capable.")
+                        .arg(kOk)
+                        .arg(a.mappedAddr.toString())
+                        .arg(a.mappedPort));
+            else
+                out(tr("NAT mapping: %1 - address/port-dependent (symmetric), %2:%3 vs %4:%5. P2P unsupported.")
+                        .arg(kFailed)
+                        .arg(a.mappedAddr.toString())
+                        .arg(a.mappedPort)
+                        .arg(b.mappedAddr.toString())
+                        .arg(b.mappedPort));
+        } else if (resolved >= 2) {
+            out(tr("NAT mapping: single reply; type undetermined."));
+        }
+    }
+
+    cleanupUdp();
     finish(true);
 }
 

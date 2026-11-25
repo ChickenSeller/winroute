@@ -655,6 +655,38 @@ T = {
     "UDP ASSOCIATE: %1 supported (a DNS reply came back through the relay)":
         ("UDP ASSOCIATE：%1 支持（已通过中继收到 DNS 回复）", "UDP ASSOCIATE：%1 対応（リレー経由で DNS 応答を受信）"),
     "UDP ASSOCIATE: %1 not available%2": ("UDP ASSOCIATE：%1 不可用%2", "UDP ASSOCIATE：%1 利用不可%2"),
+    "<b>UDP Reachability and NAT Test (STUN)</b>":
+        ("<b>UDP 可达性与 NAT 测试（STUN）</b>", "<b>UDP 到達性・NAT テスト（STUN）</b>"),
+    "UDP Reachability and NAT Test (STUN)":
+        ("UDP 可达性与 NAT 测试（STUN）", "UDP 到達性・NAT テスト（STUN）"),
+    "Resolving %1 ...": ("正在解析 %1 ...", "%1 を解決しています ..."),
+    "Could not resolve %1%2": ("无法解析 %1%2", "%1 を解決できません%2"),
+    "STUN test skipped: could not resolve any STUN server.":
+        ("跳过 STUN 测试：无法解析任何 STUN 服务器。", "STUN テストをスキップ：STUN サーバーを解決できませんでした。"),
+    "STUN test skipped: no STUN server selected.":
+        ("跳过 STUN 测试：未选择 STUN 服务器。", "STUN テストをスキップ：STUN サーバーが選択されていません。"),
+    "Custom:": ("自定义：", "カスタム："),
+    "Extra STUN servers in addition to the ticked presets, as host:port, separated by ; or spaces.":
+        ("在勾选的预置服务器之外额外添加的 STUN 服务器,格式为 host:port,用 ; 或空格分隔。",
+         "チェックしたプリセットに加えて使う STUN サーバー。host:port 形式で、; またはスペースで区切ります。"),
+    "Sending a STUN request to %1:%2 (%3) through the relay ...":
+        ("正在通过中继向 %1:%2（%3）发送 STUN 请求 ...", "リレー経由で %1:%2（%3）に STUN リクエストを送信しています ..."),
+    "%1 replied %2 - the exit is seen as %3:%4":
+        ("%1 已回复 %2 —— 出口被看到为 %3:%4", "%1 が応答 %2 —— 出口は %3:%4 として見えています"),
+    "%1 - no reply": ("%1 —— 无回包", "%1 —— 応答なし"),
+    "UDP to an arbitrary host: %1 (0/%2 replied) - datagrams relayed, no reply. DNS may pass, but P2P/relay traffic (e.g. Steam) will not work.":
+        ("到任意主机的 UDP：%1（0/%2 回复）—— 数据报已转发,无回包。DNS 可通,但 P2P/中继流量(如 Steam)无法工作。",
+         "任意ホストへの UDP：%1（0/%2 応答）—— データグラムは転送、応答なし。DNS は通っても P2P/リレー通信（Steam など）は機能しません。"),
+    "UDP to an arbitrary host: %1 (%2/%3 replied).":
+        ("到任意主机的 UDP：%1（%2/%3 回复）。", "任意ホストへの UDP：%1（%2/%3 応答）。"),
+    "NAT mapping: %1 - endpoint-independent (full-cone), %2:%3. P2P-capable.":
+        ("NAT 映射:%1 —— 端点无关(full-cone),%2:%3。支持 P2P。",
+         "NAT マッピング：%1 —— エンドポイント非依存（フルコーン）、%2:%3。P2P 対応。"),
+    "NAT mapping: %1 - address/port-dependent (symmetric), %2:%3 vs %4:%5. P2P unsupported.":
+        ("NAT 映射:%1 —— 地址/端口相关(对称型),%2:%3 ≠ %4:%5。不支持 P2P。",
+         "NAT マッピング：%1 —— アドレス/ポート依存（対称型）、%2:%3 ≠ %4:%5。P2P 非対応。"),
+    "NAT mapping: single reply; type undetermined.":
+        ("NAT 映射:仅单台响应,无法判定类型。", "NAT マッピング：応答 1 件のみ、種類は判定不可。"),
     "<b>Testing Finished.</b> Proxy server is working correctly!": ("<b>测试完成。</b>代理服务器工作正常！", "<b>テスト完了。</b>プロキシサーバーは正常に動作しています！"),
     "<b>Testing Finished.</b> <span style='color:#c0201a'>The proxy server test failed.</span>":
         ("<b>测试完成。</b> <span style='color:#c0201a'>代理服务器测试失败。</span>", "<b>テスト完了。</b> <span style='color:#c0201a'>プロキシサーバーのテストに失敗しました。</span>"),
