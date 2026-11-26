@@ -54,6 +54,8 @@
 #include <QStandardPaths>
 #include <QStatusBar>
 #include <QTabWidget>
+#include <QTextBrowser>
+#include <QTimer>
 #include <QToolBar>
 #include <QToolButton>
 #include <QTreeView>
@@ -122,6 +124,10 @@ MainWindow::MainWindow(Engine *engine, QWidget *parent)
         m_engine->networkChanged();
         probeLocalDns();
     });
+
+    // Show the "Did You Know?" advisory once, so users on a profile upgraded
+    // from before the name-resolution fix learn they can reset in one step.
+    maybeShowTips();
 }
 
 MainWindow::~MainWindow() = default;
@@ -142,6 +148,8 @@ void MainWindow::createActions()
     m_actManage = act(tr("&Manage Profiles..."), &MainWindow::manageProfiles, QKeySequence("Ctrl+M"));
     m_actImport = act(tr("&Import Profile..."), &MainWindow::importProfile, QKeySequence("Ctrl+O"));
     m_actExport = act(tr("&Export Profile..."), &MainWindow::exportProfile);
+    m_actReset = act(tr("Initiali&ze Configuration..."), &MainWindow::resetConfiguration);
+    m_actReset->setStatusTip(tr("Delete all profiles and restart with a clean default configuration"));
     m_actAutostart = new QAction(tr("&Autostart"), this);
     m_actAutostart->setCheckable(true);
     m_actAutostart->setChecked(autostartEnabled());
@@ -243,6 +251,8 @@ void MainWindow::createActions()
     });
     m_actDriver->setStatusTip(tr("Install, switch or uninstall the network driver"));
     m_actAbout = act(tr("&About WinRoute..."), &MainWindow::showAbout);
+    m_actTips = act(tr("&Did You Know?..."), &MainWindow::showTips);
+    m_actTips->setStatusTip(tr("Tips for recovering if WinRoute stops working correctly"));
 
     m_updater = new Updater(this);
     m_actCheckUpdates = act(tr("Check for &Updates..."), [this] { m_updater->checkNow(); });
@@ -280,6 +290,8 @@ void MainWindow::createMenus()
     file->addAction(m_actManage);
     file->addAction(m_actImport);
     file->addAction(m_actExport);
+    file->addSeparator();
+    file->addAction(m_actReset);
     file->addSeparator();
     file->addAction(m_actAutostart);
     file->addSeparator();
@@ -408,6 +420,7 @@ void MainWindow::createMenus()
         connect(stats, &QAction::toggled, this, [](bool on) { UsageStats::setEnabled(on); });
     }
     help->addSeparator();
+    help->addAction(m_actTips);
     help->addAction(m_actAbout);
 }
 
@@ -778,37 +791,27 @@ QString MainWindow::profilesDir()
 
 QString MainWindow::profilePath(const QString &name) const
 {
-    return QDir(profilesDir()).filePath(name + ".ppx");
+    return QDir(profilesDir()).filePath(name + ".yml");
 }
 
 QStringList MainWindow::profileNames() const
 {
     QStringList names;
-    for (const QFileInfo &fi : QDir(profilesDir()).entryInfoList({"*.ppx"}, QDir::Files, QDir::Name))
+    for (const QFileInfo &fi : QDir(profilesDir()).entryInfoList({"*.yml"}, QDir::Files, QDir::Name))
         names << fi.completeBaseName();
     return names;
 }
 
 void MainWindow::initialProfile()
 {
+    // Bring any profiles from the old .ppx storage into the native format first.
+    migrateLegacyProfiles();
     QString name = util::appSettings().value("profile/current", "Default").toString();
     if (profileNames().isEmpty()) {
-        // First start: take over the user's Proxifier profile if there is one.
-        const QString appData = qEnvironmentVariable("APPDATA");
-        const QStringList candidates{QDir(appData).filePath("Proxifier4/Profiles/Default.ppx"),
-                                     QDir(appData).filePath("Proxifier/Profiles/Default.ppx")};
-        bool imported = false;
-        for (const QString &c : candidates) {
-            Profile p;
-            if (QFileInfo::exists(c) && p.load(c)) {
-                p.save(profilePath("Default"));
-                logNormal(tr("Imported Proxifier profile ") + QDir::toNativeSeparators(c));
-                imported = true;
-                break;
-            }
-        }
-        if (!imported)
-            Profile::createDefault().save(profilePath("Default"));
+        // First start with no WinRoute profile: offer to take over a Proxifier
+        // profile if one is present, otherwise start from a clean default.
+        if (!importProxifierOnFirstRun())
+            Profile::createDefault().saveYaml(profilePath("Default"));
         name = "Default";
     }
     if (!loadProfile(name) && !loadProfile(profileNames().value(0))) {
@@ -817,13 +820,65 @@ void MainWindow::initialProfile()
     }
 }
 
+void MainWindow::migrateLegacyProfiles()
+{
+    const QDir dir(profilesDir());
+    for (const QFileInfo &fi : dir.entryInfoList({"*.ppx"}, QDir::Files, QDir::Name)) {
+        const QString yml = dir.filePath(fi.completeBaseName() + ".yml");
+        if (QFileInfo::exists(yml))
+            continue;   // already migrated; the .ppx is kept as a backup
+        Profile p;
+        QString error;
+        if (!p.load(fi.filePath(), &error)) {
+            logError(tr("Cannot migrate profile %1: %2").arg(fi.fileName(), error));
+            continue;
+        }
+        // Normalize name resolution to WinRoute's safe default so an old
+        // profile's "resolve via proxy" setting does not silently force every
+        // name through a proxy after the upgrade.
+        p.options.dnsAutoDetect = false;
+        p.options.dnsViaProxy = false;
+        if (p.saveYaml(yml, &error))
+            logNormal(tr("Migrated profile %1 to the new format").arg(fi.completeBaseName()));
+        else
+            logError(tr("Cannot migrate profile %1: %2").arg(fi.fileName(), error));
+    }
+}
+
+bool MainWindow::importProxifierOnFirstRun()
+{
+    const QString appData = qEnvironmentVariable("APPDATA");
+    const QStringList candidates{QDir(appData).filePath("Proxifier4/Profiles/Default.ppx"),
+                                 QDir(appData).filePath("Proxifier/Profiles/Default.ppx")};
+    for (const QString &c : candidates) {
+        Profile p;
+        if (!QFileInfo::exists(c) || !p.load(c))
+            continue;
+        if (QMessageBox::question(this, tr("Import Proxifier Profile"),
+                                  tr("A Proxifier profile was found at\n%1\n\nImport it into WinRoute?")
+                                      .arg(QDir::toNativeSeparators(c)))
+            != QMessageBox::Yes)
+            return false;
+        p.options.dnsAutoDetect = false;   // WinRoute's safe default
+        p.options.dnsViaProxy = false;
+        QString error;
+        if (p.saveYaml(profilePath("Default"), &error)) {
+            logNormal(tr("Imported Proxifier profile %1").arg(QDir::toNativeSeparators(c)));
+            return true;
+        }
+        logError(error);
+        return false;
+    }
+    return false;
+}
+
 bool MainWindow::loadProfile(const QString &name)
 {
     if (name.isEmpty())
         return false;
     Profile p;
     QString error;
-    if (!p.load(profilePath(name), &error)) {
+    if (!p.loadYaml(profilePath(name), &error)) {
         logError(tr("Cannot load profile %1: %2").arg(name, error));
         return false;
     }
@@ -839,7 +894,7 @@ bool MainWindow::loadProfile(const QString &name)
 void MainWindow::saveProfile()
 {
     QString error;
-    if (!m_profile.save(profilePath(m_profileName), &error))
+    if (!m_profile.saveYaml(profilePath(m_profileName), &error))
         logError(tr("Cannot save profile %1: %2").arg(m_profileName, error));
 }
 
@@ -913,12 +968,13 @@ void MainWindow::saveProfileAs()
 
 void MainWindow::importProfile()
 {
-    const QString file = QFileDialog::getOpenFileName(this, tr("Import Profile"), QString(), tr("Profile Files (*.ppx);;All Files (*.*)"));
+    const QString file = QFileDialog::getOpenFileName(this, tr("Import Profile"), QString(),
+                                                      tr("Profile Files (*.yml *.yaml *.ppx);;WinRoute Profile (*.yml);;Proxifier Profile (*.ppx);;All Files (*.*)"));
     if (file.isEmpty())
         return;
     Profile p;
     QString error;
-    if (!p.load(file, &error)) {
+    if (!p.loadAuto(file, &error)) {
         QMessageBox::warning(this, tr("Import Profile"), tr("Cannot import %1:\n%2").arg(file, error));
         return;
     }
@@ -935,11 +991,25 @@ void MainWindow::importProfile()
 
 void MainWindow::exportProfile()
 {
-    const QString file = QFileDialog::getSaveFileName(this, tr("Export Profile"), m_profileName + ".ppx", tr("Profile Files (*.ppx)"));
+    QString selectedFilter;
+    QString file = QFileDialog::getSaveFileName(this, tr("Export Profile"), m_profileName + ".yml",
+                                                tr("WinRoute Profile (*.yml);;Proxifier Profile (*.ppx)"), &selectedFilter);
     if (file.isEmpty())
         return;
+    // The format follows the file's extension; with none, the chosen filter.
+    QString suffix = QFileInfo(file).suffix().toLower();
+    bool asPpx;
+    if (suffix == "ppx" || suffix == "xml")
+        asPpx = true;
+    else if (suffix == "yml" || suffix == "yaml")
+        asPpx = false;
+    else {
+        asPpx = selectedFilter.contains(".ppx");
+        file += asPpx ? ".ppx" : ".yml";
+    }
     QString error;
-    if (!m_profile.save(file, &error))
+    const bool ok = asPpx ? m_profile.save(file, &error) : m_profile.saveYaml(file, &error);
+    if (!ok)
         QMessageBox::warning(this, tr("Export Profile"), error);
     else
         logNormal(tr("Profile exported to %1").arg(QDir::toNativeSeparators(file)));
@@ -948,6 +1018,23 @@ void MainWindow::exportProfile()
 void MainWindow::manageProfiles()
 {
     QDesktopServices::openUrl(QUrl::fromLocalFile(profilesDir()));
+}
+
+void MainWindow::resetConfiguration()
+{
+    if (QMessageBox::warning(this, tr("Initialize Configuration"),
+                             tr("This deletes all WinRoute profiles (proxies and rules) and restarts "
+                                "WinRoute with a clean default configuration.\n\nThis cannot be undone. Continue?"),
+                             QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
+        != QMessageBox::Yes)
+        return;
+    QDir(profilesDir()).removeRecursively();
+    util::appSettings().remove("profile/current");
+    util::appSettings().sync();
+    logNormal(tr("Configuration initialized; restarting WinRoute"));
+    QProcess::startDetached(QApplication::applicationFilePath(), {"--restart"});
+    m_quitting = true;
+    close();
 }
 
 // ---- profile settings ------------------------------------------------------------
@@ -1088,6 +1175,44 @@ void MainWindow::showAbout()
             .arg(tr("Interception: %1").arg(QStringLiteral("NetFilter SDK WFP driver / WinDivert")),
                  QString::fromLatin1(qVersion()).section(QLatin1Char('.'), 0, 1));
     QMessageBox::about(this, tr("About WinRoute"), motto + header + desc + links + footer);
+}
+
+void MainWindow::showTips()
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Did You Know?"));
+    auto *layout = new QVBoxLayout(&dlg);
+    auto *text = new QTextBrowser(&dlg);
+    text->setOpenExternalLinks(true);
+    // The current tip: how to recover if WinRoute misbehaves. More may follow.
+    text->setHtml(tr(
+        "<h3>Did you know?</h3>"
+        "<p>If WinRoute stops working correctly &mdash; no internet access, host names "
+        "resolving to <code>198.18.x.x</code>, or proxies behaving unexpectedly &mdash; "
+        "you can usually fix it in one step:</p>"
+        "<p>Open <b>File &rsaquo; Initialize Configuration&hellip;</b> to clear the "
+        "configuration and restart with clean defaults.</p>"
+        "<p>After an upgrade your old profile is migrated automatically and its "
+        "name-resolution settings are reset to safe values; if anything still looks "
+        "wrong, <b>Initialize Configuration</b> resolves it.</p>"));
+    layout->addWidget(text);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dlg);
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    layout->addWidget(buttons);
+    dlg.resize(480, 320);
+    dlg.exec();
+}
+
+void MainWindow::maybeShowTips()
+{
+    QSettings s = util::appSettings();
+    if (s.value("tips/shown", false).toBool())
+        return;
+    s.setValue("tips/shown", true);
+    s.sync();
+    // Let the main window finish showing first, then pop the advisory once.
+    QTimer::singleShot(0, this, [this] { showTips(); });
 }
 
 // Qt has no SOCKS4 proxy; SOCKS4/SOCKS5 both use Socks5Proxy (a SOCKS4-only

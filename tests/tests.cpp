@@ -170,6 +170,108 @@ static void testProfile()
           == (QStringList{"chrome.exe", "C:\\Program Files\\App\\a b.exe"}));
 }
 
+static void testYamlProfile()
+{
+    // Build a varied profile, then round-trip it through the native YAML format.
+    Profile p = Profile::createDefault();
+    CHECK(!p.options.dnsAutoDetect);   // new profiles default to manual mode, off
+    CHECK(!p.options.dnsViaProxy);
+    p.options.dnsViaProxy = true;      // but the format must carry any value
+    p.options.dnsExclusionList = "%ComputerName%; localhost; *.local; *.corp";
+    p.options.dnsDirectProxyId = 100;
+    p.options.dnsProxyServer = "1.1.1.1:53";
+    p.options.logDns = true;
+    p.options.udpMode = "mode_proxy";
+    p.options.handleDirectConnections = true;
+    p.options.encryption = PasswordEncryption::Basic;
+
+    ProxyServer s5;
+    s5.id = 100;
+    s5.type = ProxyType::Socks5;
+    s5.address = "127.0.0.1";
+    s5.port = 1080;
+    ProxyServer https;
+    https.id = 101;
+    https.type = ProxyType::Https;
+    https.address = "proxy.example.com";
+    https.port = 3128;
+    https.authEnabled = true;
+    https.username = "user";
+    https.password = "p@ss word";
+    https.useHostname = false;
+    p.proxies << s5 << https;
+
+    ProxyChain chain;
+    chain.id = 200;
+    chain.name = "Office";
+    chain.type = ChainType::Redundancy;
+    chain.members << ChainMember{100, true} << ChainMember{101, false};
+    chain.redundancyTimeout = 7;
+    chain.redundancyRecheckSec = 45;
+    p.chains << chain;
+
+    Rule r1;
+    r1.name = "web";
+    r1.applications = "chrome.exe; \"C:\\a b\\c.exe\"";
+    r1.targets = "*.example.com";
+    r1.ports = "80; 443";
+    r1.action = {ActionType::Proxy, 101};
+    r1.action.interfaceId = "{1D741CCB-726B-4AEB-A0C7-B816F1F8DC3D}";
+    r1.action.skipIfInterfaceDown = true;
+    r1.resolve = DnsResolve::Proxy;
+    r1.resolveProxyId = 200;
+    r1.udp = UdpControl::Disable;
+    Rule def;
+    def.name = "Default";
+    def.action.type = ActionType::Direct;
+    p.rules.clear();
+    p.rules << r1 << def;
+
+    QString err;
+    Profile q;
+    CHECK(q.fromYaml(p.toYaml(), &err));
+    if (!err.isEmpty())
+        std::printf("yaml error: %s\n", err.toLocal8Bit().constData());
+    // options
+    CHECK(q.options.dnsViaProxy && !q.options.dnsAutoDetect);
+    CHECK(q.options.dnsExclusionList == "%ComputerName%; localhost; *.local; *.corp");
+    CHECK(q.options.dnsDirectProxyId == 100);
+    CHECK(q.options.dnsProxyServer == "1.1.1.1:53");
+    CHECK(q.options.logDns);
+    CHECK(q.options.udpMode == "mode_proxy");
+    CHECK(q.options.handleDirectConnections);
+    CHECK(q.options.encryption == PasswordEncryption::Basic);
+    // proxies, including an encoded then decoded password
+    CHECK(q.proxies.size() == 2);
+    CHECK(q.proxies[0].id == 100 && q.proxies[0].address == "127.0.0.1" && q.proxies[0].port == 1080);
+    CHECK(q.proxies[1].type == ProxyType::Https && q.proxies[1].authEnabled);
+    CHECK(q.proxies[1].username == "user" && q.proxies[1].password == "p@ss word");
+    CHECK(!q.proxies[1].useHostname);
+    // chain
+    CHECK(q.chains.size() == 1 && q.chains[0].type == ChainType::Redundancy);
+    CHECK(q.chains[0].members.size() == 2 && q.chains[0].members[0].proxyId == 100
+          && !q.chains[0].members[1].enabled);
+    CHECK(q.chains[0].redundancyTimeout == 7 && q.chains[0].redundancyRecheckSec == 45);
+    // rules
+    CHECK(q.rules.size() == 2);
+    CHECK(q.rules[0].name == "web" && q.rules[0].action.type == ActionType::Proxy && q.rules[0].action.id == 101);
+    CHECK(q.rules[0].targets == "*.example.com" && q.rules[0].ports == "80; 443");
+    CHECK(q.rules[0].action.interfaceId == "{1D741CCB-726B-4AEB-A0C7-B816F1F8DC3D}" && q.rules[0].action.skipIfInterfaceDown);
+    CHECK(q.rules[0].resolve == DnsResolve::Proxy && q.rules[0].resolveProxyId == 200);
+    CHECK(q.rules[0].udp == UdpControl::Disable);
+    CHECK(util::splitList(q.rules[0].applications) == (QStringList{"chrome.exe", "C:\\a b\\c.exe"}));
+    CHECK(q.rules[1].name == "Default" && q.rules[1].action.type == ActionType::Direct);
+
+    // An empty/garbage document is rejected, not crashed on.
+    Profile bad;
+    CHECK(!bad.fromYaml(QByteArray("\t- : : ["), &err));
+
+    // A minimal document applies defaults (manual mode, a Default rule).
+    Profile mini;
+    CHECK(mini.fromYaml(QByteArray("version: 1\n"), &err));
+    CHECK(!mini.options.dnsViaProxy && !mini.rules.isEmpty() && mini.rules.last().name == "Default");
+}
+
 // ---- rules -----------------------------------------------------------------
 
 static void testRules()
@@ -2169,6 +2271,7 @@ int main(int argc, char **argv)
     // reject bind()/connect() on these sockets ("proxy type is invalid").
     QNetworkProxyFactory::setUseSystemConfiguration(false);
     testProfile();
+    testYamlProfile();
     testRules();
     testDns();
     testProxies();

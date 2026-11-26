@@ -4,9 +4,12 @@
 
 #include <QCoreApplication>
 #include <QFile>
+#include <QFileInfo>
 #include <QSaveFile>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
+
+#include <yaml-cpp/yaml.h>
 
 #include <windows.h>
 #include <dpapi.h>
@@ -143,6 +146,12 @@ Profile::Profile() = default;
 Profile Profile::createDefault()
 {
     Profile p;
+    // Manual name resolution, off, by default: WinRoute never silently flips
+    // every name to proxy resolution. Automatic detection (which overrides the
+    // "resolve via proxy" switch from a single DNS probe, so a flaky probe can
+    // force all traffic through a proxy with no way to turn it off) is opt-in.
+    p.options.dnsAutoDetect = false;
+    p.options.dnsViaProxy = false;
     Rule localhost;
     localhost.name = "Localhost";
     localhost.targets = "localhost; 127.0.0.1; %ComputerName%";
@@ -655,4 +664,330 @@ QByteArray Profile::toXml() const
     // enums, ids and booleans), so this only ever affects element content.
     out.replace("&quot;", "\"");
     return out;
+}
+
+// ---- native format (YAML) --------------------------------------------------
+// WinRoute's own profile format, independent of the Proxifier .ppx schema.
+
+static const char *actionTypeToString(ActionType t)
+{
+    switch (t) {
+    case ActionType::Direct: return "direct";
+    case ActionType::Block:  return "block";
+    case ActionType::Proxy:  return "proxy";
+    case ActionType::Chain:  return "chain";
+    }
+    return "direct";
+}
+
+static ActionType actionTypeFromString(const QString &s)
+{
+    if (s == "proxy") return ActionType::Proxy;
+    if (s == "chain") return ActionType::Chain;
+    if (s == "block") return ActionType::Block;
+    return ActionType::Direct;
+}
+
+QByteArray Profile::toYaml() const
+{
+    YAML::Emitter e;
+    auto s = [](const QString &x) { return x.toStdString(); };
+    e << YAML::BeginMap;
+    e << YAML::Key << "version" << YAML::Value << 1;
+
+    e << YAML::Key << "options" << YAML::Value << YAML::BeginMap;
+    e << YAML::Key << "dns" << YAML::Value << YAML::BeginMap;
+    e << YAML::Key << "autoDetect" << YAML::Value << options.dnsAutoDetect;
+    e << YAML::Key << "viaProxy" << YAML::Value << options.dnsViaProxy;
+    e << YAML::Key << "tryLocalFirst" << YAML::Value << options.dnsTryLocalFirst;
+    e << YAML::Key << "blockNonATypes" << YAML::Value << options.dnsBlockNonATypes;
+    e << YAML::Key << "onlyFromList" << YAML::Value << options.dnsOnlyFromList;
+    e << YAML::Key << "exclusionList" << YAML::Value << s(options.dnsExclusionList);
+    e << YAML::Key << "udpMode" << YAML::Value << options.dnsUdpMode;
+    e << YAML::Key << "directProxy" << YAML::Value << options.dnsDirectProxyId;
+    e << YAML::Key << "server" << YAML::Value << s(options.dnsProxyServer);
+    e << YAML::Key << "log" << YAML::Value << options.logDns;
+    e << YAML::EndMap;
+    e << YAML::Key << "encryption" << YAML::Value << s(encryptionToString(options.encryption));
+    e << YAML::Key << "loopDetection" << YAML::Value << options.loopDetection;
+    e << YAML::Key << "loopDetectionResolve" << YAML::Value << options.loopDetectionResolve;
+    e << YAML::Key << "udpMode" << YAML::Value << s(options.udpMode);
+    e << YAML::Key << "leakPrevention" << YAML::Value << options.leakPrevention;
+    e << YAML::Key << "processOtherUsers" << YAML::Value << options.processOtherUsers;
+    e << YAML::Key << "processServices" << YAML::Value << options.processServices;
+    e << YAML::Key << "handleDirectConnections" << YAML::Value << options.handleDirectConnections;
+    e << YAML::Key << "httpProxiesSupport" << YAML::Value << options.httpProxiesSupport;
+    e << YAML::EndMap;
+
+    e << YAML::Key << "proxies" << YAML::Value << YAML::BeginSeq;
+    for (const auto &p : proxies) {
+        e << YAML::BeginMap;
+        e << YAML::Key << "id" << YAML::Value << p.id;
+        e << YAML::Key << "type" << YAML::Value << s(proxyTypeToString(p.type));
+        e << YAML::Key << "address" << YAML::Value << s(p.address);
+        e << YAML::Key << "port" << YAML::Value << p.port;
+        if (!p.label.isEmpty())
+            e << YAML::Key << "label" << YAML::Value << s(p.label);
+        if (p.authEnabled || !p.username.isEmpty()) {
+            e << YAML::Key << "auth" << YAML::Value << p.authEnabled;
+            if (!p.username.isEmpty())
+                e << YAML::Key << "username" << YAML::Value << s(p.username);
+            if (!p.password.isEmpty())
+                e << YAML::Key << "password" << YAML::Value << s(encodePassword(p.password, options.encryption));
+        }
+        if (p.type == ProxyType::Socks4)
+            e << YAML::Key << "socks4a" << YAML::Value << p.socks4a;
+        if (!p.useHostname)
+            e << YAML::Key << "useHostname" << YAML::Value << p.useHostname;
+        e << YAML::Key << "options" << YAML::Value << p.options;
+        e << YAML::EndMap;
+    }
+    e << YAML::EndSeq;
+
+    e << YAML::Key << "chains" << YAML::Value << YAML::BeginSeq;
+    for (const auto &c : chains) {
+        e << YAML::BeginMap;
+        e << YAML::Key << "id" << YAML::Value << c.id;
+        e << YAML::Key << "name" << YAML::Value << s(c.name);
+        e << YAML::Key << "type" << YAML::Value << s(chainTypeToString(c.type));
+        e << YAML::Key << "members" << YAML::Value << YAML::BeginSeq;
+        for (const auto &m : c.members) {
+            e << YAML::Flow << YAML::BeginMap;
+            e << YAML::Key << "id" << YAML::Value << m.proxyId;
+            e << YAML::Key << "enabled" << YAML::Value << m.enabled;
+            e << YAML::EndMap;
+        }
+        e << YAML::EndSeq;
+        if (c.type == ChainType::Redundancy) {
+            e << YAML::Key << "redundancyTimeout" << YAML::Value << c.redundancyTimeout;
+            e << YAML::Key << "redundancyRecheck" << YAML::Value << c.redundancyRecheck;
+            e << YAML::Key << "redundancyRecheckSec" << YAML::Value << c.redundancyRecheckSec;
+            e << YAML::Key << "redundancyTryDirect" << YAML::Value << c.redundancyDirectFallback;
+        } else if (c.type == ChainType::LoadBalancing) {
+            e << YAML::Key << "loadBalancingSamePid" << YAML::Value << c.lbSamePidSameProxy;
+        }
+        e << YAML::EndMap;
+    }
+    e << YAML::EndSeq;
+
+    e << YAML::Key << "rules" << YAML::Value << YAML::BeginSeq;
+    for (const auto &r : rules) {
+        e << YAML::BeginMap;
+        e << YAML::Key << "name" << YAML::Value << s(r.name);
+        e << YAML::Key << "enabled" << YAML::Value << r.enabled;
+        if (!r.applications.isEmpty())
+            e << YAML::Key << "applications" << YAML::Value << s(util::joinAppList(r.applications));
+        if (!r.targets.isEmpty())
+            e << YAML::Key << "targets" << YAML::Value << s(r.targets);
+        if (!r.ports.isEmpty())
+            e << YAML::Key << "ports" << YAML::Value << s(r.ports);
+        e << YAML::Key << "action" << YAML::Value << YAML::Flow << YAML::BeginMap;
+        e << YAML::Key << "type" << YAML::Value << actionTypeToString(r.action.type);
+        if (r.action.type == ActionType::Proxy || r.action.type == ActionType::Chain)
+            e << YAML::Key << "id" << YAML::Value << r.action.id;
+        e << YAML::EndMap;
+        if (!r.action.interfaceId.isEmpty() && r.action.type != ActionType::Block) {
+            e << YAML::Key << "interface" << YAML::Value << s(r.action.interfaceId);
+            e << YAML::Key << "skipIfInterfaceDown" << YAML::Value << r.action.skipIfInterfaceDown;
+        }
+        if (r.resolve != DnsResolve::Inherit) {
+            e << YAML::Key << "resolve" << YAML::Value << (r.resolve == DnsResolve::Proxy ? "proxy" : "local");
+            if (r.resolve == DnsResolve::Proxy && r.resolveProxyId)
+                e << YAML::Key << "resolveProxy" << YAML::Value << r.resolveProxyId;
+        }
+        if (r.udp != UdpControl::Inherit)
+            e << YAML::Key << "udp" << YAML::Value << (r.udp == UdpControl::Enable ? "enable" : "disable");
+        e << YAML::EndMap;
+    }
+    e << YAML::EndSeq;
+
+    e << YAML::EndMap;
+    QByteArray out(e.c_str(), int(e.size()));
+    out.append('\n');
+    return out;
+}
+
+bool Profile::fromYaml(const QByteArray &yaml, QString *error)
+{
+    YAML::Node root;
+    try {
+        root = YAML::Load(std::string(yaml.constData(), size_t(yaml.size())));
+    } catch (const std::exception &ex) {
+        if (error)
+            *error = QCoreApplication::translate("Profile", "YAML error: %1").arg(QString::fromUtf8(ex.what()));
+        return false;
+    }
+    if (!root.IsMap()) {
+        if (error)
+            *error = QCoreApplication::translate("Profile", "Not a WinRoute profile");
+        return false;
+    }
+    auto qs = [](const YAML::Node &n, const QString &def = QString()) {
+        return n && n.IsScalar() ? QString::fromStdString(n.Scalar()) : def;
+    };
+    auto qb = [](const YAML::Node &n, bool def) { return n ? n.as<bool>(def) : def; };
+    auto qi = [](const YAML::Node &n, int def) { return n ? n.as<int>(def) : def; };
+
+    Profile p;
+    if (const YAML::Node o = root["options"]) {
+        if (const YAML::Node d = o["dns"]) {
+            p.options.dnsAutoDetect = qb(d["autoDetect"], p.options.dnsAutoDetect);
+            p.options.dnsViaProxy = qb(d["viaProxy"], p.options.dnsViaProxy);
+            p.options.dnsTryLocalFirst = qb(d["tryLocalFirst"], p.options.dnsTryLocalFirst);
+            p.options.dnsBlockNonATypes = qb(d["blockNonATypes"], p.options.dnsBlockNonATypes);
+            p.options.dnsOnlyFromList = qb(d["onlyFromList"], p.options.dnsOnlyFromList);
+            p.options.dnsExclusionList = qs(d["exclusionList"], p.options.dnsExclusionList);
+            p.options.dnsUdpMode = qi(d["udpMode"], p.options.dnsUdpMode);
+            p.options.dnsDirectProxyId = qi(d["directProxy"], p.options.dnsDirectProxyId);
+            p.options.dnsProxyServer = qs(d["server"], p.options.dnsProxyServer);
+            p.options.logDns = qb(d["log"], p.options.logDns);
+        }
+        p.options.encryption = encryptionFromString(qs(o["encryption"], encryptionToString(p.options.encryption)));
+        p.options.loopDetection = qb(o["loopDetection"], p.options.loopDetection);
+        p.options.loopDetectionResolve = qb(o["loopDetectionResolve"], p.options.loopDetectionResolve);
+        p.options.udpMode = qs(o["udpMode"], p.options.udpMode);
+        p.options.leakPrevention = qb(o["leakPrevention"], p.options.leakPrevention);
+        p.options.processOtherUsers = qb(o["processOtherUsers"], p.options.processOtherUsers);
+        p.options.processServices = qb(o["processServices"], p.options.processServices);
+        p.options.handleDirectConnections = qb(o["handleDirectConnections"], p.options.handleDirectConnections);
+        p.options.httpProxiesSupport = qb(o["httpProxiesSupport"], p.options.httpProxiesSupport);
+    }
+
+    if (const YAML::Node ps = root["proxies"]) {
+        for (const auto &pn : ps) {
+            ProxyServer sv;
+            sv.id = qi(pn["id"], 0);
+            sv.type = proxyTypeFromString(qs(pn["type"], "SOCKS5"));
+            sv.address = qs(pn["address"]).trimmed();
+            sv.port = quint16(qi(pn["port"], 1080));
+            sv.label = qs(pn["label"]);
+            sv.authEnabled = qb(pn["auth"], false);
+            sv.username = qs(pn["username"]);
+            const QString stored = qs(pn["password"]);
+            if (!stored.isEmpty()) {
+                bool ok = false;
+                sv.password = decodePassword(stored, p.options.encryption, &ok);
+            }
+            sv.socks4a = qb(pn["socks4a"], true);
+            sv.useHostname = qb(pn["useHostname"], true);
+            sv.options = qi(pn["options"], 48);
+            p.proxies.append(sv);
+        }
+    }
+
+    if (const YAML::Node cs = root["chains"]) {
+        for (const auto &cn : cs) {
+            ProxyChain c;
+            c.id = qi(cn["id"], 0);
+            c.name = qs(cn["name"]);
+            c.type = chainTypeFromString(qs(cn["type"], "simple"));
+            if (const YAML::Node ms = cn["members"]) {
+                for (const auto &mn : ms) {
+                    ChainMember m;
+                    m.proxyId = qi(mn["id"], 0);
+                    m.enabled = qb(mn["enabled"], true);
+                    c.members.append(m);
+                }
+            }
+            c.redundancyTimeout = qi(cn["redundancyTimeout"], c.redundancyTimeout);
+            c.redundancyRecheck = qb(cn["redundancyRecheck"], c.redundancyRecheck);
+            c.redundancyRecheckSec = qi(cn["redundancyRecheckSec"], c.redundancyRecheckSec);
+            c.redundancyDirectFallback = qb(cn["redundancyTryDirect"], c.redundancyDirectFallback);
+            c.lbSamePidSameProxy = qb(cn["loadBalancingSamePid"], c.lbSamePidSameProxy);
+            p.chains.append(c);
+        }
+    }
+
+    if (const YAML::Node rs = root["rules"]) {
+        for (const auto &rn : rs) {
+            Rule rule;
+            rule.name = qs(rn["name"]);
+            rule.enabled = qb(rn["enabled"], true);
+            rule.applications = qs(rn["applications"]);
+            rule.targets = qs(rn["targets"]);
+            rule.ports = qs(rn["ports"]);
+            if (const YAML::Node a = rn["action"]) {
+                rule.action.type = actionTypeFromString(qs(a["type"], "direct"));
+                rule.action.id = qi(a["id"], 0);
+            }
+            rule.action.interfaceId = qs(rn["interface"]).trimmed();
+            rule.action.skipIfInterfaceDown = qb(rn["skipIfInterfaceDown"], false);
+            const QString res = qs(rn["resolve"]);
+            rule.resolve = res == "proxy" ? DnsResolve::Proxy
+                         : res == "local" ? DnsResolve::Local
+                                          : DnsResolve::Inherit;
+            rule.resolveProxyId = qi(rn["resolveProxy"], 0);
+            const QString u = qs(rn["udp"]);
+            rule.udp = u == "enable" ? UdpControl::Enable
+                     : u == "disable" ? UdpControl::Disable
+                                      : UdpControl::Inherit;
+            if (rule.action.type == ActionType::Block || rule.action.interfaceId.isEmpty()) {
+                rule.action.interfaceId.clear();
+                rule.action.skipIfInterfaceDown = false;
+            }
+            p.rules.append(rule);
+        }
+    }
+
+    if (p.rules.isEmpty()) {
+        Rule def;
+        def.name = "Default";
+        p.rules.append(def);
+    }
+    *this = p;
+    return true;
+}
+
+bool Profile::loadYaml(const QString &path, QString *error)
+{
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly)) {
+        if (error)
+            *error = f.errorString();
+        return false;
+    }
+    return fromYaml(f.readAll(), error);
+}
+
+bool Profile::loadAuto(const QString &path, QString *error)
+{
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly)) {
+        if (error)
+            *error = f.errorString();
+        return false;
+    }
+    const QByteArray data = f.readAll();
+    const QString suffix = QFileInfo(path).suffix().toLower();
+    if (suffix == "ppx" || suffix == "xml")
+        return fromXml(data, error);
+    if (suffix == "yml" || suffix == "yaml")
+        return fromYaml(data, error);
+    // Unknown extension: sniff. A Proxifier/WinRoute .ppx is XML, so its first
+    // non-blank byte (past any BOM) is '<'; anything else is treated as YAML.
+    int i = 0;
+    while (i < data.size()
+           && (data[i] == ' ' || data[i] == '\t' || data[i] == '\r' || data[i] == '\n'
+               || static_cast<unsigned char>(data[i]) >= 0x80))
+        ++i;
+    if (i < data.size() && data[i] == '<')
+        return fromXml(data, error);
+    return fromYaml(data, error);
+}
+
+bool Profile::saveYaml(const QString &path, QString *error) const
+{
+    QSaveFile f(path);
+    if (!f.open(QIODevice::WriteOnly)) {
+        if (error)
+            *error = f.errorString();
+        return false;
+    }
+    f.write(toYaml());
+    if (!f.commit()) {
+        if (error)
+            *error = f.errorString();
+        return false;
+    }
+    return true;
 }

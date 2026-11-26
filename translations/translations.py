@@ -137,6 +137,24 @@ T = {
     "&Manage Profiles...": ("管理配置文件(&M)...", "プロファイルの管理(&M)..."),
     "&Import Profile...": ("导入配置文件(&I)...", "プロファイルのインポート(&I)..."),
     "&Export Profile...": ("导出配置文件(&E)...", "プロファイルのエクスポート(&E)..."),
+    "Initiali&ze Configuration...": ("初始化配置(&Z)...", "設定を初期化(&Z)..."),
+    "Delete all profiles and restart with a clean default configuration":
+        ("删除所有配置文件并以干净的默认配置重启", "すべてのプロファイルを削除し、クリーンな既定の設定で再起動します"),
+    "Initialize Configuration": ("初始化配置", "設定の初期化"),
+    "This deletes all WinRoute profiles (proxies and rules) and restarts "
+    "WinRoute with a clean default configuration.\n\nThis cannot be undone. Continue?":
+        ("这将删除所有 WinRoute 配置文件（代理与规则），并以干净的默认配置重启 WinRoute。\n\n此操作无法撤销。是否继续？",
+         "すべての WinRoute プロファイル（プロキシとルール）を削除し、クリーンな既定の設定で WinRoute を再起動します。\n\nこの操作は元に戻せません。続行しますか？"),
+    "Configuration initialized; restarting WinRoute":
+        ("配置已初始化，正在重启 WinRoute", "設定を初期化しました。WinRoute を再起動します"),
+    "Import Proxifier Profile": ("导入 Proxifier 配置文件", "Proxifier プロファイルのインポート"),
+    "A Proxifier profile was found at\n%1\n\nImport it into WinRoute?":
+        ("在以下位置发现 Proxifier 配置文件：\n%1\n\n要将其导入 WinRoute 吗？",
+         "次の場所に Proxifier プロファイルが見つかりました：\n%1\n\nWinRoute にインポートしますか？"),
+    "Imported Proxifier profile %1": ("已导入 Proxifier 配置文件 %1", "Proxifier プロファイル %1 をインポートしました"),
+    "Migrated profile %1 to the new format":
+        ("已将配置文件 %1 迁移到新格式", "プロファイル %1 を新しい形式に移行しました"),
+    "Cannot migrate profile %1: %2": ("无法迁移配置文件 %1：%2", "プロファイル %1 を移行できません：%2"),
     "&Autostart": ("开机自动启动(&A)", "自動起動(&A)"),
     "Start WinRoute automatically when Windows starts for the current user":
         ("当前用户登录 Windows 时自动启动 WinRoute", "現在のユーザーが Windows にサインインしたときに WinRoute を自動的に起動します"),
@@ -177,6 +195,33 @@ T = {
     "Proxy &Checker...": ("代理检测(&C)...", "プロキシチェッカー(&C)..."),
     "Test proxy servers": ("测试代理服务器", "プロキシサーバーをテストします"),
     "&About WinRoute...": ("关于 WinRoute(&A)...", "WinRoute について(&A)..."),
+    "&Did You Know?...": ("你知道吗(&D)...", "ご存じですか(&D)..."),
+    "Tips for recovering if WinRoute stops working correctly":
+        ("WinRoute 工作异常时的自救提示", "WinRoute が正しく動作しなくなったときの復旧のヒント"),
+    "Did You Know?": ("你知道吗", "ご存じですか"),
+    "<h3>Did you know?</h3>"
+    "<p>If WinRoute stops working correctly &mdash; no internet access, host names "
+    "resolving to <code>198.18.x.x</code>, or proxies behaving unexpectedly &mdash; "
+    "you can usually fix it in one step:</p>"
+    "<p>Open <b>File &rsaquo; Initialize Configuration&hellip;</b> to clear the "
+    "configuration and restart with clean defaults.</p>"
+    "<p>After an upgrade your old profile is migrated automatically and its "
+    "name-resolution settings are reset to safe values; if anything still looks "
+    "wrong, <b>Initialize Configuration</b> resolves it.</p>":
+        ("<h3>你知道吗？</h3>"
+         "<p>如果 WinRoute 工作异常——无法上网、域名被解析到 <code>198.18.x.x</code>、"
+         "或代理行为不符合预期——通常可以一步恢复：</p>"
+         "<p>打开 <b>文件 &rsaquo; 初始化配置&hellip;</b>，清空配置并以干净的默认设置重启。</p>"
+         "<p>升级后你的旧配置已自动迁移，名称解析设置也已重置为安全值；若仍有异常，"
+         "用 <b>初始化配置</b> 即可解决。</p>",
+         "<h3>ご存じですか？</h3>"
+         "<p>WinRoute が正しく動作しなくなった場合 &mdash; インターネットに接続できない、"
+         "ホスト名が <code>198.18.x.x</code> に解決される、プロキシの挙動がおかしいなど "
+         "&mdash; 多くは一手順で修復できます：</p>"
+         "<p><b>ファイル &rsaquo; 設定を初期化&hellip;</b> を開き、設定を消去してクリーンな"
+         "既定の状態で再起動します。</p>"
+         "<p>アップグレード後、古いプロファイルは自動的に移行され、名前解決の設定も安全な値に"
+         "リセットされます。それでも問題が残る場合は <b>設定を初期化</b> で解決します。</p>"),
     "&File": ("文件(&F)", "ファイル(&F)"),
     "&Load Profile": ("加载配置文件(&L)", "プロファイルの読み込み(&L)"),
     "&Profile": ("配置文件(&P)", "プロファイル(&P)"),
@@ -439,11 +484,14 @@ T = {
     "Save Profile As": ("配置文件另存为", "名前を付けてプロファイルを保存"),
     "Profile saved as %1": ("配置文件已另存为 %1", "プロファイルを %1 として保存しました"),
     "Import Profile": ("导入配置文件", "プロファイルのインポート"),
-    "Profile Files (*.ppx);;All Files (*.*)": ("配置文件 (*.ppx);;所有文件 (*.*)", "プロファイル (*.ppx);;すべてのファイル (*.*)"),
+    "Profile Files (*.yml *.yaml *.ppx);;WinRoute Profile (*.yml);;Proxifier Profile (*.ppx);;All Files (*.*)":
+        ("配置文件 (*.yml *.yaml *.ppx);;WinRoute 配置文件 (*.yml);;Proxifier 配置文件 (*.ppx);;所有文件 (*.*)",
+         "プロファイル (*.yml *.yaml *.ppx);;WinRoute プロファイル (*.yml);;Proxifier プロファイル (*.ppx);;すべてのファイル (*.*)"),
     "Cannot import %1:\n%2": ("无法导入 %1：\n%2", "%1 をインポートできません：\n%2"),
     "Profile %1 imported from %2": ("已从 %2 导入配置文件 %1", "プロファイル %1 を %2 からインポートしました"),
     "Export Profile": ("导出配置文件", "プロファイルのエクスポート"),
-    "Profile Files (*.ppx)": ("配置文件 (*.ppx)", "プロファイル (*.ppx)"),
+    "WinRoute Profile (*.yml);;Proxifier Profile (*.ppx)":
+        ("WinRoute 配置文件 (*.yml);;Proxifier 配置文件 (*.ppx)", "WinRoute プロファイル (*.yml);;Proxifier プロファイル (*.ppx)"),
     "Profile exported to %1": ("配置文件已导出到 %1", "プロファイルを %1 にエクスポートしました"),
     "Fail status of all proxies was reset": ("已重置所有代理的失败状态", "すべてのプロキシの失敗状態をリセットしました"),
     "Chain %1": ("代理链 %1", "チェーン %1"),
@@ -565,6 +613,8 @@ T = {
     "Proxy <missing>": ("代理 <不存在>", "プロキシ <見つかりません>"),
     "Chain <missing>": ("代理链 <不存在>", "チェーン <見つかりません>"),
     "Not a Proxifier/WinRoute profile": ("不是 Proxifier/WinRoute 配置文件", "Proxifier/WinRoute のプロファイルではありません"),
+    "Not a WinRoute profile": ("不是 WinRoute 配置文件", "WinRoute のプロファイルではありません"),
+    "YAML error: %1": ("YAML 错误：%1", "YAML エラー：%1"),
     "XML error at line %1: %2": ("第 %1 行 XML 错误：%2", "%1 行目の XML エラー：%2"),
     "Password of proxy %1 is encrypted in a format WinRoute cannot read; please re-enter it.":
         ("代理 %1 的密码采用了 WinRoute 无法读取的加密格式，请重新输入。", "プロキシ %1 のパスワードは WinRoute で読み取れない形式で暗号化されています。再入力してください。"),

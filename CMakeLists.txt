@@ -21,6 +21,17 @@ endif()
 set(OPENSSL_RUNTIME_DIR ${_mingw_root}/opt/bin CACHE PATH "Directory holding libcrypto/libssl runtime DLLs")
 find_package(OpenSSL REQUIRED COMPONENTS Crypto)
 
+# yaml-cpp backs WinRoute's native profile format (src/core/Profile.cpp). The
+# source is vendored under third_party/yaml-cpp (0.8.0) so the build never needs
+# the network. Built as a static library; no tests, tools, install or shared lib.
+set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "" FORCE)
+set(YAML_CPP_FORMAT_SOURCE OFF CACHE BOOL "" FORCE)
+set(YAML_CPP_INSTALL OFF CACHE BOOL "" FORCE)
+set(YAML_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+add_subdirectory(third_party/yaml-cpp EXCLUDE_FROM_ALL)
+
 set(NETFILTER_SDK_DIR ${CMAKE_SOURCE_DIR}/netfilter/nfsdk CACHE PATH "NetFilter SDK root (nfsdk folder)")
 # Several drivers ship, the installer lets the user pick one: the NetFilter SDK
 # demo driver (default) and the release drivers "A", "B", each as
@@ -129,6 +140,7 @@ add_library(winroute_core STATIC ${CORE_SOURCES})
 target_include_directories(winroute_core PUBLIC src ${NETFILTER_SDK_DIR}/wfp/include ${NETFILTER_SDK_DIR}/include ${WINDIVERT_DIR}/include)
 target_compile_definitions(winroute_core PUBLIC UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _WIN32_WINNT=0x0A00)
 target_link_libraries(winroute_core PUBLIC Qt6::Core Qt6::Network OpenSSL::Crypto ws2_32 iphlpapi psapi advapi32 shell32 crypt32 version)
+target_link_libraries(winroute_core PRIVATE yaml-cpp::yaml-cpp)
 
 option(WINROUTE_BUILD_GUI "Build the WinRoute application" ON)
 # Development builds can drop the requireAdministrator manifest to test the UI unelevated.

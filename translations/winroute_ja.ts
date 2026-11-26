@@ -1088,6 +1088,14 @@ Continue?</source>
       <translation>プロファイルのエクスポート(&amp;E)...</translation>
     </message>
     <message>
+      <source>Initiali&amp;ze Configuration...</source>
+      <translation>設定を初期化(&amp;Z)...</translation>
+    </message>
+    <message>
+      <source>Delete all profiles and restart with a clean default configuration</source>
+      <translation>すべてのプロファイルを削除し、クリーンな既定の設定で再起動します</translation>
+    </message>
+    <message>
       <source>&amp;Autostart</source>
       <translation>自動起動(&amp;A)</translation>
     </message>
@@ -1250,6 +1258,14 @@ Continue?</source>
     <message>
       <source>&amp;About WinRoute...</source>
       <translation>WinRoute について(&amp;A)...</translation>
+    </message>
+    <message>
+      <source>&amp;Did You Know?...</source>
+      <translation>ご存じですか(&amp;D)...</translation>
+    </message>
+    <message>
+      <source>Tips for recovering if WinRoute stops working correctly</source>
+      <translation>WinRoute が正しく動作しなくなったときの復旧のヒント</translation>
     </message>
     <message>
       <source>Check for &amp;Updates...</source>
@@ -1516,6 +1532,64 @@ Continue?</source>
       <translation>ネットワークドライバーはインストール済みですが実行されていません</translation>
     </message>
     <message>
+      <source>Cannot migrate profile %1: %2</source>
+      <translation>プロファイル %1 を移行できません：%2</translation>
+    </message>
+    <message>
+      <source>Migrated profile %1 to the new format</source>
+      <translation>プロファイル %1 を新しい形式に移行しました</translation>
+    </message>
+    <message>
+      <source>Import Proxifier Profile</source>
+      <translation>Proxifier プロファイルのインポート</translation>
+    </message>
+    <message>
+      <source>A Proxifier profile was found at
+%1
+
+Import it into WinRoute?</source>
+      <translation>次の場所に Proxifier プロファイルが見つかりました：
+%1
+
+WinRoute にインポートしますか？</translation>
+    </message>
+    <message>
+      <source>Imported Proxifier profile %1</source>
+      <translation>Proxifier プロファイル %1 をインポートしました</translation>
+    </message>
+    <message>
+      <source>Profile Files (*.yml *.yaml *.ppx);;WinRoute Profile (*.yml);;Proxifier Profile (*.ppx);;All Files (*.*)</source>
+      <translation>プロファイル (*.yml *.yaml *.ppx);;WinRoute プロファイル (*.yml);;Proxifier プロファイル (*.ppx);;すべてのファイル (*.*)</translation>
+    </message>
+    <message>
+      <source>WinRoute Profile (*.yml);;Proxifier Profile (*.ppx)</source>
+      <translation>WinRoute プロファイル (*.yml);;Proxifier プロファイル (*.ppx)</translation>
+    </message>
+    <message>
+      <source>Initialize Configuration</source>
+      <translation>設定の初期化</translation>
+    </message>
+    <message>
+      <source>This deletes all WinRoute profiles (proxies and rules) and restarts WinRoute with a clean default configuration.
+
+This cannot be undone. Continue?</source>
+      <translation>すべての WinRoute プロファイル（プロキシとルール）を削除し、クリーンな既定の設定で WinRoute を再起動します。
+
+この操作は元に戻せません。続行しますか？</translation>
+    </message>
+    <message>
+      <source>Configuration initialized; restarting WinRoute</source>
+      <translation>設定を初期化しました。WinRoute を再起動します</translation>
+    </message>
+    <message>
+      <source>Did You Know?</source>
+      <translation>ご存じですか</translation>
+    </message>
+    <message>
+      <source>&lt;h3&gt;Did you know?&lt;/h3&gt;&lt;p&gt;If WinRoute stops working correctly &amp;mdash; no internet access, host names resolving to &lt;code&gt;198.18.x.x&lt;/code&gt;, or proxies behaving unexpectedly &amp;mdash; you can usually fix it in one step:&lt;/p&gt;&lt;p&gt;Open &lt;b&gt;File &amp;rsaquo; Initialize Configuration&amp;hellip;&lt;/b&gt; to clear the configuration and restart with clean defaults.&lt;/p&gt;&lt;p&gt;After an upgrade your old profile is migrated automatically and its name-resolution settings are reset to safe values; if anything still looks wrong, &lt;b&gt;Initialize Configuration&lt;/b&gt; resolves it.&lt;/p&gt;</source>
+      <translation>&lt;h3&gt;ご存じですか？&lt;/h3&gt;&lt;p&gt;WinRoute が正しく動作しなくなった場合 &amp;mdash; インターネットに接続できない、ホスト名が &lt;code&gt;198.18.x.x&lt;/code&gt; に解決される、プロキシの挙動がおかしいなど &amp;mdash; 多くは一手順で修復できます：&lt;/p&gt;&lt;p&gt;&lt;b&gt;ファイル &amp;rsaquo; 設定を初期化&amp;hellip;&lt;/b&gt; を開き、設定を消去してクリーンな既定の状態で再起動します。&lt;/p&gt;&lt;p&gt;アップグレード後、古いプロファイルは自動的に移行され、名前解決の設定も安全な値にリセットされます。それでも問題が残る場合は &lt;b&gt;設定を初期化&lt;/b&gt; で解決します。&lt;/p&gt;</translation>
+    </message>
+    <message>
       <source>End Process Tree</source>
       <translation>プロセスツリーの終了</translation>
     </message>
@@ -1616,10 +1690,6 @@ Continue?</source>
       <translation>プロファイル：</translation>
     </message>
     <message>
-      <source>Imported Proxifier profile </source>
-      <translation>Proxifier のプロファイルをインポートしました：</translation>
-    </message>
-    <message>
       <source>Cannot load profile %1: %2</source>
       <translation>プロファイル %1 を読み込めません：%2</translation>
     </message>
@@ -1676,10 +1746,6 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
       <translation>プロファイルのインポート</translation>
     </message>
     <message>
-      <source>Profile Files (*.ppx);;All Files (*.*)</source>
-      <translation>プロファイル (*.ppx);;すべてのファイル (*.*)</translation>
-    </message>
-    <message>
       <source>Cannot import %1:
 %2</source>
       <translation>%1 をインポートできません：
@@ -1692,10 +1758,6 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>Export Profile</source>
       <translation>プロファイルのエクスポート</translation>
-    </message>
-    <message>
-      <source>Profile Files (*.ppx)</source>
-      <translation>プロファイル (*.ppx)</translation>
     </message>
     <message>
       <source>Profile exported to %1</source>
@@ -1976,6 +2038,14 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     <message>
       <source>Password of proxy %1 is encrypted in a format WinRoute cannot read; please re-enter it.</source>
       <translation>プロキシ %1 のパスワードは WinRoute で読み取れない形式で暗号化されています。再入力してください。</translation>
+    </message>
+    <message>
+      <source>YAML error: %1</source>
+      <translation>YAML エラー：%1</translation>
+    </message>
+    <message>
+      <source>Not a WinRoute profile</source>
+      <translation>WinRoute のプロファイルではありません</translation>
     </message>
   </context>
   <context>

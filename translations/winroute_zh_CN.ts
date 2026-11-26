@@ -1088,6 +1088,14 @@ Continue?</source>
       <translation>导出配置文件(&amp;E)...</translation>
     </message>
     <message>
+      <source>Initiali&amp;ze Configuration...</source>
+      <translation>初始化配置(&amp;Z)...</translation>
+    </message>
+    <message>
+      <source>Delete all profiles and restart with a clean default configuration</source>
+      <translation>删除所有配置文件并以干净的默认配置重启</translation>
+    </message>
+    <message>
       <source>&amp;Autostart</source>
       <translation>开机自动启动(&amp;A)</translation>
     </message>
@@ -1250,6 +1258,14 @@ Continue?</source>
     <message>
       <source>&amp;About WinRoute...</source>
       <translation>关于 WinRoute(&amp;A)...</translation>
+    </message>
+    <message>
+      <source>&amp;Did You Know?...</source>
+      <translation>你知道吗(&amp;D)...</translation>
+    </message>
+    <message>
+      <source>Tips for recovering if WinRoute stops working correctly</source>
+      <translation>WinRoute 工作异常时的自救提示</translation>
     </message>
     <message>
       <source>Check for &amp;Updates...</source>
@@ -1516,6 +1532,64 @@ Continue?</source>
       <translation>网络驱动已安装但未运行</translation>
     </message>
     <message>
+      <source>Cannot migrate profile %1: %2</source>
+      <translation>无法迁移配置文件 %1：%2</translation>
+    </message>
+    <message>
+      <source>Migrated profile %1 to the new format</source>
+      <translation>已将配置文件 %1 迁移到新格式</translation>
+    </message>
+    <message>
+      <source>Import Proxifier Profile</source>
+      <translation>导入 Proxifier 配置文件</translation>
+    </message>
+    <message>
+      <source>A Proxifier profile was found at
+%1
+
+Import it into WinRoute?</source>
+      <translation>在以下位置发现 Proxifier 配置文件：
+%1
+
+要将其导入 WinRoute 吗？</translation>
+    </message>
+    <message>
+      <source>Imported Proxifier profile %1</source>
+      <translation>已导入 Proxifier 配置文件 %1</translation>
+    </message>
+    <message>
+      <source>Profile Files (*.yml *.yaml *.ppx);;WinRoute Profile (*.yml);;Proxifier Profile (*.ppx);;All Files (*.*)</source>
+      <translation>配置文件 (*.yml *.yaml *.ppx);;WinRoute 配置文件 (*.yml);;Proxifier 配置文件 (*.ppx);;所有文件 (*.*)</translation>
+    </message>
+    <message>
+      <source>WinRoute Profile (*.yml);;Proxifier Profile (*.ppx)</source>
+      <translation>WinRoute 配置文件 (*.yml);;Proxifier 配置文件 (*.ppx)</translation>
+    </message>
+    <message>
+      <source>Initialize Configuration</source>
+      <translation>初始化配置</translation>
+    </message>
+    <message>
+      <source>This deletes all WinRoute profiles (proxies and rules) and restarts WinRoute with a clean default configuration.
+
+This cannot be undone. Continue?</source>
+      <translation>这将删除所有 WinRoute 配置文件（代理与规则），并以干净的默认配置重启 WinRoute。
+
+此操作无法撤销。是否继续？</translation>
+    </message>
+    <message>
+      <source>Configuration initialized; restarting WinRoute</source>
+      <translation>配置已初始化，正在重启 WinRoute</translation>
+    </message>
+    <message>
+      <source>Did You Know?</source>
+      <translation>你知道吗</translation>
+    </message>
+    <message>
+      <source>&lt;h3&gt;Did you know?&lt;/h3&gt;&lt;p&gt;If WinRoute stops working correctly &amp;mdash; no internet access, host names resolving to &lt;code&gt;198.18.x.x&lt;/code&gt;, or proxies behaving unexpectedly &amp;mdash; you can usually fix it in one step:&lt;/p&gt;&lt;p&gt;Open &lt;b&gt;File &amp;rsaquo; Initialize Configuration&amp;hellip;&lt;/b&gt; to clear the configuration and restart with clean defaults.&lt;/p&gt;&lt;p&gt;After an upgrade your old profile is migrated automatically and its name-resolution settings are reset to safe values; if anything still looks wrong, &lt;b&gt;Initialize Configuration&lt;/b&gt; resolves it.&lt;/p&gt;</source>
+      <translation>&lt;h3&gt;你知道吗？&lt;/h3&gt;&lt;p&gt;如果 WinRoute 工作异常——无法上网、域名被解析到 &lt;code&gt;198.18.x.x&lt;/code&gt;、或代理行为不符合预期——通常可以一步恢复：&lt;/p&gt;&lt;p&gt;打开 &lt;b&gt;文件 &amp;rsaquo; 初始化配置&amp;hellip;&lt;/b&gt;，清空配置并以干净的默认设置重启。&lt;/p&gt;&lt;p&gt;升级后你的旧配置已自动迁移，名称解析设置也已重置为安全值；若仍有异常，用 &lt;b&gt;初始化配置&lt;/b&gt; 即可解决。&lt;/p&gt;</translation>
+    </message>
+    <message>
       <source>End Process Tree</source>
       <translation>结束进程树</translation>
     </message>
@@ -1616,10 +1690,6 @@ Continue?</source>
       <translation>配置文件：</translation>
     </message>
     <message>
-      <source>Imported Proxifier profile </source>
-      <translation>已导入 Proxifier 配置文件 </translation>
-    </message>
-    <message>
       <source>Cannot load profile %1: %2</source>
       <translation>无法加载配置文件 %1：%2</translation>
     </message>
@@ -1676,10 +1746,6 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
       <translation>导入配置文件</translation>
     </message>
     <message>
-      <source>Profile Files (*.ppx);;All Files (*.*)</source>
-      <translation>配置文件 (*.ppx);;所有文件 (*.*)</translation>
-    </message>
-    <message>
       <source>Cannot import %1:
 %2</source>
       <translation>无法导入 %1：
@@ -1692,10 +1758,6 @@ Hint: WinRoute automatically loads the most recently used profile on start.</sou
     <message>
       <source>Export Profile</source>
       <translation>导出配置文件</translation>
-    </message>
-    <message>
-      <source>Profile Files (*.ppx)</source>
-      <translation>配置文件 (*.ppx)</translation>
     </message>
     <message>
       <source>Profile exported to %1</source>
@@ -1976,6 +2038,14 @@ localhost; *.example.com; %ComputerName%; %SimpleHostnames%</translation>
     <message>
       <source>Password of proxy %1 is encrypted in a format WinRoute cannot read; please re-enter it.</source>
       <translation>代理 %1 的密码采用了 WinRoute 无法读取的加密格式，请重新输入。</translation>
+    </message>
+    <message>
+      <source>YAML error: %1</source>
+      <translation>YAML 错误：%1</translation>
+    </message>
+    <message>
+      <source>Not a WinRoute profile</source>
+      <translation>不是 WinRoute 配置文件</translation>
     </message>
   </context>
   <context>

@@ -58,6 +58,8 @@ private:
     QString profilePath(const QString &name) const;
     QStringList profileNames() const;
     void initialProfile();
+    void migrateLegacyProfiles();        // convert WinRoute .ppx profiles to .yml once
+    bool importProxifierOnFirstRun();    // ask to take over a Proxifier profile
     bool loadProfile(const QString &name);
     void saveProfile();
     void applyProfile(const Profile &p);
@@ -67,6 +69,7 @@ private:
     void importProfile();
     void exportProfile();
     void manageProfiles();
+    void resetConfiguration();           // delete all profiles and settings, then restart
 
     // profile settings
     void showProxyServers();
@@ -79,6 +82,8 @@ private:
     void showProxyServerSettings();
     void showCapture();
     void showAbout();
+    void showTips();         // the "Did You Know?" dialog
+    void maybeShowTips();    // show it once, automatically, on first run
 
     // connections
     QList<int> selectedRows() const;
@@ -147,13 +152,13 @@ private:
     QMenu *m_trayProfileMenu = nullptr;
     QToolBar *m_toolBar = nullptr;
 
-    QAction *m_actNewProfile, *m_actSaveAs, *m_actManage, *m_actImport, *m_actExport, *m_actAutostart, *m_actCloseWindow, *m_actExit;
+    QAction *m_actNewProfile, *m_actSaveAs, *m_actManage, *m_actImport, *m_actExport, *m_actReset, *m_actAutostart, *m_actCloseWindow, *m_actExit;
     QAction *m_actProxyServers, *m_actRules, *m_actNameResolution, *m_actHttpProxies, *m_actServices, *m_actHandleDirect,
         *m_actLoopDetection, *m_actUdpProxy, *m_actLogDns, *m_actEncryption;
     QAction *m_actDisconnect, *m_actEndProcess, *m_actEndProcessTree, *m_actCreateRule, *m_actCopyConn;
     QAction *m_actLogCopy, *m_actLogSelectAll, *m_actLogClear;
     QAction *m_actTrayIcon, *m_actToolbar, *m_actStatusBar;
-    QAction *m_actChecker, *m_actDriver, *m_actCapture, *m_actAbout, *m_actCheckUpdates, *m_actCheckUpdatesProxy;
+    QAction *m_actChecker, *m_actDriver, *m_actCapture, *m_actAbout, *m_actTips, *m_actCheckUpdates, *m_actCheckUpdatesProxy;
     QAction *m_actUpdateViaProxy = nullptr;   // "check through a proxy" (only in non-forum builds)
     Updater *m_updater = nullptr;
     QActionGroup *m_logLevelGroup = nullptr;

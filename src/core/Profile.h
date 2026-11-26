@@ -137,8 +137,19 @@ public:
 
     bool load(const QString &path, QString *error = nullptr);
     bool save(const QString &path, QString *error = nullptr) const;
+    // Proxifier's .ppx XML, kept for importing and exporting Proxifier profiles.
     bool fromXml(const QByteArray &xml, QString *error = nullptr);
     QByteArray toXml() const;
+    // WinRoute's own native format (YAML), free of the .ppx schema. Used for
+    // loading and saving profiles; .ppx is only for import/export.
+    bool fromYaml(const QByteArray &yaml, QString *error = nullptr);
+    QByteArray toYaml() const;
+    bool loadYaml(const QString &path, QString *error = nullptr);
+    bool saveYaml(const QString &path, QString *error = nullptr) const;
+    // Load a profile picking the format by file extension (.ppx/.xml vs
+    // .yml/.yaml), falling back to sniffing the content. For import, which
+    // accepts either WinRoute (YAML) or Proxifier (.ppx) profiles.
+    bool loadAuto(const QString &path, QString *error = nullptr);
 
     const ProxyServer *proxyById(int id) const;
     const ProxyChain *chainById(int id) const;

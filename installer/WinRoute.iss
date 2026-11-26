@@ -63,9 +63,9 @@ ja.InstallingDriver=ネットワークドライバーをインストールして
 en.DriverFailed=The network driver could not be installed (exit code %1).%n%nWinRoute will try to install it again when it starts.
 zh_CN.DriverFailed=网络驱动安装失败（退出代码 %1）。%n%nWinRoute 启动时会再次尝试安装。
 ja.DriverFailed=ネットワークドライバーをインストールできませんでした（終了コード %1）。%n%nWinRoute の起動時に再度インストールを試みます。
-en.RemoveSettings=Do you also want to delete your WinRoute profiles, settings and log files?
-zh_CN.RemoveSettings=是否同时删除 WinRoute 的配置文件、设置和日志？
-ja.RemoveSettings=WinRoute のプロファイル、設定、ログファイルも削除しますか？
+en.KeepSettings=Keep your WinRoute profiles, settings and log files?%n%nChoose No to delete them.
+zh_CN.KeepSettings=是否保留 WinRoute 的配置文件、设置和日志？%n%n选择“否”将删除它们。
+ja.KeepSettings=WinRoute のプロファイル、設定、ログファイルを残しますか？%n%n「いいえ」を選ぶと削除されます。
 en.DriverPageTitle=Network Driver
 zh_CN.DriverPageTitle=网络驱动
 ja.DriverPageTitle=ネットワークドライバー
@@ -329,7 +329,9 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if (CurUninstallStep = usPostUninstall) and not UninstallSilent() then
-    if MsgBox(CustomMessage('RemoveSettings'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+    // Positive phrasing, default Yes: keep the configuration unless the user
+    // explicitly chooses No (delete).
+    if MsgBox(CustomMessage('KeepSettings'), mbConfirmation, MB_YESNO or MB_DEFBUTTON1) = IDNO then
     begin
       DelTree(ExpandConstant('{userappdata}\WinRoute'), True, True, True);
       DeleteFile(ExpandConstant('{app}\WinRoute.ini'));   // portable settings file
